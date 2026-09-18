@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/requisicoes/:id/mensagens", "destination": "/api/requisicoes/[id]" },
+    { "source": "/api/requisicoes/:id",           "destination": "/api/requisicoes/[id]" },
+    { "source": "/api/requisicoes",               "destination": "/api/requisicoes/index" },
+    { "source": "/api/atendimentos",              "destination": "/api/atendimentos/index" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
+  ]
+}

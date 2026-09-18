@@ -1,0 +1,36 @@
+name: Gmail Polling – Conecta-CT
+
+on:
+  schedule:
+    # Roda a cada 5 minutos (mínimo do GitHub Actions)
+    - cron: '*/5 * * * *'
+  workflow_dispatch:   # permite disparar manualmente pela interface do GitHub
+
+jobs:
+  poll:
+    name: Verificar respostas dos cartórios
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar polling
+        env:
+          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GMAIL_CLIENT_ID:       ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET:   ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN:   ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          GMAIL_USER:            ${{ secrets.GMAIL_USER }}
+        run: node scripts/gmail-polling.js

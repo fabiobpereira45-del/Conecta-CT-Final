@@ -1,0 +1,20 @@
+{
+  "name": "conecta-ct-backend",
+  "version": "1.0.0",
+  "description": "Backend da plataforma Conecta-CT – Conselho Tutelar Salvador/BA",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "poll": "node scripts/gmail-polling.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.44.4",
+    "googleapis": "^140.0.1"
+  },
+  "devDependencies": {
+    "vercel": "^35.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
