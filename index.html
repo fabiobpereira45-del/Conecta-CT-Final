@@ -1705,8 +1705,19 @@ function renderFormFill(id) {
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
     <div class="cb-text"><strong>Cabeçalho preenchido automaticamente – Conselho Tutelar I</strong>Av. Princesa Isabel, 1000 · Bonfim · Salvador/BA · (71) 3115-0001</div>
   </div>
-  <div class="card card-pad">
+  <!-- ══ SEÇÃO DO ATENDENTE ══ -->
+  <div class="card card-pad" id="ficha-secao-atendente">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--primary)">
+      <div style="width:32px;height:32px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:.5px">Preenchimento pelo Atendente</div>
+        <div style="font-size:12px;color:var(--text-muted)">Preencha todos os campos antes de direcionar ao conselheiro plantonista</div>
+      </div>
+    </div>
     <div style="display:grid;gap:16px">
+      <!-- Data, Hora, Protocolo -->
       <div class="field-row cols-3">
         <div><label class="field-label">Data</label><input type="date" id="form-data-atual" /></div>
         <div><label class="field-label">Hora</label><input type="time" id="form-hora-atual" /></div>
@@ -1715,8 +1726,10 @@ function renderFormFill(id) {
           ${id===0?`<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Protocolo gerado automaticamente. Anote-o para referência futura.</div>`:''}
         </div>
       </div>
+
+      <!-- Dados da Criança/Adolescente -->
       <div class="field-row cols-2">
-        <div><label class="field-label">Nome Completo</label><input placeholder="Nome da criança/adolescente" /></div>
+        <div><label class="field-label">Nome Completo da Criança/Adolescente</label><input id="ficha-nome-crianca" placeholder="Nome completo" /></div>
         <div>
           <label class="field-label">Data de Nascimento</label>
           <input type="date" id="form-nasc-crianca" onchange="calcularIdadeCrianca(this.value)" />
@@ -1728,20 +1741,28 @@ function renderFormFill(id) {
         <div><label class="field-label">Raça/Cor</label><select><option>Selecione…</option><option>Branca</option><option>Preta</option><option>Parda</option><option>Amarela</option><option>Originários</option></select></div>
         <div><label class="field-label">Transtorno</label><select><option>Não</option><option>TEA</option><option>TOD</option><option>TDAH</option><option>DI</option><option>Outro</option></select></div>
       </div>
-      <div class="field-row cols-2">
-        <div><label class="field-label">Responsável</label><input placeholder="Nome do responsável" /></div>
-        <div><label class="field-label">Grau de Parentesco</label><select><option>Mãe</option><option>Pai</option><option>Avó/Avô</option><option>Tio/Tia</option><option>Outro</option></select></div>
+
+      <!-- Filiação -->
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">👪 Filiação</div>
+        <div class="field-row cols-2">
+          <div><label class="field-label">Nome da Mãe</label><input placeholder="Nome completo da mãe" /></div>
+          <div><label class="field-label">Nome do Pai</label><input placeholder="Nome completo do pai (se conhecido)" /></div>
+        </div>
+        <div class="field-row cols-2" style="margin-top:10px">
+          <div><label class="field-label">Responsável Legal</label><input placeholder="Nome do responsável legal" /></div>
+          <div><label class="field-label">Grau de Parentesco</label><select><option>Mãe</option><option>Pai</option><option>Avó/Avô</option><option>Tio/Tia</option><option>Padrasto/Madrasta</option><option>Outro familiar</option><option>Responsável sem parentesco</option></select></div>
+        </div>
       </div>
-      <!-- CEP + Endereço automático -->
-      <div>
+
+      <!-- Endereço -->
+      <div style="border-top:1px solid var(--border);padding-top:14px">
         <label class="field-label">Endereço</label>
         <div class="cep-group">
           <div>
             <label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">CEP</label>
             <div class="cep-input-wrap">
-              <input id="cep-input" placeholder="00000-000" maxlength="9"
-                oninput="formatCep(this)"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();lookupCep()}" />
+              <input id="cep-input" placeholder="00000-000" maxlength="9" oninput="formatCep(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupCep()}" />
               <button class="cep-btn" onclick="lookupCep()" title="Buscar CEP" id="cep-btn">
                 <svg id="cep-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               </button>
@@ -1749,108 +1770,66 @@ function renderFormFill(id) {
             <div id="cep-found" class="cep-found">✓ Endereço encontrado</div>
             <div id="cep-error" class="cep-error">CEP não encontrado. Preencha manualmente.</div>
           </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Logradouro</label>
-            <input id="addr-logradouro" placeholder="Rua / Av. / Trav." />
-          </div>
+          <div><label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Logradouro</label><input id="addr-logradouro" placeholder="Rua / Av. / Trav." /></div>
         </div>
         <div class="cep-fields">
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Bairro</label>
-            <input id="addr-bairro" placeholder="Bairro" />
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Cidade / UF</label>
-            <input id="addr-cidade" placeholder="Cidade – UF" />
-          </div>
+          <div><label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Bairro</label><input id="addr-bairro" placeholder="Bairro" /></div>
+          <div><label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Cidade / UF</label><input id="addr-cidade" placeholder="Cidade – UF" /></div>
         </div>
         <div class="cep-fields-3">
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Complemento</label>
-            <input id="addr-complemento" placeholder="Apto, Casa, Bloco…" />
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Referência</label>
-            <input id="addr-referencia" placeholder="Ponto de referência" />
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Nº</label>
-            <input id="addr-numero" placeholder="Nº" />
-          </div>
+          <div><label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Complemento</label><input id="addr-complemento" placeholder="Apto, Casa, Bloco…" /></div>
+          <div><label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Referência</label><input id="addr-referencia" placeholder="Ponto de referência" /></div>
+          <div><label style="font-size:11px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:5px">Nº</label><input id="addr-numero" placeholder="Nº" /></div>
         </div>
       </div>
-      <div><label class="field-label">Telefone</label><input placeholder="(71) 9 9999-9999" /></div>
+      <div><label class="field-label">Telefone de Contato</label><input placeholder="(71) 9 9999-9999" /></div>
 
-      <!-- Dados da Família / Composição Familiar -->
-      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">👨‍👩‍👧 Composição Familiar</div>
+      <!-- Composição Familiar -->
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">👨‍👩‍👧 Composição Familiar</div>
         <div class="field-row cols-3">
-          <div><label class="field-label">Nº de Irmãos</label><input type="number" min="0" placeholder="0" id="form-num-irmaos" /></div>
+          <div>
+            <label class="field-label">Nº de Irmãos</label>
+            <input type="number" min="0" max="20" placeholder="0" id="form-num-irmaos" oninput="renderIrmaos(parseInt(this.value)||0)" />
+          </div>
           <div>
             <label class="field-label">Renda Familiar</label>
-            <select>
-              <option>Selecione…</option>
-              <option>Sem renda</option>
-              <option>Até 1 salário mínimo</option>
-              <option>1 a 2 salários mínimos</option>
-              <option>2 a 3 salários mínimos</option>
-              <option>Acima de 3 salários mínimos</option>
-            </select>
+            <select><option>Selecione…</option><option>Sem renda</option><option>Até 1 salário mínimo</option><option>1 a 2 salários mínimos</option><option>2 a 3 salários mínimos</option><option>Acima de 3 salários mínimos</option></select>
           </div>
           <div>
             <label class="field-label">Benefício Social</label>
-            <select>
-              <option>Nenhum</option>
-              <option>Bolsa Família / CadÚnico</option>
-              <option>BPC/LOAS</option>
-              <option>Outro</option>
-            </select>
+            <select><option>Nenhum</option><option>Bolsa Família / CadÚnico</option><option>BPC/LOAS</option><option>Outro</option></select>
           </div>
         </div>
-        <div class="field-row cols-2">
-          <div><label class="field-label">Situação de Moradia</label>
-            <select>
-              <option>Selecione…</option>
-              <option>Própria</option>
-              <option>Alugada</option>
-              <option>Cedida</option>
-              <option>Invasão/Ocupação</option>
-              <option>Outro</option>
-            </select>
+        <!-- Campos dinâmicos dos irmãos -->
+        <div id="irmaos-lista" style="margin-top:10px;display:grid;gap:8px"></div>
+        <div class="field-row cols-2" style="margin-top:10px">
+          <div>
+            <label class="field-label">Situação de Moradia</label>
+            <select><option>Selecione…</option><option>Própria</option><option>Alugada</option><option>Cedida</option><option>Invasão/Ocupação</option><option>Outro</option></select>
           </div>
-          <div><label class="field-label">Com quem reside a criança/adolescente</label>
-            <input placeholder="Ex: Mãe e padrasto" />
-          </div>
+          <div><label class="field-label">Com quem reside</label><input placeholder="Ex: Mãe e padrasto" /></div>
         </div>
       </div>
 
       <!-- Situação Escolar -->
-      <div style="border-top:1px solid var(--border);padding-top:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">🎓 Situação Escolar</div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎓 Situação Escolar</div>
         <div class="field-row cols-3">
           <div>
             <label class="field-label">Está matriculado(a)?</label>
             <select onchange="document.getElementById('escola-dados').style.display=this.value==='Sim'?'grid':'none'">
-              <option>Selecione…</option>
-              <option>Sim</option>
-              <option>Não</option>
-              <option>Nunca foi</option>
+              <option>Selecione…</option><option>Sim</option><option>Não</option><option>Nunca foi</option>
             </select>
           </div>
           <div>
             <label class="field-label">Frequência</label>
-            <select>
-              <option>Selecione…</option>
-              <option>Regular</option>
-              <option>Irregular</option>
-              <option>Evadido(a)</option>
-            </select>
+            <select><option>Selecione…</option><option>Regular</option><option>Irregular</option><option>Evadido(a)</option></select>
           </div>
           <div>
             <label class="field-label">Série / Ano</label>
             <select>
-              <option>Selecione…</option>
-              <option>Educação Infantil</option>
+              <option>Selecione…</option><option>Educação Infantil</option>
               <option>1º ano EF</option><option>2º ano EF</option><option>3º ano EF</option>
               <option>4º ano EF</option><option>5º ano EF</option><option>6º ano EF</option>
               <option>7º ano EF</option><option>8º ano EF</option><option>9º ano EF</option>
@@ -1861,55 +1840,131 @@ function renderFormFill(id) {
         </div>
         <div id="escola-dados" style="display:none;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
           <div><label class="field-label">Nome da Escola</label><input placeholder="Nome da escola" /></div>
-          <div><label class="field-label">Turno</label>
-            <select><option>Selecione…</option><option>Matutino</option><option>Vespertino</option><option>Noturno</option><option>Integral</option></select>
-          </div>
+          <div><label class="field-label">Turno</label><select><option>Selecione…</option><option>Matutino</option><option>Vespertino</option><option>Noturno</option><option>Integral</option></select></div>
         </div>
       </div>
 
-      <!-- Natureza da Violação / Denúncia -->
-      <div style="border-top:1px solid var(--border);padding-top:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">⚠️ Natureza da Violação / Denúncia</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:12px">
+      <!-- Atendente info -->
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div class="field-row cols-2">
+          <div><label class="field-label">Atendente Responsável</label><input value="${currentUser.name}" readonly style="background:var(--bg-subtle,#f8f9fb);cursor:default" /></div>
+          <div><label class="field-label">Observações do Atendente</label><input placeholder="Observações iniciais (opcional)" /></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botão Direcionar para Conselheiro -->
+    <div style="margin-top:24px;padding:16px;background:var(--primary-subtle);border-radius:12px;border:1px solid var(--primary)">
+      <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:12px">📨 Direcionar para Conselheiro Plantonista</div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
+        <div>
+          <label class="field-label">Selecione o Conselheiro do CT</label>
+          <select id="ficha-conselheiro-destino" style="border-color:var(--primary)">
+            <option value="">-- Selecione o conselheiro --</option>
+            ${usersData.filter(u=>u.role==='conselheiro'||u.role==='master').map(u=>`<option value="${u.name}">${u.name} – ${u.cargo}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="direcionarFichaConselheiro()" style="padding:10px 20px;font-size:14px">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Direcionar
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px">⚠️ Após direcionar, somente o conselheiro selecionado poderá visualizar e editar esta demanda.</div>
+    </div>
+  </div>
+
+  <!-- ══ SEÇÃO DO CONSELHEIRO (visível apenas para o conselheiro vinculado) ══ -->
+  <div class="card card-pad" id="ficha-secao-conselheiro" style="display:none;margin-top:16px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2ecc71">
+      <div style="width:32px;height:32px;background:#2ecc71;border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:#2ecc71;text-transform:uppercase;letter-spacing:.5px">Seção do Conselheiro Tutelar</div>
+        <div style="font-size:12px;color:var(--text-muted)" id="ficha-conselheiro-label">Conselheiro responsável pelo caso</div>
+      </div>
+    </div>
+    <div style="display:grid;gap:16px">
+
+      <!-- Natureza da Violação -->
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
           ${['Negligência','Abandono','Violência Física','Violência Psicológica','Violência Sexual','Trabalho Infantil','Exploração Sexual','Evasão Escolar','Uso de Drogas','Conflito Familiar','Violência Doméstica','Outro'].map(v=>`
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
             <input type="checkbox" name="violacao" value="${v}" style="accent-color:var(--primary)" /> ${v}
           </label>`).join('')}
         </div>
         <div><label class="field-label">Descrição da Situação</label>
-          <textarea rows="4" style="resize:vertical" placeholder="Descreva detalhadamente a situação relatada…"></textarea>
+          <textarea rows="4" style="resize:vertical" placeholder="Descreva detalhadamente a situação…"></textarea>
         </div>
       </div>
 
       <!-- Motivo e Providências -->
-      <div style="border-top:1px solid var(--border);padding-top:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">📋 Atendimento</div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📋 Parecer e Providências</div>
         <div><label class="field-label">Motivo do Atendimento</label><textarea rows="3" style="resize:vertical" placeholder="Descreva o motivo…"></textarea></div>
-        <div style="margin-top:12px"><label class="field-label">Providências Imediatas</label><textarea rows="3" style="resize:vertical" placeholder="Providências tomadas no atendimento…"></textarea></div>
+        <div style="margin-top:10px"><label class="field-label">Providências Imediatas</label><textarea rows="3" style="resize:vertical" placeholder="Providências tomadas…"></textarea></div>
       </div>
 
       <!-- Encaminhamentos -->
-      <div style="border-top:1px solid var(--border);padding-top:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">🔀 Encaminhamentos</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:12px">
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔀 Encaminhamentos</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:10px">
           ${['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro'].map(e=>`
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
             <input type="checkbox" name="encaminhamento" value="${e}" style="accent-color:var(--primary)" /> ${e}
           </label>`).join('')}
         </div>
         <div><label class="field-label">Observações de Encaminhamento</label>
-          <textarea rows="2" style="resize:vertical" placeholder="Detalhes sobre os encaminhamentos realizados…"></textarea>
+          <textarea rows="2" style="resize:vertical" placeholder="Detalhes dos encaminhamentos…"></textarea>
         </div>
       </div>
 
-      <div class="field-row cols-2">
-        <div><label class="field-label">Conselheiro(a)</label><input value="${currentUser.name}" /></div>
-        <div><label class="field-label">Cargo</label><input value="${{master:'Coordenador',conselheiro:'Conselheiro Tutelar',atendente:'Atendente'}[currentUser.role]}" /></div>
+      <!-- Conclusão do conselheiro -->
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div class="field-row cols-2">
+          <div><label class="field-label">Conselheiro(a) Responsável</label><input value="${currentUser.name}" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
+          <div><label class="field-label">Cargo</label><input value="${{master:'Coordenador',conselheiro:'Conselheiro Tutelar',atendente:'Atendente'}[currentUser.role]}" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
+        </div>
       </div>
     </div>
-    <div style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
-      <button class="btn btn-primary" onclick="showToast('Documento gerado!')">${I.download} Gerar e Baixar</button>
+
+    <!-- Ações do Conselheiro -->
+    <div style="margin-top:24px;display:grid;gap:12px">
+      <!-- Remeter para outro conselheiro do colegiado -->
+      <div style="padding:14px;background:var(--bg-subtle,#f8f9fb);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">🔄 Remeter para outro conselheiro do meu CT</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+          <div>
+            <label class="field-label" style="font-size:11px">Conselheiro do CT</label>
+            <select id="ficha-remeter-ct">
+              <option value="">-- Selecione --</option>
+              ${usersData.filter(u=>(u.role==='conselheiro'||u.role==='master')&&u.name!==currentUser.name).map(u=>`<option value="${u.name}">${u.name}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn btn-outline" onclick="remeterFichaConselheiro()" style="font-size:13px">Remeter</button>
+        </div>
+      </div>
+      <!-- Encaminhar para outro CT -->
+      <div style="padding:14px;background:var(--bg-subtle,#f8f9fb);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">📤 Encaminhar para outro Conselho Tutelar de Salvador</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+          <div>
+            <label class="field-label" style="font-size:11px">Conselho Tutelar de Salvador</label>
+            <select id="ficha-encaminhar-ct">
+              <option value="">-- Selecione o CT --</option>
+              ${CONSELHOS_BAIRROS.map(c=>`<option value="${c.nome}">${c.nome} – ${c.regiao}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn btn-outline" onclick="encaminharFichaOutroCT()" style="font-size:13px">Encaminhar</button>
+        </div>
+      </div>
+      <!-- Salvar/Gerar -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px">
+        <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
+        <button class="btn btn-primary" onclick="showToast('Ficha salva com sucesso!')">${I.download} Salvar e Gerar PDF</button>
+      </div>
     </div>
   </div>`
 }
@@ -3633,6 +3688,77 @@ function downloadRequisicoesPDF() {
   <script>window.print();<\/script></body></html>`
   const w = window.open('','_blank')
   if (w) { w.document.write(html); w.document.close() }
+}
+
+// ── IRMÃOS DINÂMICOS ──
+function renderIrmaos(qty) {
+  const el = document.getElementById('irmaos-lista')
+  if (!el) return
+  el.innerHTML = ''
+  if (qty <= 0) return
+  const frag = []
+  for (let i = 0; i < Math.min(qty, 15); i++) {
+    frag.push(`
+    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;background:var(--bg-subtle,#f8f9fb);border-radius:8px;border:1px solid var(--border)">
+      <div style="display:grid;grid-template-columns:1fr 100px;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted)">Irmão ${i+1} – Nome</label>
+          <input placeholder="Nome completo" style="margin-top:4px" />
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted)">Idade</label>
+          <input type="number" min="0" max="25" placeholder="anos" style="margin-top:4px" />
+        </div>
+      </div>
+    </div>`)
+  }
+  el.innerHTML = frag.join('')
+}
+
+// ── FICHA: DIRECIONAR PARA CONSELHEIRO ──
+let fichaConselheiroDirecionado = null
+function direcionarFichaConselheiro() {
+  const sel = document.getElementById('ficha-conselheiro-destino')
+  const nome = sel ? sel.value : ''
+  if (!nome) { showToast('Selecione um conselheiro antes de direcionar.'); return }
+  fichaConselheiroDirecionado = nome
+  // Mostrar seção do conselheiro se o usuário atual for o selecionado ou master
+  const secCons = document.getElementById('ficha-secao-conselheiro')
+  const lbl = document.getElementById('ficha-conselheiro-label')
+  if (secCons) {
+    secCons.style.display = (currentUser.name === nome || currentUser.role === 'master') ? 'block' : 'none'
+    if (lbl) lbl.textContent = `Responsável: ${nome}`
+  }
+  // Bloquear edição da seção do atendente
+  document.querySelectorAll('#ficha-secao-atendente input, #ficha-secao-atendente select, #ficha-secao-atendente textarea').forEach(el => {
+    if (!el.readOnly && el.id !== 'form-data-atual' && el.id !== 'form-hora-atual') el.disabled = true
+  })
+  const btnDir = document.querySelector('[onclick="direcionarFichaConselheiro()"]')
+  if (btnDir) {
+    btnDir.textContent = '✓ Direcionado'
+    btnDir.disabled = true
+    btnDir.style.background = '#2ecc71'
+  }
+  showToast(`✅ Demanda direcionada para ${nome}`)
+}
+
+// ── FICHA: REMETER PARA OUTRO CONSELHEIRO DO CT ──
+function remeterFichaConselheiro() {
+  const sel = document.getElementById('ficha-remeter-ct')
+  const nome = sel ? sel.value : ''
+  if (!nome) { showToast('Selecione o conselheiro de destino.'); return }
+  fichaConselheiroDirecionado = nome
+  const lbl = document.getElementById('ficha-conselheiro-label')
+  if (lbl) lbl.textContent = `Responsável: ${nome} (remetido)`
+  showToast(`🔄 Demanda remetida para ${nome}`)
+}
+
+// ── FICHA: ENCAMINHAR PARA OUTRO CT ──
+function encaminharFichaOutroCT() {
+  const sel = document.getElementById('ficha-encaminhar-ct')
+  const ct = sel ? sel.value : ''
+  if (!ct) { showToast('Selecione o Conselho Tutelar de destino.'); return }
+  showToast(`📤 Demanda encaminhada para ${ct}`)
 }
 
 // ── AUTO DATA/HORA ATUAL NOS FORMULÁRIOS ──
