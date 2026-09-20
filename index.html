@@ -285,8 +285,15 @@ tr:hover td{background:var(--sidebar-hover)}
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="auth-logo-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div class="auth-logo-icon" style="background:none;box-shadow:none">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="72" height="72">
+          <!-- Escudo fundo azul -->
+          <path d="M40 4 L72 16 L72 44 C72 60 57 72 40 76 C23 72 8 60 8 44 L8 16 Z" fill="#1e3a5f"/>
+          <!-- Estrela/símbolo interno branco -->
+          <text x="40" y="52" text-anchor="middle" font-size="28" font-weight="bold" fill="white" font-family="Arial">CT</text>
+          <!-- Borda dourada -->
+          <path d="M40 4 L72 16 L72 44 C72 60 57 72 40 76 C23 72 8 60 8 44 L8 16 Z" fill="none" stroke="#c9a227" stroke-width="2.5"/>
+        </svg>
       </div>
       <h1>Conselho Tutelar de Salvador</h1>
       <p>Acesse o sistema para continuar</p>
@@ -297,7 +304,18 @@ tr:hover td{background:var(--sidebar-hover)}
     </div>
     <div id="auth-login">
       <div class="field-group"><label class="field-label">E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" value="fabio.bpereira45@gmail.com" /></div>
-      <div class="field-group"><label class="field-label">Senha</label><input type="password" id="login-pass" placeholder="Senha" value="••••••" /></div>
+      <div class="field-group">
+        <label class="field-label">Senha</label>
+        <div style="position:relative">
+          <input type="password" id="login-pass" placeholder="Senha" value="••••••" style="padding-right:40px" />
+          <button type="button" onclick="togglePassVis('login-pass',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px" title="Mostrar/ocultar senha">
+            <svg id="eye-login-pass" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div style="text-align:right;margin-top:-8px;margin-bottom:16px">
+        <button type="button" onclick="showForgotPassword()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0">Esqueci minha senha</button>
+      </div>
       <button class="auth-btn" onclick="doLogin()">Entrar</button>
       <div style="margin-top:16px">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600">Simular perfil:</div>
@@ -3253,6 +3271,45 @@ function genDutyRoster() {
 
 function exportDutyRoster() {
   showToast('Exportação PDF disponível na versão completa do sistema.')
+}
+
+// ── TOGGLE PASSWORD VISIBILITY ──
+function togglePassVis(inputId, btn) {
+  const inp = document.getElementById(inputId)
+  if (!inp) return
+  const isPass = inp.type === 'password'
+  inp.type = isPass ? 'text' : 'password'
+  const svg = btn.querySelector('svg')
+  if (svg) svg.innerHTML = isPass
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+}
+
+// ── FORGOT PASSWORD ──
+function showForgotPassword() {
+  const modal = document.createElement('div')
+  modal.id = 'forgot-modal'
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px'
+  modal.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;padding:32px;width:100%;max-width:400px;box-shadow:var(--shadow)">
+      <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Recuperar acesso</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Informe seu e-mail cadastrado. O administrador do sistema será notificado para redefinir seu acesso.</p>
+      <div class="field-group"><label class="field-label">E-mail</label><input id="forgot-email" type="email" placeholder="seu@email.com" /></div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button onclick="document.getElementById('forgot-modal').remove()" style="flex:1;padding:11px;border:1px solid var(--border);border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;background:var(--card);color:var(--text)">Cancelar</button>
+        <button onclick="submitForgot()" style="flex:1;padding:11px;background:var(--primary);color:#fff;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;border:none">Enviar</button>
+      </div>
+    </div>`
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove() })
+  setTimeout(()=>document.getElementById('forgot-email')?.focus(), 100)
+}
+
+function submitForgot() {
+  const email = document.getElementById('forgot-email')?.value?.trim()
+  if (!email || !email.includes('@')) { showToast('Informe um e-mail válido.', 'error'); return }
+  document.getElementById('forgot-modal')?.remove()
+  showToast(`Solicitação enviada para ${email}. O administrador entrará em contato.`, 'success')
 }
 
 // ── INIT: show auth ──
