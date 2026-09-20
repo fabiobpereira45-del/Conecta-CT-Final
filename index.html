@@ -1690,6 +1690,8 @@ function renderFormFill(id) {
     const seq2 = String(atendimentoCounter).padStart(3,'0')
     protocoloAtendimento = `${yy2}/${mm2}/${seq2}`
   }
+  // Setar data/hora atual após render
+  setTimeout(setFormDataHoraAtual, 50)
   return `
   <div class="fill-header">
     <button onclick="backToForms()">${I.arrowleft} Voltar</button>
@@ -1706,8 +1708,8 @@ function renderFormFill(id) {
   <div class="card card-pad">
     <div style="display:grid;gap:16px">
       <div class="field-row cols-3">
-        <div><label class="field-label">Data</label><input type="date" value="2026-09-18" /></div>
-        <div><label class="field-label">Hora</label><input type="time" value="09:00" /></div>
+        <div><label class="field-label">Data</label><input type="date" id="form-data-atual" /></div>
+        <div><label class="field-label">Hora</label><input type="time" id="form-hora-atual" /></div>
         <div><label class="field-label">Protocolo${id===0?' (gerado automaticamente)':''}</label>
           <input ${id===0?`value="${protocoloAtendimento}" readonly style="background:var(--primary-subtle);color:var(--primary);font-weight:600;cursor:default"`:`placeholder="Ex: 2026/09/247"`} />
           ${id===0?`<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Protocolo gerado automaticamente. Anote-o para referência futura.</div>`:''}
@@ -1715,7 +1717,11 @@ function renderFormFill(id) {
       </div>
       <div class="field-row cols-2">
         <div><label class="field-label">Nome Completo</label><input placeholder="Nome da criança/adolescente" /></div>
-        <div><label class="field-label">Data de Nascimento</label><input type="date" /></div>
+        <div>
+          <label class="field-label">Data de Nascimento</label>
+          <input type="date" id="form-nasc-crianca" onchange="calcularIdadeCrianca(this.value)" />
+          <div id="form-idade-crianca" style="font-size:12px;color:var(--primary);font-weight:600;margin-top:4px;display:none"></div>
+        </div>
       </div>
       <div class="field-row cols-3">
         <div><label class="field-label">Sexo</label><select><option>Selecione…</option><option>Feminino</option><option>Masculino</option><option>Não-binário</option><option>Outro</option></select></div>
@@ -1774,8 +1780,128 @@ function renderFormFill(id) {
         </div>
       </div>
       <div><label class="field-label">Telefone</label><input placeholder="(71) 9 9999-9999" /></div>
-      <div><label class="field-label">Motivo do Atendimento</label><textarea rows="3" style="resize:vertical" placeholder="Descreva o motivo…"></textarea></div>
-      <div><label class="field-label">Providências</label><textarea rows="3" style="resize:vertical" placeholder="Providências tomadas…"></textarea></div>
+
+      <!-- Dados da Família / Composição Familiar -->
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">👨‍👩‍👧 Composição Familiar</div>
+        <div class="field-row cols-3">
+          <div><label class="field-label">Nº de Irmãos</label><input type="number" min="0" placeholder="0" id="form-num-irmaos" /></div>
+          <div>
+            <label class="field-label">Renda Familiar</label>
+            <select>
+              <option>Selecione…</option>
+              <option>Sem renda</option>
+              <option>Até 1 salário mínimo</option>
+              <option>1 a 2 salários mínimos</option>
+              <option>2 a 3 salários mínimos</option>
+              <option>Acima de 3 salários mínimos</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Benefício Social</label>
+            <select>
+              <option>Nenhum</option>
+              <option>Bolsa Família / CadÚnico</option>
+              <option>BPC/LOAS</option>
+              <option>Outro</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div><label class="field-label">Situação de Moradia</label>
+            <select>
+              <option>Selecione…</option>
+              <option>Própria</option>
+              <option>Alugada</option>
+              <option>Cedida</option>
+              <option>Invasão/Ocupação</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div><label class="field-label">Com quem reside a criança/adolescente</label>
+            <input placeholder="Ex: Mãe e padrasto" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Situação Escolar -->
+      <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">🎓 Situação Escolar</div>
+        <div class="field-row cols-3">
+          <div>
+            <label class="field-label">Está matriculado(a)?</label>
+            <select onchange="document.getElementById('escola-dados').style.display=this.value==='Sim'?'grid':'none'">
+              <option>Selecione…</option>
+              <option>Sim</option>
+              <option>Não</option>
+              <option>Nunca foi</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Frequência</label>
+            <select>
+              <option>Selecione…</option>
+              <option>Regular</option>
+              <option>Irregular</option>
+              <option>Evadido(a)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Série / Ano</label>
+            <select>
+              <option>Selecione…</option>
+              <option>Educação Infantil</option>
+              <option>1º ano EF</option><option>2º ano EF</option><option>3º ano EF</option>
+              <option>4º ano EF</option><option>5º ano EF</option><option>6º ano EF</option>
+              <option>7º ano EF</option><option>8º ano EF</option><option>9º ano EF</option>
+              <option>1º ano EM</option><option>2º ano EM</option><option>3º ano EM</option>
+              <option>EJA</option><option>Outro</option>
+            </select>
+          </div>
+        </div>
+        <div id="escola-dados" style="display:none;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+          <div><label class="field-label">Nome da Escola</label><input placeholder="Nome da escola" /></div>
+          <div><label class="field-label">Turno</label>
+            <select><option>Selecione…</option><option>Matutino</option><option>Vespertino</option><option>Noturno</option><option>Integral</option></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Natureza da Violação / Denúncia -->
+      <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">⚠️ Natureza da Violação / Denúncia</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:12px">
+          ${['Negligência','Abandono','Violência Física','Violência Psicológica','Violência Sexual','Trabalho Infantil','Exploração Sexual','Evasão Escolar','Uso de Drogas','Conflito Familiar','Violência Doméstica','Outro'].map(v=>`
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+            <input type="checkbox" name="violacao" value="${v}" style="accent-color:var(--primary)" /> ${v}
+          </label>`).join('')}
+        </div>
+        <div><label class="field-label">Descrição da Situação</label>
+          <textarea rows="4" style="resize:vertical" placeholder="Descreva detalhadamente a situação relatada…"></textarea>
+        </div>
+      </div>
+
+      <!-- Motivo e Providências -->
+      <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">📋 Atendimento</div>
+        <div><label class="field-label">Motivo do Atendimento</label><textarea rows="3" style="resize:vertical" placeholder="Descreva o motivo…"></textarea></div>
+        <div style="margin-top:12px"><label class="field-label">Providências Imediatas</label><textarea rows="3" style="resize:vertical" placeholder="Providências tomadas no atendimento…"></textarea></div>
+      </div>
+
+      <!-- Encaminhamentos -->
+      <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">🔀 Encaminhamentos</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:12px">
+          ${['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro'].map(e=>`
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+            <input type="checkbox" name="encaminhamento" value="${e}" style="accent-color:var(--primary)" /> ${e}
+          </label>`).join('')}
+        </div>
+        <div><label class="field-label">Observações de Encaminhamento</label>
+          <textarea rows="2" style="resize:vertical" placeholder="Detalhes sobre os encaminhamentos realizados…"></textarea>
+        </div>
+      </div>
+
       <div class="field-row cols-2">
         <div><label class="field-label">Conselheiro(a)</label><input value="${currentUser.name}" /></div>
         <div><label class="field-label">Cargo</label><input value="${{master:'Coordenador',conselheiro:'Conselheiro Tutelar',atendente:'Atendente'}[currentUser.role]}" /></div>
@@ -2863,26 +2989,26 @@ function showEventoModal(){
       </div>
       <div class="field-group"><label class="field-label">Tipo</label>
         <select id="m-ecls">
-          <option value="ev-atendimento">Atendimento</option>
-          <option value="ev-reuniao">Reunião</option>
-          <option value="ev-visita">Visita</option>
-          <option value="ev-reuniao">Audiência no MP</option>
-          <option value="ev-reuniao">Audiência Remota MP ou Juizo da Infancia e Juventude</option>
-          <option value="ev-visita">Delegacia</option>
-          <option value="ev-reuniao">Reunião de Colegiado</option>
-          <option value="ev-reuniao">Reunião de Comissão</option>
+          <option value="ev-atendimento">Acolhimento Institucional</option>
           <option value="ev-reuniao">Assembléia Ordinária e Extraordinária</option>
-          <option value="ev-atendimento">Palestra</option>
-          <option value="ev-visita">Visita em Órgãos</option>
-          <option value="ev-visita">Visita a Escola</option>
-          <option value="ev-reuniao">Evento com Parceiros</option>
+          <option value="ev-atendimento">Atendimento</option>
+          <option value="ev-reuniao">Audiência no MP</option>
+          <option value="ev-reuniao">Audiência Remota MP ou Juizo da Infância e Juventude</option>
+          <option value="ev-atendimento">Capacitação</option>
           <option value="ev-visita">Cartório</option>
           <option value="ev-visita">Cras</option>
           <option value="ev-visita">Creas</option>
-          <option value="ev-atendimento">Acolhimento Institucional</option>
-          <option value="ev-atendimento">Plantão Interno</option>
+          <option value="ev-visita">Delegacia</option>
+          <option value="ev-reuniao">Evento com Parceiros</option>
+          <option value="ev-atendimento">Palestra</option>
           <option value="ev-atendimento">Plantão Centralizado</option>
-          <option value="ev-atendimento">Capacitação</option>
+          <option value="ev-atendimento">Plantão Interno</option>
+          <option value="ev-reuniao">Reunião</option>
+          <option value="ev-reuniao">Reunião de Colegiado</option>
+          <option value="ev-reuniao">Reunião de Comissão</option>
+          <option value="ev-visita">Visita</option>
+          <option value="ev-visita">Visita a Escola</option>
+          <option value="ev-visita">Visita em Órgãos</option>
         </select></div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
@@ -3507,6 +3633,45 @@ function downloadRequisicoesPDF() {
   <script>window.print();<\/script></body></html>`
   const w = window.open('','_blank')
   if (w) { w.document.write(html); w.document.close() }
+}
+
+// ── AUTO DATA/HORA ATUAL NOS FORMULÁRIOS ──
+function setFormDataHoraAtual() {
+  const now = new Date()
+  const dataEl = document.getElementById('form-data-atual')
+  const horaEl = document.getElementById('form-hora-atual')
+  if (dataEl) {
+    const y = now.getFullYear()
+    const m = String(now.getMonth()+1).padStart(2,'0')
+    const d = String(now.getDate()).padStart(2,'0')
+    dataEl.value = `${y}-${m}-${d}`
+  }
+  if (horaEl) {
+    const h = String(now.getHours()).padStart(2,'0')
+    const min = String(now.getMinutes()).padStart(2,'0')
+    horaEl.value = `${h}:${min}`
+  }
+}
+
+// ── CÁLCULO DE IDADE ──
+function calcularIdadeCrianca(nascStr) {
+  const el = document.getElementById('form-idade-crianca')
+  if (!el || !nascStr) return
+  const nasc = new Date(nascStr)
+  const hoje = new Date()
+  let anos = hoje.getFullYear() - nasc.getFullYear()
+  let meses = hoje.getMonth() - nasc.getMonth()
+  if (meses < 0 || (meses === 0 && hoje.getDate() < nasc.getDate())) {
+    anos--; meses += 12
+  }
+  if (meses < 0) meses += 12
+  if (anos < 0) { el.style.display='none'; return }
+  el.style.display = 'block'
+  if (anos === 0) {
+    el.textContent = `Idade: ${meses} mes${meses!==1?'es':''}`
+  } else {
+    el.textContent = `Idade: ${anos} ano${anos!==1?'s':''} e ${meses} mes${meses!==1?'es':''}`
+  }
 }
 
 // ── ESC key closes modals ──
