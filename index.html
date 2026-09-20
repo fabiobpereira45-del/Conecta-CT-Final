@@ -261,22 +261,6 @@ tr:hover td{background:var(--sidebar-hover)}
   display:none;padding:8px 12px;background:#fee2e2;border:1px solid #fecaca;
   border-radius:6px;font-size:12px;color:var(--danger);margin-top:6px;
 }
-/* ── MODAL ── */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-box{background:var(--card);border-radius:16px;padding:28px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
-.modal-title{font-size:17px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
-/* ── CRUD FORMS ADMIN ── */
-.form-admin-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
-.form-admin-row:last-child{border-bottom:none}
-.form-admin-name{flex:1;font-size:13px}
-.form-admin-cat{font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:20px;padding:2px 8px}
-.form-admin-actions{display:flex;gap:4px}
-.form-admin-actions button{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:background .15s}
-.form-admin-actions button:hover{background:var(--sidebar-hover)}
-/* email success */
-.email-sent-badge{display:inline-flex;align-items:center;gap:6px;background:#dcfce7;color:#16a34a;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;border:1px solid #bbf7d0}
-
 #toast{position:fixed;bottom:24px;right:24px;background:#1a2332;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.25);transform:translateY(120%);transition:transform .3s ease;z-index:999;max-width:320px}
 #toast.show{transform:translateY(0)}
 </style>
@@ -411,7 +395,6 @@ tr:hover td{background:var(--sidebar-hover)}
   </main>
 </div>
 <div id="toast"></div>
-<div id="modal-root"></div>
 
 <script>
 // ── ICONS ──
@@ -455,7 +438,6 @@ const NAV_ALL = [
   { id:'duty-roster', label:'Escala de Plantões', icon:'clock', roles:['master','conselheiro'] },
   { id:'photos', label:'Álbum de Fotos', icon:'image', roles:['master','conselheiro'] },
   { id:'forms', label:'Formulários', icon:'filetext', roles:['master','conselheiro','atendente'] },
-  { id:'requisicoes', label:'Minhas Requisições', icon:'report', roles:['master','conselheiro','atendente'] },
   { id:'eca', label:'Pesquisa ECA', icon:'book', roles:['master','conselheiro','atendente'] },
   { id:'rules', label:'Regimento Interno', icon:'scale', roles:['master','conselheiro','atendente'] },
   { id:'__sep__', label:'', icon:'', roles:['master'] },
@@ -464,60 +446,6 @@ const NAV_ALL = [
   { id:'approvals', label:'Aprovações Pendentes', icon:'check', roles:['master'] },
   { id:'system-settings', label:'Configurações do Sistema', icon:'settings', roles:['master'] },
 ]
-
-// ── CARTÓRIOS DE REGISTRO CIVIL – SALVADOR/BA ──
-const CARTORIOS_SALVADOR = [
-  { oficio:'1º Ofício RCPN', subdistritos:['Sé','Conceição da Praia','Santana','Paço','Pilar','São Pedro'], email:'registrocivilssa@gmail.com', tel:'(71) 3052-5310', end:'Av. Estados Unidos, 397, Ed. Cidade do Salvador — Comércio' },
-  { oficio:'2º Ofício RCPN', subdistritos:['Santo Antônio Além do Carmo','Nazaré'], email:'contato@2rcpn.com.br', tel:'(71) 3266-7733', end:'Estrada da Liberdade, 95 — Lapinha' },
-  { oficio:'4º Ofício RCPN', subdistritos:['Pirajá','Itapuã'], email:'cartoriopiraja@gmail.com', tel:'(71) 3392-7836', end:'Via Castelo Branco, 225, 3ª etapa — Castelo Branco' },
-  { oficio:'5º Ofício RCPN (Brotas/Vitória)', subdistritos:['Brotas','Vitória'], email:'pedidobrotas@gmail.com', tel:'(71) 3016-0055', end:'R. Prof. Martagão Gesteira, 477 — Graça' },
-  { oficio:'6º Ofício RCPN (Cajazeiras)', subdistritos:['Valéria','São Cristóvão'], email:'cartoriodecajazeiras@gmail.com', tel:'(71) 3301-8955', end:'Estrada da Paciência, 2183 — Cajazeiras VIII' },
-  { oficio:'Subdistrito de Amaralina', subdistritos:['Amaralina','Caminho das Árvores'], email:'rcpnamaralina@gmail.com', tel:'(71) 3035-0009', end:'Av. Tancredo Neves, 1632, Loja 31 — Salvador Trade Center' },
-  { oficio:'Subdistrito de Paripe', subdistritos:['Paripe','Periperi','Bom Jesus','Ilha de Maré'], email:'cartorioparipe@gmail.com', tel:'(71) 3307-5191', end:'Rua Almirante Barroso, 02 — Paripe' },
-  { oficio:'Subdistrito de Plataforma', subdistritos:['Plataforma','São Caetano'], email:'rcpnplataforma@gmail.com', tel:'(71) 3019-3572', end:'Av. Afrânio Peixoto, 76 — Itacaranha / Plataforma' },
-  { oficio:'Subdistrito dos Mares', subdistritos:['Mares','Calçada'], email:'cartoriodosmares@gmail.com', tel:'(71) 3042-9199', end:'Av. Oscar Pontes, 1.503, Ed. Serra Vale — Calçada' },
-  { oficio:'Subdistrito da Penha', subdistritos:['Penha','Bonfim','Ribeira'], email:'registrocivildapenha@gmail.com', tel:'(71) 3316-9579', end:'Av. Beira Mar, 419 — Ribeira' },
-]
-
-// ── REMETENTE CADASTRADO ──
-let senderConfig = { name:'', email:'', cargo:'Conselheiro(a) Tutelar', configured: false }
-
-// ── AGENDA DE DESTINATÁRIOS ──
-let emailAgenda = [
-  { id:'ag1', nome:'1º Ofício RCPN – Comércio', email:'registrocivilssa@gmail.com', tipo:'Cartório', tel:'(71) 3052-5310' },
-  { id:'ag2', nome:'2º Ofício RCPN – Lapinha', email:'contato@2rcpn.com.br', tipo:'Cartório', tel:'(71) 3266-7733' },
-  { id:'ag3', nome:'4º Ofício RCPN – Pirajá/Itapuã', email:'cartoriopiraja@gmail.com', tipo:'Cartório', tel:'(71) 3392-7836' },
-  { id:'ag4', nome:'5º Ofício RCPN – Brotas/Vitória', email:'pedidobrotas@gmail.com', tipo:'Cartório', tel:'(71) 3016-0055' },
-  { id:'ag5', nome:'6º Ofício RCPN – Cajazeiras', email:'cartoriodecajazeiras@gmail.com', tipo:'Cartório', tel:'(71) 3301-8955' },
-  { id:'ag6', nome:'Subdistrito de Amaralina', email:'rcpnamaralina@gmail.com', tipo:'Cartório', tel:'(71) 3035-0009' },
-  { id:'ag7', nome:'Subdistrito de Paripe', email:'cartorioparipe@gmail.com', tipo:'Cartório', tel:'(71) 3307-5191' },
-  { id:'ag8', nome:'Subdistrito de Plataforma', email:'rcpnplataforma@gmail.com', tipo:'Cartório', tel:'(71) 3019-3572' },
-  { id:'ag9', nome:'Subdistrito dos Mares', email:'cartoriodosmares@gmail.com', tipo:'Cartório', tel:'(71) 3042-9199' },
-  { id:'ag10', nome:'Subdistrito da Penha', email:'registrocivildapenha@gmail.com', tipo:'Cartório', tel:'(71) 3316-9579' },
-]
-let agendaNextId = 11
-
-// ── API BACKEND ──
-const API_BASE = 'https://conecta-ct-final.vercel.app'
-
-async function apiFetch(path, opts = {}) {
-  const res = await fetch(API_BASE + path, {
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-    ...opts,
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `HTTP ${res.status}`)
-  }
-  return res.json()
-}
-
-// ── REQUISIÇÕES DE CERTIDÃO ──
-let requisicoes = []
-let requisicaoCounter = 0
-
-// ── PROTOCOLOS DE ATENDIMENTO ──
-let atendimentoCounter = 0
 
 // ── FORMS DATA ──
 const FORMS = [
@@ -535,7 +463,6 @@ const FORMS = [
   {id:11,name:'Notificação (2)',category:'Notificações'},
   {id:12,name:'Convite Adolescente',category:'Convites'},
   {id:13,name:'Certidão',category:'Certidões'},
-  {id:41,name:'Requisição de Certidão',category:'Requisições'},
   {id:14,name:'Termo de Responsabilidade',category:'Termos'},
   {id:15,name:'Permuta De Serviço',category:'Administrativo'},
   {id:16,name:'Encaminhamento CRAS',category:'Encaminhamentos'},
@@ -717,14 +644,6 @@ function renderContent() {
     case 'users': el.innerHTML = renderUsers(); break
     case 'approvals': el.innerHTML = renderApprovals(); break
     case 'duty-roster': el.innerHTML = renderDutyRoster(); attachDutyRosterEvents(); break
-    case 'requisicoes': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando requisições…</div>'; carregarRequisicoes(); break
-    case 'councils': el.innerHTML = renderCouncils(); break
-    case 'general-stats': el.innerHTML = renderGeneralStats(); break
-    case 'photos': el.innerHTML = renderPhotos(); attachPhotosEvents(); break
-    case 'eca': el.innerHTML = renderEca(); attachEcaEvents(); break
-    case 'rules': el.innerHTML = renderRules(); break
-    case 'admin-stats': el.innerHTML = renderAdminStats(); break
-    case 'system-settings': el.innerHTML = renderSystemSettings(); break
     default: el.innerHTML = renderPlaceholder()
   }
 }
@@ -917,86 +836,33 @@ function pstat(l,v) {
 // ── NOTICES ──
 function renderNotices() {
   const canCreate = currentUser.role === 'master'
-  const notices = noticesData
+  const notices = [
+    {type:'convocatoria',priority:'urgente',title:'Reunião Plenária Extraordinária – CT I',body:'Convocamos todos os conselheiros para reunião plenária extraordinária no dia 20/09/2026 às 14h, na sede do CT I, para deliberação sobre casos urgentes em andamento.',date:'18 set. 2026',author:'Fabio Pereira'},
+    {type:'aviso',priority:'normal',title:'Atualização do Sistema de Registro',body:'Informamos que o sistema passará por manutenção no dia 22/09 das 22h às 02h. Atendimentos devem ser registrados manualmente neste período.',date:'17 set. 2026',author:'Admin CT Salvador'},
+    {type:'convocatoria',priority:'normal',title:'Capacitação: ECA e Jurisprudência 2026',body:'Capacitação obrigatória para todos os conselheiros. Módulo: Jurisprudência recente e aplicação do ECA. Data: 25/09 às 09h. Local: CMDCA Salvador.',date:'15 set. 2026',author:'CMDCA Salvador'},
+    {type:'aviso',priority:'normal',title:'Novo Formulário de Escuta Especializada',body:'O formulário 22 – Escuta Especializada foi revisado conforme Resolução nº 231/2026 do CONANDA. Baixe o novo modelo em Formulários.',date:'12 set. 2026',author:'Coordenação CT'},
+  ]
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
     <div><h2>Convocatórias e Avisos</h2><p>${notices.length} publicações</p></div>
-    ${canCreate ? `<button class="btn btn-primary" onclick="showNoticaModal()">${I.plus} Nova</button>` : ''}
+    ${canCreate ? `<button class="btn btn-primary" onclick="showToast('Nova convocatória (prévia)')">${I.plus} Nova</button>` : ''}
   </div>
   ${!canCreate ? `<div style="padding:10px 14px;background:var(--primary-subtle);border-radius:8px;font-size:12px;color:var(--primary);margin-bottom:16px">
-    Modo leitura — apenas o master pode criar ou editar avisos.
+    ${I.lock.replace('48','14').replace('48','14')} Modo leitura — apenas o master pode criar ou editar avisos.
   </div>` : ''}
-  <div id="notices-list" style="display:flex;flex-direction:column;gap:12px">
-    ${notices.map((n,i)=>`
+  <div style="display:flex;flex-direction:column;gap:12px">
+    ${notices.map(n=>`
     <div class="card notice-card ${n.type}">
       <div class="nc-meta">
         <span class="nc-type ${n.type}">${n.type==='convocatoria'?'Convocatória':'Aviso'}</span>
         ${n.priority==='urgente'?'<span style="font-size:10px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:.5px">● Urgente</span>':''}
-        ${canCreate ? `<button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="editNotice(${i})">Editar</button>` : ''}
+        ${canCreate ? `<button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="showToast('Editar aviso (prévia)')">Editar</button>` : ''}
       </div>
       <h4>${n.title}</h4>
       <p>${n.body}</p>
       <div class="nc-footer"><span>${n.date}</span><span>${n.author}</span></div>
     </div>`).join('')}
   </div>`
-}
-
-let noticesData = [
-  {type:'convocatoria',priority:'urgente',title:'Reunião Plenária Extraordinária – CT I',body:'Convocamos todos os conselheiros para reunião plenária extraordinária no dia 20/09/2026 às 14h, na sede do CT I, para deliberação sobre casos urgentes em andamento.',date:'18 set. 2026',author:'Fabio Pereira'},
-  {type:'aviso',priority:'normal',title:'Atualização do Sistema de Registro',body:'Informamos que o sistema passará por manutenção no dia 22/09 das 22h às 02h. Atendimentos devem ser registrados manualmente neste período.',date:'17 set. 2026',author:'Admin CT Salvador'},
-  {type:'convocatoria',priority:'normal',title:'Capacitação: ECA e Jurisprudência 2026',body:'Capacitação obrigatória para todos os conselheiros. Módulo: Jurisprudência recente e aplicação do ECA. Data: 25/09 às 09h. Local: CMDCA Salvador.',date:'15 set. 2026',author:'CMDCA Salvador'},
-  {type:'aviso',priority:'normal',title:'Novo Formulário de Escuta Especializada',body:'O formulário 22 – Escuta Especializada foi revisado conforme Resolução nº 231/2026 do CONANDA. Baixe o novo modelo em Formulários.',date:'12 set. 2026',author:'Coordenação CT'},
-]
-
-function showNoticaModal(idx) {
-  const editing = idx !== undefined
-  const n = editing ? noticesData[idx] : {type:'aviso',priority:'normal',title:'',body:''}
-  document.getElementById('modal-root').innerHTML = `
-  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-    <div class="modal-box">
-      <div class="modal-title">${I.megaphone} ${editing?'Editar':'Nova'} Publicação</div>
-      <div class="field-group"><label class="field-label">Tipo</label>
-        <select id="m-ntype">
-          <option value="aviso" ${n.type==='aviso'?'selected':''}>Aviso</option>
-          <option value="convocatoria" ${n.type==='convocatoria'?'selected':''}>Convocatória</option>
-        </select></div>
-      <div class="field-group"><label class="field-label">Prioridade</label>
-        <select id="m-nprio">
-          <option value="normal" ${n.priority==='normal'?'selected':''}>Normal</option>
-          <option value="urgente" ${n.priority==='urgente'?'selected':''}>Urgente</option>
-        </select></div>
-      <div class="field-group"><label class="field-label">Título</label>
-        <input id="m-ntitle" value="${n.title}" placeholder="Título da publicação" /></div>
-      <div class="field-group"><label class="field-label">Conteúdo</label>
-        <textarea id="m-nbody" rows="4" placeholder="Texto da convocatória ou aviso...">${n.body}</textarea></div>
-      <div class="modal-footer">
-        ${editing?`<button class="btn btn-danger" onclick="deleteNotice(${idx})">Excluir</button>`:''}
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveNotice(${editing?idx:'undefined'})">Salvar</button>
-      </div>
-    </div>
-  </div>`
-}
-function editNotice(i){ showNoticaModal(i) }
-function saveNotice(idx){
-  const type = document.getElementById('m-ntype').value
-  const prio = document.getElementById('m-nprio').value
-  const title = document.getElementById('m-ntitle').value.trim()
-  const body = document.getElementById('m-nbody').value.trim()
-  if(!title||!body){showToast('Preencha título e conteúdo.');return}
-  const today = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).replace('.','')+'.'+new Date().getFullYear()
-  const entry = {type,priority:prio,title,body,date:new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}),author:currentUser.name}
-  if(idx===undefined||idx==='undefined') noticesData.unshift(entry)
-  else noticesData[idx]=entry
-  closeModal()
-  navigate('notices')
-  showToast(idx===undefined||idx==='undefined'?'Publicação criada!':'Publicação atualizada!')
-}
-function deleteNotice(i){
-  noticesData.splice(i,1)
-  closeModal()
-  navigate('notices')
-  showToast('Publicação excluída.')
 }
 
 // ── STATISTICS ──
@@ -1045,19 +911,19 @@ function renderDaily() {
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
     <div><h2>Lançamentos Diários</h2>
     <p>18 set. 2026${role==='conselheiro'?' · Apenas seus registros':''}</p></div>
-    <button class="btn btn-primary" onclick="showLancamentoModal()">${I.plus} Novo</button>
+    <button class="btn btn-primary" onclick="showToast('Novo lançamento (prévia)')">${I.plus} Novo</button>
   </div>
   ${role==='conselheiro'?`<div style="padding:10px 14px;background:var(--primary-subtle);border-radius:8px;font-size:12px;color:var(--primary);margin-bottom:16px">
     Você está visualizando apenas seus próprios lançamentos.
   </div>`:''}
   <div class="card"><div class="table-wrap"><table>
     <thead><tr><th>Protocolo</th><th>Nome</th><th>Tipo</th><th>Hora</th><th>Status</th><th>Ações</th></tr></thead>
-    <tbody>${lancamentosData.map((l,i)=>`<tr>
-      <td><span style="font-size:11px;font-family:monospace;color:var(--text-muted)">${l.protocolo}</span></td>
-      <td><strong>${l.nome}</strong></td><td style="color:var(--text-muted)">${l.tipo}</td>
-      <td style="font-variant-numeric:tabular-nums">${l.hora}</td>
-      <td><span class="status-chip st-${l.sc}">${l.status}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="showLancamentoModal(${i})">Editar</button></td>
+    <tbody>${rows.map(([p,n,t,h,s,sc])=>`<tr>
+      <td><span style="font-size:11px;font-family:monospace;color:var(--text-muted)">${p}</span></td>
+      <td><strong>${n}</strong></td><td style="color:var(--text-muted)">${t}</td>
+      <td style="font-variant-numeric:tabular-nums">${h}</td>
+      <td><span class="status-chip st-${sc}">${s}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="showToast('Editar lançamento')">Editar</button></td>
     </tr>`).join('')}</tbody>
   </table></div></div>`
 }
@@ -1070,19 +936,23 @@ function renderAgenda() {
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
     <div><h2>Agenda</h2>
     <p>${role==='atendente'?'Todos os conselheiros – CT01':'Semana de 15 a 21/09/2026'}</p></div>
-    ${canAdd?`<button class="btn btn-primary" onclick="showEventoModal()">${I.plus} Novo</button>`:''}
+    ${canAdd?`<button class="btn btn-primary" onclick="showToast('Novo evento (prévia)')">${I.plus} Novo</button>`:''}
   </div>
   ${role==='atendente'?`<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#16a34a;margin-bottom:16px">
     Exibindo agenda de todos os conselheiros do CT01. Somente leitura.
   </div>`:''}
-  ${['Hoje','Sexta','Sábado','Segunda'].map(dia=>{
-    const evs=eventosData.filter(e=>e.dia===dia)
-    if(!evs.length)return''
-    return `<div class="agenda-day">
-      <div class="agenda-day-label">${dia==='Hoje'?'Hoje – Sáb, 19 set.':dia+', set.'}</div>
-      ${evs.map(e=>aitem(e.time,e.title,e.sub,e.cls,e.who)).join('')}
-    </div>`
-  }).join('')}`
+  <div class="agenda-day">
+    <div class="agenda-day-label">Hoje – Quinta, 18 set.</div>
+    ${aitem('09:00','Atendimento – Maria Silva','Violência doméstica · Sede CT I','ev-atendimento','Felipe Matos')}
+    ${aitem('11:30','Visita Domiciliar','Família Carvalho · Bairro Liberdade','ev-visita','Ana Costa')}
+    ${aitem('14:00','Reunião com CRAS Bonfim','Encaminhamentos pendentes','ev-reuniao','Felipe Matos')}
+    ${aitem('16:30','Atendimento – João Pedro','Negligência escolar','ev-atendimento','Ana Costa')}
+  </div>
+  <div class="agenda-day">
+    <div class="agenda-day-label">Sexta, 19 set.</div>
+    ${aitem('09:00','Plantão – Sede CT I','Início de plantão regular','ev-visita','Todos')}
+    ${aitem('14:00','Capacitação ECA – CMDCA','Jurisprudência 2026 (obrigatório)','ev-reuniao','Todos')}
+  </div>`
 }
 function aitem(time,title,sub,cls,who) {
   return `<div class="agenda-item">
@@ -1115,7 +985,6 @@ function rrow(n,p,t,s) {
 // ── FORMS ──
 function renderForms() {
   if (formsFillActive !== null) return renderFormFill(formsFillActive)
-  const role = currentUser?.role
   const cats = ['Todos',...new Set(FORMS.map(f=>f.category))]
   const filtered = FORMS.filter(f => {
     const mc = formsCategory==='Todos'||f.category===formsCategory
@@ -1123,20 +992,7 @@ function renderForms() {
     return mc && ms
   })
   return `
-  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
-    <div><h2>Formulários</h2><p>${FORMS.length} modelos · Cabeçalho preenchido automaticamente</p></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${role==='master'?`<button class="btn btn-outline btn-sm" onclick="openCrudForms()">✏️ Gerenciar formulários</button>`:''}
-      <button class="btn btn-outline btn-sm" onclick="openAgendaModal()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Destinatários (${emailAgenda.length})
-      </button>
-      <button class="btn btn-outline btn-sm" onclick="openSenderConfig()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
-        ${senderConfig.configured ? '✓ Remetente' : 'Remetente'}
-      </button>
-    </div>
-  </div>
+  <div class="page-header"><h2>Formulários</h2><p>${FORMS.length} modelos · Cabeçalho preenchido automaticamente</p></div>
   <div class="council-banner card">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></svg>
     <div class="cb-text"><strong>Conselho Tutelar I – CT 01</strong>Av. Princesa Isabel, 1000 · Bonfim · Salvador/BA · (71) 3115-0001 · ct01@salvador.ba.gov.br</div>
@@ -1164,523 +1020,8 @@ function getFormsGrid(filtered) {
     <div class="fc-cat">${f.category}</div>
   </div>`).join('') || '<div class="empty" style="grid-column:1/-1"><p>Nenhum formulário encontrado.</p></div>'
 }
-
-// ── MODAL HELPERS ──
-function showModal(html) {
-  const root = document.getElementById('modal-root')
-  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">${html}</div>`
-}
-function closeModal() {
-  document.getElementById('modal-root').innerHTML = ''
-}
-
-// ── CRUD FORMULÁRIOS (master) ──
-function openCrudForms() {
-  const cats = [...new Set(FORMS.map(f=>f.category))]
-  showModal(`
-    <div class="modal-box" style="max-width:640px">
-      <div class="modal-title">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
-        Gerenciar Formulários
-      </div>
-
-      <!-- Adicionar novo -->
-      <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:16px">
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">Adicionar formulário</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div><label class="field-label">Nome</label><input id="crud-new-name" placeholder="Nome do formulário" /></div>
-          <div><label class="field-label">Categoria</label>
-            <input id="crud-new-cat" placeholder="Categoria" list="crud-cat-list" />
-            <datalist id="crud-cat-list">${cats.map(c=>`<option value="${c}">`).join('')}</datalist>
-          </div>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="crudAddForm()">+ Adicionar</button>
-      </div>
-
-      <!-- Lista -->
-      <div style="max-height:380px;overflow-y:auto">
-        ${FORMS.map(f=>`
-          <div class="form-admin-row" id="crud-row-${f.id}">
-            <div class="form-admin-name" id="crud-name-${f.id}">${f.name}</div>
-            <div class="form-admin-cat" id="crud-cat-${f.id}">${f.category}</div>
-            <div class="form-admin-actions">
-              <button title="Renomear" onclick="crudEditForm(${f.id})">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
-              <button title="Excluir" onclick="crudDeleteForm(${f.id})" style="color:var(--danger)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-              </button>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">Fechar</button>
-      </div>
-    </div>
-  `)
-}
-
-function crudAddForm() {
-  const name = document.getElementById('crud-new-name').value.trim()
-  const cat = document.getElementById('crud-new-cat').value.trim()
-  if (!name || !cat) { showToast('Preencha nome e categoria.'); return }
-  const newId = Math.max(...FORMS.map(f=>f.id)) + 1
-  FORMS.push({ id: newId, name, category: cat })
-  showToast(`Formulário "${name}" adicionado!`)
-  openCrudForms()
-}
-
-function crudEditForm(id) {
-  const f = FORMS.find(f=>f.id===id)
-  if (!f) return
-  const nameEl = document.getElementById(`crud-name-${id}`)
-  const catEl = document.getElementById(`crud-cat-${id}`)
-  const cats = [...new Set(FORMS.map(f=>f.category))]
-  nameEl.innerHTML = `<input id="edit-name-${id}" value="${f.name}" style="height:28px;font-size:12px;padding:4px 8px" />`
-  catEl.innerHTML = `<input id="edit-cat-${id}" value="${f.category}" style="height:28px;font-size:12px;padding:4px 8px;width:130px" list="edit-cat-list-${id}" /><datalist id="edit-cat-list-${id}">${cats.map(c=>`<option value="${c}">`).join('')}</datalist>`
-  const row = document.getElementById(`crud-row-${id}`)
-  // troca botão editar por salvar
-  const btns = row.querySelector('.form-admin-actions')
-  btns.innerHTML = `
-    <button title="Salvar" onclick="crudSaveForm(${id})" style="color:var(--success)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-    </button>
-    <button title="Cancelar" onclick="openCrudForms()">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>`
-}
-
-function crudSaveForm(id) {
-  const f = FORMS.find(f=>f.id===id)
-  if (!f) return
-  const newName = document.getElementById(`edit-name-${id}`)?.value.trim()
-  const newCat = document.getElementById(`edit-cat-${id}`)?.value.trim()
-  if (!newName || !newCat) { showToast('Nome e categoria não podem ficar vazios.'); return }
-  f.name = newName
-  f.category = newCat
-  showToast('Formulário atualizado!')
-  openCrudForms()
-}
-
-function crudDeleteForm(id) {
-  const f = FORMS.find(f=>f.id===id)
-  if (!f) return
-  if (!confirm(`Excluir "${f.name}"?`)) return
-  const idx = FORMS.indexOf(f)
-  FORMS.splice(idx, 1)
-  showToast('Formulário removido.')
-  openCrudForms()
-}
-
-// ── CONFIGURAR REMETENTE ──
-function openSenderConfig() {
-  showModal(`
-    <div class="modal-box">
-      <div class="modal-title">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
-        Configurar Remetente de E-mail
-      </div>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
-        Configure o e-mail remetente que aparecerá nas requisições enviadas pelo sistema. Estes dados são usados para pré-preencher e assinar os e-mails enviados aos cartórios.
-      </p>
-      <div style="display:grid;gap:12px">
-        <div><label class="field-label">Nome Completo</label><input id="sender-name" placeholder="Ex: Fabio Pereira" value="${senderConfig.name}" /></div>
-        <div><label class="field-label">E-mail Institucional</label><input id="sender-email" type="email" placeholder="seu@email.gov.br" value="${senderConfig.email}" /></div>
-        <div><label class="field-label">Cargo</label>
-          <select id="sender-cargo">
-            ${['Conselheiro(a) Tutelar','Coordenador(a)','Atendente'].map(c=>`<option ${senderConfig.cargo===c?'selected':''}>${c}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveSenderConfig()">Salvar remetente</button>
-      </div>
-    </div>
-  `)
-}
-
-function saveSenderConfig() {
-  const name = document.getElementById('sender-name').value.trim()
-  const email = document.getElementById('sender-email').value.trim()
-  const cargo = document.getElementById('sender-cargo').value
-  if (!name || !email) { showToast('Preencha nome e e-mail.'); return }
-  senderConfig = { name, email, cargo, configured: true }
-  closeModal()
-  showToast('Remetente configurado com sucesso!')
-  // Atualiza a lista de formulários para refletir o status
-  if (formsFillActive === null) {
-    document.getElementById('content').innerHTML = renderForms()
-    attachFormsEvents()
-  }
-}
-
-// ── AGENDA DE DESTINATÁRIOS ──
-const AGENDA_TIPOS = ['Cartório','CRAS','CREAS','Delegacia','Defensoria Pública','Escola','Hospital','Outro']
-
-function openAgendaModal(selectMode, onSelect) {
-  const tipoFiltro = { current: 'Todos' }
-  const renderRows = (filtro='Todos') => emailAgenda
-    .filter(d => filtro==='Todos' || d.tipo===filtro)
-    .map(d => `
-      <div class="form-admin-row" id="ag-row-${d.id}">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="ag-name-${d.id}">${d.nome}</div>
-          <div style="font-size:11px;color:var(--text-muted)" id="ag-email-${d.id}">${d.email}${d.tel?' · '+d.tel:''}</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:20px;padding:2px 8px;white-space:nowrap;margin:0 8px">${d.tipo}</div>
-        <div class="form-admin-actions">
-          ${selectMode ? `<button title="Selecionar" onclick="agendaSelect('${d.id}')" style="color:var(--accent);font-size:11px;white-space:nowrap;padding:0 6px;width:auto">Usar →</button>` : ''}
-          <button title="Editar" onclick="agendaEdit('${d.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          <button title="Excluir" onclick="agendaDelete('${d.id}')" style="color:var(--danger)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-          </button>
-        </div>
-      </div>
-    `).join('') || '<div style="padding:20px;color:var(--text-muted);font-size:13px;text-align:center">Nenhum destinatário cadastrado.</div>'
-
-  // guardar callback para modo seleção
-  window._agendaSelectCb = onSelect || null
-  window._agendaSelectMode = !!selectMode
-
-  showModal(`
-    <div class="modal-box" style="max-width:620px">
-      <div class="modal-title">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        ${selectMode ? 'Selecionar Destinatário' : 'Cadastro de Destinatários'}
-      </div>
-
-      <!-- Adicionar novo -->
-      <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:14px">
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">Novo destinatário</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div><label class="field-label">Nome / Instituição</label><input id="ag-new-nome" placeholder="Ex: CRAS Liberdade" /></div>
-          <div><label class="field-label">E-mail</label><input id="ag-new-email" type="email" placeholder="contato@instituicao.gov.br" /></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <div><label class="field-label">Tipo</label>
-            <select id="ag-new-tipo">${AGENDA_TIPOS.map(t=>`<option>${t}</option>`).join('')}</select>
-          </div>
-          <div><label class="field-label">Telefone <span style="font-weight:400">(opcional)</span></label><input id="ag-new-tel" placeholder="(71) 9 9999-9999" /></div>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="agendaAdd()">+ Adicionar</button>
-      </div>
-
-      <!-- Filtro por tipo -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-        ${['Todos',...AGENDA_TIPOS].map(t=>`
-          <button class="chip${t==='Todos'?' active':''}" id="ag-chip-${t.replace(/\s/g,'_')}"
-            onclick="agendaFiltrar('${t}')">${t}</button>
-        `).join('')}
-      </div>
-
-      <!-- Lista -->
-      <div id="ag-lista" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:0 4px">
-        ${renderRows()}
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">${selectMode ? 'Cancelar' : 'Fechar'}</button>
-      </div>
-    </div>
-  `)
-
-  // guardar renderRows para reuso
-  window._agendaRenderRows = renderRows
-}
-
-function agendaFiltrar(tipo) {
-  document.querySelectorAll('[id^="ag-chip-"]').forEach(b => b.classList.remove('active'))
-  const chipId = 'ag-chip-' + tipo.replace(/\s/g,'_')
-  const chip = document.getElementById(chipId)
-  if (chip) chip.classList.add('active')
-  const lista = document.getElementById('ag-lista')
-  if (lista && window._agendaRenderRows) lista.innerHTML = window._agendaRenderRows(tipo)
-}
-
-function agendaAdd() {
-  const nome = document.getElementById('ag-new-nome').value.trim()
-  const email = document.getElementById('ag-new-email').value.trim()
-  const tipo = document.getElementById('ag-new-tipo').value
-  const tel = document.getElementById('ag-new-tel').value.trim()
-  if (!nome || !email) { showToast('Preencha nome e e-mail.'); return }
-  const id = 'ag' + (agendaNextId++)
-  emailAgenda.push({ id, nome, email, tipo, tel })
-  showToast(`"${nome}" adicionado à agenda!`)
-  openAgendaModal(window._agendaSelectMode, window._agendaSelectCb)
-}
-
-function agendaEdit(id) {
-  const d = emailAgenda.find(x=>x.id===id)
-  if (!d) return
-  const nameEl = document.getElementById(`ag-name-${id}`)
-  const emailEl = document.getElementById(`ag-email-${id}`)
-  const row = document.getElementById(`ag-row-${id}`)
-  nameEl.innerHTML = `<input id="ag-edit-nome-${id}" value="${d.nome}" style="height:26px;font-size:12px;padding:3px 6px" />`
-  emailEl.innerHTML = `
-    <input id="ag-edit-email-${id}" value="${d.email}" style="height:24px;font-size:11px;padding:2px 6px;width:calc(100% - 90px);display:inline-block" />
-    <input id="ag-edit-tel-${id}" value="${d.tel||''}" placeholder="tel" style="height:24px;font-size:11px;padding:2px 6px;width:82px;display:inline-block;margin-left:4px" />`
-  const btns = row.querySelector('.form-admin-actions')
-  const prevHtml = btns.innerHTML
-  btns.innerHTML = `
-    <button title="Salvar" onclick="agendaSave('${id}')" style="color:var(--success)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-    </button>
-    <button title="Cancelar" onclick="openAgendaModal(window._agendaSelectMode,window._agendaSelectCb)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>`
-}
-
-function agendaSave(id) {
-  const d = emailAgenda.find(x=>x.id===id)
-  if (!d) return
-  d.nome = document.getElementById(`ag-edit-nome-${id}`)?.value.trim() || d.nome
-  d.email = document.getElementById(`ag-edit-email-${id}`)?.value.trim() || d.email
-  d.tel = document.getElementById(`ag-edit-tel-${id}`)?.value.trim() || ''
-  showToast('Destinatário atualizado!')
-  openAgendaModal(window._agendaSelectMode, window._agendaSelectCb)
-}
-
-function agendaDelete(id) {
-  const d = emailAgenda.find(x=>x.id===id)
-  if (!d || !confirm(`Excluir "${d.nome}"?`)) return
-  emailAgenda = emailAgenda.filter(x=>x.id!==id)
-  showToast('Destinatário removido.')
-  openAgendaModal(window._agendaSelectMode, window._agendaSelectCb)
-}
-
-function agendaSelect(id) {
-  const d = emailAgenda.find(x=>x.id===id)
-  if (!d) return
-  closeModal()
-  if (window._agendaSelectCb) window._agendaSelectCb(d)
-}
-
-// ── MODAL ENVIO DE E-MAIL AO CARTÓRIO ──
-function openEmailModal(tipoCertidao) {
-  if (!senderConfig.configured) {
-    showToast('Configure o remetente antes de enviar. Use o botão "Configurar remetente".')
-    openSenderConfig()
-    return
-  }
-  showModal(`
-    <div class="modal-box" style="max-width:560px">
-      <div class="modal-title">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
-        Enviar Requisição por E-mail
-      </div>
-
-      <!-- Remetente -->
-      <div style="background:var(--primary-subtle);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px">
-        <div style="font-weight:700;color:var(--primary);margin-bottom:4px">De: ${senderConfig.name} &lt;${senderConfig.email}&gt;</div>
-        <div style="color:var(--text-muted)">${senderConfig.cargo} · Conselho Tutelar I – CT 01</div>
-        <button onclick="openSenderConfig()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;margin-top:4px;padding:0">Alterar remetente</button>
-      </div>
-
-      <!-- Subdistrito / Cartório destino -->
-      <div style="margin-bottom:14px">
-        <label class="field-label">Comarca / Subdistrito do cartório destinatário</label>
-        <select id="email-cartorio" onchange="updateCartorioEmail()" style="margin-top:4px">
-          <option value="">— Selecione o subdistrito —</option>
-          ${CARTORIOS_SALVADOR.map((c,i) =>
-            c.subdistritos.map(s =>
-              `<option value="${i}|${s}">${s} — ${c.oficio}</option>`
-            ).join('')
-          ).join('')}
-        </select>
-      </div>
-
-      <div id="cartorio-info" style="display:none;background:var(--bg);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.8">
-        <div><strong>Cartório:</strong> <span id="ci-oficio"></span></div>
-        <div><strong>Endereço:</strong> <span id="ci-end"></span></div>
-        <div><strong>Telefone:</strong> <span id="ci-tel"></span></div>
-        <div><strong>E-mail:</strong> <span id="ci-email" style="color:var(--accent)"></span></div>
-      </div>
-
-      <!-- Para / E-mail destino -->
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-          <label class="field-label" style="margin:0">Para: (destinatário)</label>
-          <button onclick="openAgendaModal(true, d=>{ document.getElementById('email-to').value=d.email; document.getElementById('email-to-label').textContent=d.nome+' <'+d.email+'>'; document.getElementById('email-to-label').style.display='block'; })"
-            style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Buscar na agenda
-          </button>
-        </div>
-        <div id="email-to-label" style="display:none;font-size:12px;color:var(--primary);font-weight:600;background:var(--primary-subtle);padding:6px 10px;border-radius:6px;margin-bottom:6px"></div>
-        <input id="email-to" placeholder="ou digite o e-mail manualmente" />
-      </div>
-
-      <!-- CC opcional -->
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-          <label class="field-label" style="margin:0">Com Cópia – CC <span style="font-weight:400;text-transform:none">(opcional)</span></label>
-          <button onclick="openAgendaModal(true, d=>{ const cc=document.getElementById('email-cc'); cc.value=cc.value?cc.value+', '+d.email:d.email; })"
-            style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            + Adicionar da agenda
-          </button>
-        </div>
-        <input id="email-cc" placeholder="e-mail1@exemplo.com, e-mail2@exemplo.com" />
-      </div>
-
-      <!-- Assunto -->
-      <div style="margin-bottom:14px">
-        <label class="field-label">Assunto</label>
-        <input id="email-subject" value="Requisição de Certidão de ${tipoCertidao || 'Nascimento'} – Conselho Tutelar I" style="margin-top:4px" />
-      </div>
-
-      <!-- Corpo do e-mail -->
-      <div style="margin-bottom:14px">
-        <label class="field-label">Mensagem</label>
-        <textarea id="email-body" rows="7" style="margin-top:4px;resize:vertical;font-size:12px;line-height:1.7">${gerarCorpoEmail(tipoCertidao)}</textarea>
-      </div>
-
-      <div id="email-sent-status" style="display:none" class="email-sent-badge">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-        E-mail preparado no cliente de e-mail!
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="enviarEmail()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          Enviar E-mail
-        </button>
-      </div>
-    </div>
-  `)
-}
-
-function updateCartorioEmail() {
-  const sel = document.getElementById('email-cartorio').value
-  const info = document.getElementById('cartorio-info')
-  if (!sel) { info.style.display='none'; return }
-  const [idx] = sel.split('|')
-  const c = CARTORIOS_SALVADOR[parseInt(idx)]
-  document.getElementById('ci-oficio').textContent = c.oficio
-  document.getElementById('ci-end').textContent = c.end
-  document.getElementById('ci-tel').textContent = c.tel
-  document.getElementById('ci-email').textContent = c.email
-  document.getElementById('email-to').value = c.email
-  info.style.display = 'block'
-}
-
-function gerarCorpoEmail(tipoCertidao) {
-  const data = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})
-  return `Ilmo.(a). Sr.(a). Oficial de Registro,
-
-O Conselho Tutelar I da Criança e do Adolescente do Município de Salvador, no uso de suas atribuições legais (Art. 136 do ECA – Lei 8.069/1990), vem por meio deste REQUISITAR a expedição de Certidão de ${tipoCertidao||'Nascimento'}, conforme documento em anexo.
-
-Solicitamos a gentileza de processar a requisição com brevidade, tendo em vista a natureza urgente da proteção dos direitos da criança/adolescente envolvido(a).
-
-Atenciosamente,
-${senderConfig.name}
-${senderConfig.cargo}
-Conselho Tutelar I – CT 01 · Salvador/BA
-${senderConfig.email}
-
-Salvador, ${data}.`
-}
-
-function gerarProtocoloRequisicao() {
-  requisicaoCounter++
-  const now = new Date()
-  const yy = now.getFullYear()
-  const mm = String(now.getMonth()+1).padStart(2,'0')
-  const seq = String(requisicaoCounter).padStart(3,'0')
-  return `REQ-${yy}/${mm}-${seq}`
-}
-
-async function enviarEmail() {
-  const to = document.getElementById('email-to').value.trim()
-  const cc = document.getElementById('email-cc')?.value.trim() || ''
-  const subject = document.getElementById('email-subject').value.trim()
-  const body = document.getElementById('email-body').value.trim()
-  if (!to) { showToast('Informe o e-mail do destinatário.'); return }
-  let mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-  if (cc) mailto += `&cc=${encodeURIComponent(cc)}`
-  window.open(mailto, '_blank')
-  document.getElementById('email-sent-status').style.display = 'flex'
-  showToast('Abrindo cliente de e-mail…')
-
-  // Registrar requisição no backend
-  const cartorioSel = document.getElementById('email-cartorio')?.value || ''
-  let cartorioNome = to
-  let subdistrito = ''
-  if (cartorioSel) {
-    const [idx, sub] = cartorioSel.split('|')
-    cartorioNome = CARTORIOS_SALVADOR[parseInt(idx)]?.oficio || to
-    subdistrito = sub || ''
-  }
-  const tipoMatch = subject.match(/Certidão de (\w+)/i)
-  const tipoCertidao = tipoMatch ? tipoMatch[1] : 'Nascimento'
-
-  try {
-    const nova = await apiFetch('/api/requisicoes', {
-      method: 'POST',
-      body: JSON.stringify({
-        solicitante: currentUser.name,
-        solicitante_ct: currentUser.ct || 'CT-I',
-        cartorio: cartorioNome,
-        subdistrito,
-        email_destino: to,
-        tipo: tipoCertidao,
-        assunto: subject,
-      })
-    })
-    // Adiciona localmente para feedback imediato
-    requisicoes.unshift({
-      protocolo: nova.protocolo,
-      data: new Date(nova.created_at).toLocaleDateString('pt-BR'),
-      hora: new Date(nova.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      solicitante: nova.solicitante,
-      solicitanteCt: nova.solicitante_ct,
-      cartorio: nova.cartorio,
-      subdistrito: nova.subdistrito || '',
-      emailDestino: nova.email_destino,
-      tipo: nova.tipo,
-      status: nova.status,
-      id: nova.id,
-      tem_mensagem_nao_lida: false,
-    })
-    showToast(`Requisição registrada – Protocolo: ${nova.protocolo}`)
-  } catch(e) {
-    console.error('Erro ao salvar requisição:', e)
-    // Fallback local se API falhar
-    const protocolo = gerarProtocoloRequisicao()
-    const now = new Date()
-    requisicoes.unshift({
-      protocolo,
-      data: now.toLocaleDateString('pt-BR'),
-      hora: now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      solicitante: currentUser.name,
-      solicitanteCt: currentUser.ct,
-      cartorio: cartorioNome,
-      subdistrito,
-      emailDestino: to,
-      tipo: tipoCertidao,
-      status: 'Enviada',
-    })
-    showToast('Requisição salva localmente (sem conexão com servidor)')
-  }
-}
 function renderFormFill(id) {
-  const form = FORMS.find(f => f.id === id)
-  if (id === 41) return renderFormRequisicaoCertidao(form)
-  // Gerar protocolo automático para Ficha de Atendimento Recepção (id:0)
-  let protocoloAtendimento = ''
-  if (id === 0) {
-    atendimentoCounter++
-    const now2 = new Date()
-    const yy2 = now2.getFullYear()
-    const mm2 = String(now2.getMonth()+1).padStart(2,'0')
-    const seq2 = String(atendimentoCounter).padStart(3,'0')
-    protocoloAtendimento = `${yy2}/${mm2}/${seq2}`
-  }
+  const form = FORMS[id]
   return `
   <div class="fill-header">
     <button onclick="backToForms()">${I.arrowleft} Voltar</button>
@@ -1699,10 +1040,7 @@ function renderFormFill(id) {
       <div class="field-row cols-3">
         <div><label class="field-label">Data</label><input type="date" value="2026-09-18" /></div>
         <div><label class="field-label">Hora</label><input type="time" value="09:00" /></div>
-        <div><label class="field-label">Protocolo${id===0?' (gerado automaticamente)':''}</label>
-          <input ${id===0?`value="${protocoloAtendimento}" readonly style="background:var(--primary-subtle);color:var(--primary);font-weight:600;cursor:default"`:`placeholder="Ex: 2026/09/247"`} />
-          ${id===0?`<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Protocolo gerado automaticamente. Anote-o para referência futura.</div>`:''}
-        </div>
+        <div><label class="field-label">Protocolo</label><input placeholder="Ex: 2026/09/247" /></div>
       </div>
       <div class="field-row cols-2">
         <div><label class="field-label">Nome Completo</label><input placeholder="Nome da criança/adolescente" /></div>
@@ -1778,279 +1116,6 @@ function renderFormFill(id) {
     </div>
   </div>`
 }
-function renderFormRequisicaoCertidao(form) {
-  const header = `
-  <div class="fill-header">
-    <button onclick="backToForms()">${I.arrowleft} Voltar</button>
-    <div style="flex:1">
-      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">${form.category} · Nº 41</div>
-      <h2 style="font-size:18px;font-weight:700">${form.name}</h2>
-    </div>
-    <button class="btn btn-primary" onclick="showToast('Documento gerado e baixado!')">${I.download} Baixar .docx</button>
-  </div>
-  <div class="council-banner card">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
-    <div class="cb-text"><strong>Cabeçalho preenchido automaticamente – Conselho Tutelar I</strong>Av. Princesa Isabel, 1000 · Bonfim · Salvador/BA · (71) 3115-0001</div>
-  </div>`
-
-  return header + `
-  <div class="card card-pad">
-    <div style="display:grid;gap:16px">
-
-      <!-- Destinatário -->
-      <div style="background:var(--primary-subtle);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;color:var(--text)">
-        <strong>Ao Cartório de Registro Civil das Pessoas Naturais</strong><br>
-        Comarca de <input style="display:inline;width:180px;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 4px;font-size:13px" placeholder="_______________" />
-        &nbsp;&nbsp;Subdistrito de <input style="display:inline;width:180px;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 4px;font-size:13px" placeholder="_______________" />
-        &nbsp;<strong>NESTA</strong>
-      </div>
-
-      <!-- Número do CT -->
-      <div class="field-row cols-2">
-        <div>
-          <label class="field-label">Nº do Conselho Tutelar</label>
-          <input placeholder="Ex: I, IV, XII…" value="I" />
-        </div>
-        <div>
-          <label class="field-label">Conselheiro(a) Requisitante</label>
-          <input value="${currentUser.name}" />
-        </div>
-      </div>
-
-      <div class="divider"></div>
-      <strong style="font-size:13px">Dados da pessoa requerida</strong>
-
-      <!-- Requerido -->
-      <div class="field-row cols-2">
-        <div><label class="field-label">Nome Completo</label><input placeholder="Nome do(a) requerido(a)" /></div>
-        <div><label class="field-label">Data de Nascimento</label><input type="date" /></div>
-      </div>
-      <div class="field-row cols-2">
-        <div><label class="field-label">CPF</label><input placeholder="000.000.000-00" /></div>
-        <div><label class="field-label">Filiação – Mãe</label><input placeholder="Nome da mãe" /></div>
-      </div>
-      <div><label class="field-label">Filiação – Pai</label><input placeholder="Nome do pai" /></div>
-
-      <div class="divider"></div>
-      <strong style="font-size:13px">Especificações da certidão</strong>
-
-      <!-- Tipo de certidão -->
-      <div>
-        <label class="field-label">Tipo de Certidão</label>
-        <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:6px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="radio" name="tipo-certidao" value="Nascimento" checked /> Nascimento
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="radio" name="tipo-certidao" value="Casamento" /> Casamento
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="radio" name="tipo-certidao" value="Óbito" /> Óbito
-          </label>
-        </div>
-      </div>
-
-      <!-- Modalidade -->
-      <div>
-        <label class="field-label">Modalidade da Certidão</label>
-        <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:6px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="radio" name="modalidade-certidao" value="Simples" checked /> Simples
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="radio" name="modalidade-certidao" value="Inteiro teor" /> Inteiro teor
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="radio" name="modalidade-certidao" value="Busca" /> Busca
-          </label>
-        </div>
-      </div>
-
-      <!-- Número de vias -->
-      <div style="max-width:200px">
-        <label class="field-label">Número de vias</label>
-        <select>
-          <option value="1">1ª via</option>
-          <option value="2">2ª via</option>
-          <option value="3">3ª via</option>
-        </select>
-      </div>
-
-      <div class="divider"></div>
-      <strong style="font-size:13px">Dados do Registro</strong>
-
-      <div class="field-row cols-3">
-        <div><label class="field-label">Data do Evento</label><input type="date" /></div>
-        <div><label class="field-label">Livro</label><input placeholder="Ex: A-15" /></div>
-        <div><label class="field-label">Folha</label><input placeholder="Ex: 42" /></div>
-      </div>
-      <div>
-        <label class="field-label">Termo</label>
-        <input placeholder="Nº do Termo" />
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- Data e local -->
-      <div class="field-row cols-2">
-        <div><label class="field-label">Local</label><input value="Salvador" /></div>
-        <div><label class="field-label">Data</label><input type="date" value="2026-09-18" /></div>
-      </div>
-
-      <div style="margin-top:8px;padding:12px;background:var(--primary-subtle);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.6">
-        <strong style="color:var(--primary)">Observação legal (ECA Art. 136):</strong> Em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental da criança e/ou do adolescente.
-      </div>
-
-    </div>
-    <div style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
-      <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
-      <button class="btn btn-outline" onclick="openEmailModal(document.querySelector('[name=tipo-certidao]:checked')?.value||'Nascimento')" style="color:var(--accent);border-color:var(--accent)">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
-        Enviar por e-mail ao Cartório
-      </button>
-      <button class="btn btn-primary" onclick="showToast('Requisição de Certidão gerada!')">${I.download} Gerar e Baixar</button>
-    </div>
-  </div>`
-}
-
-// ── REQUISIÇÕES DE CERTIDÃO ──
-const STATUS_REQUISICAO = ['Enviada','Em andamento','Concluída','Cancelada']
-const STATUS_COLORS = { 'Enviada':'var(--accent)', 'Em andamento':'var(--warning)', 'Concluída':'var(--success)', 'Cancelada':'var(--danger)' }
-
-async function carregarRequisicoes() {
-  try {
-    const params = new URLSearchParams()
-    if (currentUser.role !== 'master') params.set('solicitante', currentUser.name)
-    const data = await apiFetch('/api/requisicoes?' + params.toString())
-    requisicoes = data.map(r => ({
-      id: r.id,
-      protocolo: r.protocolo,
-      data: new Date(r.created_at).toLocaleDateString('pt-BR'),
-      hora: new Date(r.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      solicitante: r.solicitante,
-      solicitanteCt: r.solicitante_ct,
-      cartorio: r.cartorio,
-      subdistrito: r.subdistrito || '',
-      emailDestino: r.email_destino,
-      tipo: r.tipo,
-      status: r.status,
-      tem_mensagem_nao_lida: r.tem_mensagem_nao_lida || false,
-    }))
-  } catch(e) {
-    console.error('Erro ao carregar requisições:', e)
-  }
-  refreshRequisicoes()
-}
-
-function renderRequisicoes() {
-  const role = currentUser.role
-  const list = requisicoes
-  const busca = (document.getElementById('req-search')?.value || '').toLowerCase()
-  const filtro = document.getElementById('req-status-filter')?.value || ''
-  const filtered = list.filter(r =>
-    (!busca || r.protocolo.toLowerCase().includes(busca) || r.solicitante.toLowerCase().includes(busca) || r.cartorio.toLowerCase().includes(busca) || r.tipo.toLowerCase().includes(busca)) &&
-    (!filtro || r.status === filtro)
-  )
-  return `
-  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
-    <div>
-      <h2>Requisições de Certidão</h2>
-      <p>${list.length} registro(s)${role==='master'?' · todos os conselhos':' · suas requisições'}</p>
-    </div>
-    <button class="btn btn-primary" onclick="navigate('forms');setTimeout(()=>openFormFill(41),100)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Nova Requisição
-    </button>
-  </div>
-  <div class="card card-pad" style="margin-bottom:12px">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <input id="req-search" placeholder="Buscar por protocolo, solicitante, cartório…" style="flex:1;min-width:200px" oninput="refreshRequisicoes()" />
-      <select id="req-status-filter" style="width:160px" onchange="refreshRequisicoes()">
-        <option value="">Todos os status</option>
-        ${STATUS_REQUISICAO.map(s=>`<option value="${s}">${s}</option>`).join('')}
-      </select>
-    </div>
-  </div>
-  ${filtered.length === 0 ? `
-  <div class="card card-pad empty" style="text-align:center;padding:40px">
-    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="margin:0 auto 14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    <p style="color:var(--text-muted)">Nenhuma requisição encontrada.<br>Envie uma requisição de certidão para registrá-la aqui.</p>
-  </div>` : `
-  <div class="card"><div class="table-wrap"><table>
-    <thead><tr>
-      <th>Protocolo</th>
-      <th>Data</th>
-      ${role==='master'?'<th>Solicitante</th>':''}
-      <th>Cartório</th>
-      <th>Tipo</th>
-      <th>Status</th>
-      <th>Ações</th>
-    </tr></thead>
-    <tbody>
-      ${filtered.map((r,i) => `<tr>
-        <td>
-          <div style="display:flex;align-items:center;gap:6px">
-            <strong style="font-family:monospace;color:var(--primary)">${r.protocolo}</strong>
-            ${r.tem_mensagem_nao_lida ? `<span title="Nova mensagem do cartório" style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#d97706;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;border:1px solid #fde68a">
-              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              Resposta
-            </span>` : ''}
-          </div>
-        </td>
-        <td style="color:var(--text-muted);font-size:12px">${r.data} ${r.hora}</td>
-        ${role==='master'?`<td><div style="font-size:12px"><strong>${r.solicitante}</strong><br><span style="color:var(--text-muted)">${r.solicitanteCt}</span></div></td>`:''}
-        <td style="font-size:12px"><div><strong>${r.cartorio}</strong>${r.subdistrito?`<br><span style="color:var(--text-muted)">${r.subdistrito}</span>`:''}</div></td>
-        <td><span style="font-size:12px;background:var(--primary-subtle);color:var(--primary);padding:2px 8px;border-radius:12px">${r.tipo}</span></td>
-        <td><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:${STATUS_COLORS[r.status]}22;color:${STATUS_COLORS[r.status]}">${r.status}</span></td>
-        <td>
-          <select style="font-size:11px;padding:4px 6px;width:auto" onchange="alterarStatusRequisicao(${i},this.value)">
-            ${STATUS_REQUISICAO.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </td>
-      </tr>`).join('')}
-    </tbody>
-  </table></div></div>`}
-  `
-}
-
-function refreshRequisicoes() {
-  document.getElementById('content').innerHTML = renderRequisicoes()
-  attachRequisicaoEvents()
-}
-
-function attachRequisicaoEvents() {
-  const inp = document.getElementById('req-search')
-  if (inp) inp.addEventListener('input', refreshRequisicoes)
-}
-
-async function alterarStatusRequisicao(idxFiltered, novoStatus) {
-  const busca = (document.getElementById('req-search')?.value || '').toLowerCase()
-  const filtro = document.getElementById('req-status-filter')?.value || ''
-  const filtered = requisicoes.filter(r =>
-    (!busca || r.protocolo.toLowerCase().includes(busca) || r.solicitante.toLowerCase().includes(busca) || r.cartorio.toLowerCase().includes(busca) || r.tipo.toLowerCase().includes(busca)) &&
-    (!filtro || r.status === filtro)
-  )
-  const target = filtered[idxFiltered]
-  if (!target) return
-  const globalIdx = requisicoes.indexOf(target)
-  if (globalIdx !== -1) requisicoes[globalIdx].status = novoStatus
-  refreshRequisicoes()
-  // Salvar no backend
-  if (target.id) {
-    try {
-      await apiFetch(`/api/requisicoes/${target.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: novoStatus })
-      })
-      showToast(`Status atualizado para: ${novoStatus}`)
-    } catch(e) {
-      showToast('Erro ao salvar no servidor. Status atualizado localmente.')
-    }
-  } else {
-    showToast(`Status atualizado para: ${novoStatus}`)
-  }
-}
-
 function attachFormsEvents() {
   const inp = document.getElementById('forms-search')
   if (inp) inp.addEventListener('input', e => {
@@ -2069,37 +1134,36 @@ function updateFormsSearch(v) { formsSearch=v; document.getElementById('forms-gr
 
 // ── USERS (master only) ──
 function renderUsers() {
+  const users = [
+    {name:'Fabio Pereira',initials:'FP',role:'master',ct:'CT01',status:'ativo'},
+    {name:'Ana Costa',initials:'AC',role:'conselheiro',ct:'CT01',status:'ativo'},
+    {name:'Carlos Lima',initials:'CL',role:'conselheiro',ct:'CT02',status:'ativo'},
+    {name:'Márcia Rocha',initials:'MR',role:'atendente',ct:'CT01',status:'ativo'},
+    {name:'Paulo Souza',initials:'PS',role:'conselheiro',ct:'CT03',status:'inativo'},
+  ]
   const roleLabel = {master:'Master',conselheiro:'Conselheiro',atendente:'Atendente'}
   const roleClass = {master:'role-master',conselheiro:'role-conselheiro',atendente:'role-atendente'}
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
-    <div><h2>Gerenciar Usuários</h2><p>${usersData.length} usuários cadastrados${pendingUsers.length?` · ${pendingUsers.length} aguardando aprovação`:''}</p></div>
+    <div><h2>Gerenciar Usuários</h2><p>${users.length} usuários cadastrados${pendingUsers.length?` · ${pendingUsers.length} aguardando aprovação`:''}</p></div>
     <div style="display:flex;gap:8px">
       ${pendingUsers.length?`<button class="btn btn-outline" onclick="navigate('approvals')" style="color:var(--warning);border-color:var(--warning)">⏳ ${pendingUsers.length} pendentes</button>`:''}
-      <button class="btn btn-primary" onclick="showUserModal()">${I.plus} Novo</button>
+      <button class="btn btn-primary" onclick="showToast('Novo usuário (prévia)')">${I.plus} Novo</button>
     </div>
   </div>
   <div class="card"><div class="table-wrap"><table>
     <thead><tr><th>Usuário</th><th>Conselho</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
-    <tbody>${usersData.map((u,i)=>{
-      const initials=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()
-      const sc=u.status==='Ativo'?'ativo':'inativo'
-      return `<tr>
-      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:30px;height:30px;font-size:11px">${initials}</div><div><strong>${u.name}</strong><div style="font-size:11px;color:var(--text-muted)">${u.email}</div></div></div></td>
+    <tbody>${users.map(u=>`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:30px;height:30px;font-size:11px">${u.initials}</div><strong>${u.name}</strong></div></td>
       <td style="color:var(--text-muted)">${u.ct}</td>
-      <td><span class="role-badge ${roleClass[u.role]||'role-conselheiro'}">${roleLabel[u.role]||u.role}</span></td>
-      <td><span class="status-chip st-${sc}">${u.status}</span></td>
+      <td><span class="role-badge ${roleClass[u.role]}">${roleLabel[u.role]}</span></td>
+      <td><span class="status-chip st-${u.status}">${u.status==='ativo'?'Ativo':'Inativo'}</span></td>
       <td style="display:flex;gap:6px">
-        <button class="btn btn-outline btn-sm" onclick="showUserModal(${i})">Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="toggleUserStatus(${i})">${u.status==='Ativo'?'Desativar':'Ativar'}</button>
+        <button class="btn btn-outline btn-sm" onclick="showToast('Editar usuário')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="showToast('Usuário desativado')">Desativar</button>
       </td>
-    </tr>`}).join('')}</tbody>
+    </tr>`).join('')}</tbody>
   </table></div></div>`
-}
-function toggleUserStatus(i){
-  usersData[i].status=usersData[i].status==='Ativo'?'Inativo':'Ativo'
-  navigate('users')
-  showToast(`Usuário ${usersData[i].status==='Ativo'?'ativado':'desativado'}.`)
 }
 
 // ── APPROVALS (master only) ──
@@ -2141,680 +1205,6 @@ function rejectUser(id) {
 }
 
 // ── PLACEHOLDER ──
-// ── CONSELHOS E BAIRROS ──
-const CONSELHOS_BAIRROS = [
-  { num:'I', nome:'Conselho Tutelar I', bairros:['Barra','Graça','Vitória','Canela','Nazaré','Barris','Tororó','Garcia','Federação','Ondina','Rio Vermelho','Amaralina','Santa Cruz','Horto Florestal'] },
-  { num:'II', nome:'Conselho Tutelar II', bairros:['Liberdade','Pero Vaz','Pau Miúdo','Capelinha','Lobato','Periperi','Paripe','São Tomé de Paripe','Ilha de Maré','Coutos','Base Naval'] },
-  { num:'III', nome:'Conselho Tutelar III', bairros:['Brotas','Engenho Velho de Brotas','Retiro','Matatu','Cosme de Farias','Alto do Cabrito','Saramandaia','Tancredo Neves','Beiru','Cabula','Narandiba'] },
-  { num:'IV', nome:'Conselho Tutelar IV', bairros:['Bonfim','Massaranduba','Calçada','Mares','Roma','Pero Vaz','Uruguai','Boa Viagem','Penha','Ribeira','Plataforma','São João do Cabrito'] },
-  { num:'V', nome:'Conselho Tutelar V', bairros:['Pituba','Costa Azul','Caminho das Árvores','Itaigara','Stiep','Pernambués','Pau da Lima','Sussuarana','Novo Horizonte'] },
-  { num:'VI', nome:'Conselho Tutelar VI', bairros:['Cajazeiras I a XI','Valéria','São Cristóvão','Castelo Branco','Mussurunga','São Caetano','Fazenda Grande do Retiro','Fazenda Grande I, II, III e IV'] },
-  { num:'VII', nome:'Conselho Tutelar VII', bairros:['Itapuã','Stella Maris','Patamares','Piatã','Armação','Boca do Rio','Jardim de Allah','Jaguaripe','Praia do Flamengo'] },
-  { num:'VIII', nome:'Conselho Tutelar VIII', bairros:['Subúrbio Ferroviário','Plataforma','Periperi','Paripe','Coutos','Ilha de Maré','São Tomé de Paripe','Base Naval de Aratu'] },
-]
-
-function renderCouncils() {
-  const search = ''
-  return `
-  <div class="page-header">
-    <h2>Conselhos e Bairros</h2>
-    <p>Distribuição territorial dos Conselhos Tutelares de Salvador/BA</p>
-  </div>
-  <div class="card card-pad" style="margin-bottom:16px">
-    <input id="council-search" placeholder="Buscar conselho ou bairro…" oninput="filterCouncils(this.value)" />
-  </div>
-  <div id="councils-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">
-    ${CONSELHOS_BAIRROS.map(c => `
-    <div class="card council-card" data-search="${c.nome.toLowerCase()} ${c.bairros.join(' ').toLowerCase()}">
-      <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-        <div style="width:38px;height:38px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${c.num}</div>
-        <div>
-          <strong style="font-size:14px">${c.nome}</strong>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${c.bairros.length} bairros / localidades</div>
-        </div>
-      </div>
-      <div style="padding:14px">
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${c.bairros.map(b => `<span style="font-size:11px;background:var(--primary-subtle);color:var(--primary);padding:3px 9px;border-radius:20px">${b}</span>`).join('')}
-        </div>
-      </div>
-    </div>`).join('')}
-  </div>`
-}
-
-function filterCouncils(v) {
-  const q = v.toLowerCase()
-  document.querySelectorAll('.council-card').forEach(el => {
-    el.style.display = el.dataset.search.includes(q) ? '' : 'none'
-  })
-}
-
-// ── ESTATÍSTICAS GERAIS ──
-function renderGeneralStats() {
-  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-  const currentMonth = new Date().getMonth()
-  const data = [42,58,51,67,73,69,81,77,84,0,0,0].slice(0, currentMonth+1)
-  const maxVal = Math.max(...data)
-  return `
-  <div class="page-header">
-    <h2>Estatísticas Gerais</h2>
-    <p>Visão consolidada de todos os Conselhos Tutelares – ${new Date().getFullYear()}</p>
-  </div>
-  <div class="grid-3" style="margin-bottom:20px">
-    ${[
-      {label:'Atendimentos no Ano',value:'603',sub:'todos os conselhos',color:'var(--primary)'},
-      {label:'Casos em Aberto',value:'47',sub:'aguardando resolução',color:'var(--warning)'},
-      {label:'Requisições Enviadas',value:'128',sub:'certidões solicitadas',color:'var(--accent)'},
-      {label:'Encaminhamentos',value:'214',sub:'para rede de proteção',color:'var(--success)'},
-      {label:'Plantões Realizados',value:'96',sub:'fins de semana',color:'#7c3aed'},
-      {label:'Conselheiros Ativos',value:'40',sub:'em 8 conselhos',color:'#0891b2'},
-    ].map(s=>`
-    <div class="card stat-card">
-      <div class="label">${s.label}</div>
-      <div class="value" style="color:${s.color}">${s.value}</div>
-      <div class="sub">${s.sub}</div>
-    </div>`).join('')}
-  </div>
-  <div class="card card-pad" style="margin-bottom:16px">
-    <strong style="font-size:14px;display:block;margin-bottom:16px">Atendimentos por Mês – ${new Date().getFullYear()}</strong>
-    <div style="display:flex;align-items:flex-end;gap:8px;height:120px">
-      ${data.map((v,i)=>`
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-        <div style="font-size:10px;color:var(--text-muted);font-weight:600">${v}</div>
-        <div style="width:100%;background:${i===currentMonth?'var(--primary)':'var(--primary-subtle)'};border-radius:4px 4px 0 0;height:${Math.round((v/maxVal)*90)+10}px;min-height:10px;transition:height .3s"></div>
-        <div style="font-size:10px;color:var(--text-muted)">${months[i]}</div>
-      </div>`).join('')}
-    </div>
-  </div>
-  <div class="card"><div class="table-wrap"><table>
-    <thead><tr><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
-    <tbody>
-      ${CONSELHOS_BAIRROS.slice(0,6).map((c,i)=>{
-        const at=[84,71,63,58,77,68][i], ab=[6,8,4,7,9,5][i], enc=[27,21,19,18,24,20][i], pl=[12,10,8,11,13,9][i]
-        return `<tr>
-          <td><strong>CT ${c.num}</strong></td>
-          <td>${at}</td>
-          <td><span style="color:var(--warning);font-weight:600">${ab}</span></td>
-          <td>${enc}</td>
-          <td>${pl}</td>
-        </tr>`
-      }).join('')}
-    </tbody>
-  </table></div></div>`
-}
-
-// ── ÁLBUM DE FOTOS ──
-let photosData = [
-  {id:1,title:'Reunião Plenária – Agosto 2026',date:'15/08/2026',tags:['reunião','plenária'],color:'#1e3a5f'},
-  {id:2,title:'Capacitação em Rede de Proteção',date:'02/08/2026',tags:['capacitação','formação'],color:'#0891b2'},
-  {id:3,title:'Visita ao CREAS Brotas',date:'20/07/2026',tags:['visita','CREAS'],color:'#16a34a'},
-  {id:4,title:'Plantão Centralizado – Julho',date:'05/07/2026',tags:['plantão'],color:'#7c3aed'},
-  {id:5,title:'Semana da Criança 2025',date:'12/10/2025',tags:['evento','criança'],color:'#d97706'},
-  {id:6,title:'Formatura Conselheiros 2025',date:'20/12/2025',tags:['evento','formatura'],color:'#dc2626'},
-]
-let photosFilter = ''
-
-function renderPhotos() {
-  const filtered = photosFilter
-    ? photosData.filter(p => p.tags.some(t=>t.includes(photosFilter)) || p.title.toLowerCase().includes(photosFilter))
-    : photosData
-  return `
-  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
-    <div><h2>Álbum de Fotos</h2><p>${photosData.length} álbuns registrados</p></div>
-    <button class="btn btn-primary" onclick="showAddAlbumModal()">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Novo Álbum
-    </button>
-  </div>
-  <div class="card card-pad" style="margin-bottom:16px">
-    <input id="photos-search" placeholder="Buscar álbum ou tag…" oninput="filterPhotos(this.value)" />
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
-    ${filtered.map(p=>`
-    <div class="card" style="cursor:pointer;overflow:hidden;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openAlbum(${p.id})">
-      <div style="height:140px;background:linear-gradient(135deg,${p.color}dd,${p.color}88);display:flex;align-items:center;justify-content:center">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-      </div>
-      <div style="padding:14px">
-        <strong style="font-size:13px;display:block;margin-bottom:4px">${p.title}</strong>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${p.date}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${p.tags.map(t=>`<span style="font-size:11px;background:var(--primary-subtle);color:var(--primary);padding:2px 8px;border-radius:20px">${t}</span>`).join('')}
-        </div>
-      </div>
-    </div>`).join('')}
-  </div>`
-}
-
-function attachPhotosEvents() {}
-
-function filterPhotos(v) {
-  photosFilter = v.toLowerCase()
-  document.getElementById('content').innerHTML = renderPhotos()
-  attachPhotosEvents()
-}
-
-function openAlbum(id) {
-  const p = photosData.find(x=>x.id===id)
-  if (!p) return
-  document.getElementById('modal-root').innerHTML = `
-  <div class="modal-backdrop" onclick="closeModal()">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="modal-title">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-        ${p.title}
-      </div>
-      <div style="height:200px;background:linear-gradient(135deg,${p.color}dd,${p.color}55);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
-        <div style="text-align:center;color:rgba(255,255,255,.8)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-          <p style="margin-top:8px;font-size:13px">Adicione fotos ao álbum</p>
-        </div>
-      </div>
-      <div style="margin-bottom:16px">
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Data: ${p.date}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">${p.tags.map(t=>`<span style="font-size:12px;background:var(--primary-subtle);color:var(--primary);padding:3px 10px;border-radius:20px">${t}</span>`).join('')}</div>
-      </div>
-      <div style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer" onclick="showToast('Upload de fotos disponível no app completo')">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin:0 auto 8px;display:block"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <p style="font-size:13px;color:var(--text-muted)">Clique para adicionar fotos</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-danger btn-sm" onclick="deleteAlbum(${p.id})">Excluir Álbum</button>
-        <button class="btn btn-outline" onclick="closeModal()">Fechar</button>
-      </div>
-    </div>
-  </div>`
-}
-
-function showAddAlbumModal() {
-  document.getElementById('modal-root').innerHTML = `
-  <div class="modal-backdrop" onclick="closeModal()">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="modal-title">Novo Álbum</div>
-      <div class="field-group"><label class="field-label">Título do Álbum</label><input id="album-title" placeholder="Ex: Reunião Plenária – Setembro 2026" /></div>
-      <div class="field-group"><label class="field-label">Tags (separadas por vírgula)</label><input id="album-tags" placeholder="reunião, plenária, setembro" /></div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="addAlbum()">Criar Álbum</button>
-      </div>
-    </div>
-  </div>`
-}
-
-function addAlbum() {
-  const title = document.getElementById('album-title').value.trim()
-  if (!title) { showToast('Informe o título do álbum.'); return }
-  const tags = document.getElementById('album-tags').value.split(',').map(t=>t.trim()).filter(Boolean)
-  const colors = ['#1e3a5f','#0891b2','#16a34a','#7c3aed','#d97706','#dc2626']
-  const now = new Date()
-  photosData.unshift({
-    id: Date.now(), title,
-    date: now.toLocaleDateString('pt-BR'),
-    tags: tags.length ? tags : ['geral'],
-    color: colors[Math.floor(Math.random()*colors.length)]
-  })
-  closeModal()
-  document.getElementById('content').innerHTML = renderPhotos()
-  showToast('Álbum criado com sucesso!')
-}
-
-function deleteAlbum(id) {
-  photosData = photosData.filter(p=>p.id!==id)
-  closeModal()
-  document.getElementById('content').innerHTML = renderPhotos()
-  showToast('Álbum excluído.')
-}
-
-function closeModal() {
-  document.getElementById('modal-root').innerHTML = ''
-}
-
-// ── PESQUISA ECA ──
-const ECA_ARTIGOS = [
-  {num:'Art. 1º',titulo:'Proteção integral à criança e ao adolescente',texto:'Esta Lei dispõe sobre a proteção integral à criança e ao adolescente.'},
-  {num:'Art. 2º',titulo:'Definição de criança e adolescente',texto:'Considera-se criança, para os efeitos desta Lei, a pessoa até doze anos de idade incompletos, e adolescente aquela entre doze e dezoito anos de idade.'},
-  {num:'Art. 3º',titulo:'Direitos fundamentais',texto:'A criança e o adolescente gozam de todos os direitos fundamentais inerentes à pessoa humana, sem prejuízo da proteção integral de que trata esta Lei, assegurando-se-lhes, por lei ou por outros meios, todas as oportunidades e facilidades, a fim de lhes facultar o desenvolvimento físico, mental, moral, espiritual e social, em condições de liberdade e de dignidade.'},
-  {num:'Art. 4º',titulo:'Dever da família, comunidade e Estado',texto:'É dever da família, da comunidade, da sociedade em geral e do poder público assegurar, com absoluta prioridade, a efetivação dos direitos referentes à vida, à saúde, à alimentação, à educação, ao esporte, ao lazer, à profissionalização, à cultura, à dignidade, ao respeito, à liberdade e à convivência familiar e comunitária.'},
-  {num:'Art. 5º',titulo:'Omissão e ação violadora de direitos',texto:'Nenhuma criança ou adolescente será objeto de qualquer forma de negligência, discriminação, exploração, violência, crueldade e opressão, punido na forma da lei qualquer atentado, por ação ou omissão, aos seus direitos fundamentais.'},
-  {num:'Art. 13º',titulo:'Comunicação de maus-tratos',texto:'Os casos de suspeita ou confirmação de castigo físico, de tratamento cruel ou degradante e de maus-tratos contra criança ou adolescente serão obrigatoriamente comunicados ao Conselho Tutelar da respectiva localidade, sem prejuízo de outras providências legais.'},
-  {num:'Art. 18º',titulo:'Dever de proteção',texto:'É dever de todos velar pela dignidade da criança e do adolescente, pondo-os a salvo de qualquer tratamento desumano, violento, aterrorizante, vexatório ou constrangedor.'},
-  {num:'Art. 53º',titulo:'Direito à educação',texto:'A criança e o adolescente têm direito à educação, visando ao pleno desenvolvimento de sua pessoa, preparo para o exercício da cidadania e qualificação para o trabalho.'},
-  {num:'Art. 98º',titulo:'Medidas de proteção',texto:'As medidas de proteção à criança e ao adolescente são aplicáveis sempre que os direitos reconhecidos nesta Lei forem ameaçados ou violados: I - por ação ou omissão da sociedade ou do Estado; II - por falta, omissão ou abuso dos pais ou responsável; III - em razão de sua conduta.'},
-  {num:'Art. 101º',titulo:'Medidas específicas de proteção',texto:'Verificada qualquer das hipóteses previstas no art. 98, a autoridade competente poderá determinar, dentre outras, as seguintes medidas: I - encaminhamento aos pais ou responsável, mediante termo de responsabilidade; II - orientação, apoio e acompanhamento temporários; III - matrícula e frequência obrigatórias em estabelecimento oficial de ensino fundamental; IV - inclusão em serviços e programas oficiais ou comunitários de proteção, apoio e promoção da família, da criança e do adolescente...'},
-  {num:'Art. 129º',titulo:'Medidas aplicáveis aos pais',texto:'São medidas aplicáveis aos pais ou responsável: I - encaminhamento a programa oficial ou comunitário de proteção à família; II - inclusão em programa oficial ou comunitário de auxílio, orientação e tratamento a alcoólatras e toxicômanos; III - encaminhamento a tratamento psicológico ou psiquiátrico; IV - encaminhamento a cursos ou programas de orientação; V - obrigação de matricular o filho ou pupilo e acompanhar sua frequência e aproveitamento escolar...'},
-  {num:'Art. 136º',titulo:'Atribuições do Conselho Tutelar',texto:'São atribuições do Conselho Tutelar: I - atender as crianças e adolescentes nas hipóteses previstas nos arts. 98 e 105, aplicando as medidas previstas no art. 101, I a VII; II - atender e aconselhar os pais ou responsável, aplicando as medidas previstas no art. 129, I a VII; III - promover a execução de suas decisões, podendo para tanto requisitar serviços públicos nas áreas de saúde, educação, serviço social, previdência, trabalho e segurança...'},
-  {num:'Art. 141º',titulo:'Acesso à Defensoria e ao MP',texto:'É garantido o acesso de toda criança ou adolescente à Defensoria Pública, ao Ministério Público e ao Poder Judiciário, por qualquer de seus órgãos. É garantida a prestação de assistência judiciária integral e gratuita àqueles que dela necessitarem.'},
-]
-
-let ecaSearch = ''
-let ecaExpanded = null
-
-function renderEca() {
-  const q = ecaSearch.toLowerCase()
-  const filtered = q
-    ? ECA_ARTIGOS.filter(a => a.num.toLowerCase().includes(q) || a.titulo.toLowerCase().includes(q) || a.texto.toLowerCase().includes(q))
-    : ECA_ARTIGOS
-  return `
-  <div class="page-header">
-    <h2>Pesquisa ECA</h2>
-    <p>Estatuto da Criança e do Adolescente – Lei nº 8.069/1990</p>
-  </div>
-  <div class="card card-pad" style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input id="eca-search" placeholder="Buscar artigo, título ou conteúdo…" style="border:none;box-shadow:none;padding:0;flex:1" oninput="searchEca(this.value)" value="${ecaSearch}" />
-  </div>
-  <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${filtered.length} artigo(s) encontrado(s)</div>
-  <div style="display:flex;flex-direction:column;gap:8px">
-    ${filtered.map(a=>`
-    <div class="card" style="cursor:pointer" onclick="toggleEca('${a.num}')">
-      <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
-          <span style="font-size:11px;font-weight:700;color:var(--primary);background:var(--primary-subtle);padding:3px 10px;border-radius:20px;white-space:nowrap">${a.num}</span>
-          <strong style="font-size:13px">${a.titulo}</strong>
-        </div>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="flex-shrink:0;transform:rotate(${ecaExpanded===a.num?'180':'0'}deg);transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      ${ecaExpanded===a.num ? `<div style="padding:0 16px 16px;font-size:13px;color:var(--text-muted);line-height:1.7;border-top:1px solid var(--border);padding-top:14px">${a.texto}</div>` : ''}
-    </div>`).join('')}
-  </div>`
-}
-
-function attachEcaEvents() {}
-
-function searchEca(v) {
-  ecaSearch = v
-  document.getElementById('content').innerHTML = renderEca()
-}
-
-function toggleEca(num) {
-  ecaExpanded = ecaExpanded === num ? null : num
-  document.getElementById('content').innerHTML = renderEca()
-}
-
-// ── REGIMENTO INTERNO ──
-const REGIMENTO_CAPITULOS = [
-  {titulo:'Capítulo I – Da Natureza e Composição',artigos:[
-    {num:'Art. 1º',texto:'O Conselho Tutelar é órgão permanente e autônomo, não jurisdicional, encarregado pela sociedade de zelar pelo cumprimento dos direitos da criança e do adolescente, definidos na Lei Federal n° 8.069/90.'},
-    {num:'Art. 2º',texto:'O Conselho Tutelar é composto por 05 (cinco) membros, escolhidos pela comunidade local para mandato de 04 (quatro) anos, permitida uma recondução, mediante novo processo de escolha.'},
-    {num:'Art. 3º',texto:'Os Conselheiros Tutelares exercem função pública relevante, de natureza não remunerada, em regime de dedicação exclusiva.'},
-  ]},
-  {titulo:'Capítulo II – Das Atribuições',artigos:[
-    {num:'Art. 4º',texto:'Compete ao Conselho Tutelar atender crianças e adolescentes nas situações de ameaça ou violação de direitos, aplicando as medidas de proteção previstas no art. 101 do ECA.'},
-    {num:'Art. 5º',texto:'O Conselho Tutelar poderá requisitar serviços públicos nas áreas de saúde, educação, serviço social, previdência, trabalho e segurança, bem como representar junto à autoridade judiciária.'},
-    {num:'Art. 6º',texto:'O atendimento é prestado de segunda a sexta-feira, das 08h às 17h, com escala de plantão nos fins de semana, feriados e períodos noturnos, conforme escala aprovada em plenária.'},
-  ]},
-  {titulo:'Capítulo III – Do Funcionamento',artigos:[
-    {num:'Art. 7º',texto:'As reuniões plenárias são realizadas semanalmente, em dia e horário fixados pelo Conselho, podendo ser convocadas reuniões extraordinárias sempre que necessário.'},
-    {num:'Art. 8º',texto:'As decisões do Conselho Tutelar são tomadas por maioria simples dos membros presentes, cabendo ao Presidente o voto de qualidade em caso de empate.'},
-    {num:'Art. 9º',texto:'Das reuniões serão lavradas atas, assinadas pelos conselheiros presentes, arquivadas em livro próprio e disponibilizadas para consulta pública.'},
-  ]},
-  {titulo:'Capítulo IV – Da Ética e Conduta',artigos:[
-    {num:'Art. 10',texto:'É vedado ao Conselheiro Tutelar exercer atividade político-partidária durante o exercício do mandato, bem como divulgar informações sigilosas obtidas no exercício da função.'},
-    {num:'Art. 11',texto:'O Conselheiro que cometer infração administrativa ou ética responderá perante a Comissão de Ética, observado o contraditório e a ampla defesa.'},
-    {num:'Art. 12',texto:'São infrações éticas: I - divulgação de dados sigilosos; II - abandono de função; III - uso da função para fins pessoais; IV - tratamento desrespeitoso a usuários ou colegas.'},
-  ]},
-  {titulo:'Capítulo V – Das Disposições Finais',artigos:[
-    {num:'Art. 13',texto:'Os casos omissos serão resolvidos pelo Plenário do Conselho, ouvido o Ministério Público quando necessário.'},
-    {num:'Art. 14',texto:'Este Regimento entra em vigor na data de sua aprovação em Assembleia, revogadas as disposições em contrário.'},
-  ]},
-]
-
-let rulesExpanded = null
-
-function renderRules() {
-  return `
-  <div class="page-header">
-    <h2>Regimento Interno</h2>
-    <p>Conselho Tutelar de Salvador – Normas de funcionamento e conduta</p>
-  </div>
-  <div class="card card-pad" style="margin-bottom:16px;background:var(--primary-subtle);border-color:var(--primary)">
-    <div style="display:flex;align-items:center;gap:10px">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <div><strong style="color:var(--primary)">Regimento Interno – CT Salvador/BA</strong><div style="font-size:12px;color:var(--text-muted);margin-top:2px">Aprovado em Assembleia Plenária · Vigência: 2024–2028</div></div>
-    </div>
-  </div>
-  <div style="display:flex;flex-direction:column;gap:12px">
-    ${REGIMENTO_CAPITULOS.map((cap,ci)=>`
-    <div class="card">
-      <div style="padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="toggleRules(${ci})">
-        <strong style="font-size:14px;color:var(--primary)">${cap.titulo}</strong>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="transform:rotate(${rulesExpanded===ci?'180':'0'}deg);transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      ${rulesExpanded===ci ? `
-      <div style="border-top:1px solid var(--border)">
-        ${cap.artigos.map(a=>`
-        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
-          <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px">${a.num}</div>
-          <div style="font-size:13px;color:var(--text-muted);line-height:1.7">${a.texto}</div>
-        </div>`).join('')}
-      </div>` : ''}
-    </div>`).join('')}
-  </div>`
-}
-
-function toggleRules(idx) {
-  rulesExpanded = rulesExpanded === idx ? null : idx
-  document.getElementById('content').innerHTML = renderRules()
-}
-
-// ── ADMIN: TODAS ESTATÍSTICAS ──
-function renderAdminStats() {
-  const cts = CONSELHOS_BAIRROS.slice(0,6)
-  return `
-  <div class="page-header">
-    <h2>Admin: Estatísticas Completas</h2>
-    <p>Visão administrativa de todos os Conselhos Tutelares</p>
-  </div>
-  <div class="grid-3" style="margin-bottom:20px">
-    ${[
-      {label:'Total de Atendimentos',value:'603',sub:'ano corrente',color:'var(--primary)'},
-      {label:'Média por Conselho',value:'100',sub:'atendimentos/mês',color:'var(--accent)'},
-      {label:'Taxa de Resolução',value:'92%',sub:'casos encerrados',color:'var(--success)'},
-      {label:'Encaminhamentos',value:'214',sub:'para rede de proteção',color:'#0891b2'},
-      {label:'Usuários Ativos',value:'40',sub:'conselheiros + atendentes',color:'#7c3aed'},
-      {label:'Requisições Abertas',value:'23',sub:'aguardando resposta',color:'var(--warning)'},
-    ].map(s=>`<div class="card stat-card"><div class="label">${s.label}</div><div class="value" style="color:${s.color}">${s.value}</div><div class="sub">${s.sub}</div></div>`).join('')}
-  </div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-pad" style="border-bottom:1px solid var(--border)"><strong>Desempenho por Conselho</strong></div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>CT</th><th>Atendimentos</th><th>Resolvidos</th><th>Em Aberto</th><th>Req. Enviadas</th><th>Usuários</th><th>Status</th></tr></thead>
-      <tbody>
-        ${cts.map((c,i)=>{
-          const at=[84,71,63,58,77,68][i], res=[78,64,59,51,70,63][i], ab=at-res, req=[14,11,9,8,13,10][i], us=[7,6,5,5,7,6][i]
-          const pct=Math.round((res/at)*100)
-          return `<tr>
-            <td><strong>CT ${c.num}</strong></td>
-            <td>${at}</td>
-            <td style="color:var(--success);font-weight:600">${res}</td>
-            <td style="color:var(--warning);font-weight:600">${ab}</td>
-            <td>${req}</td>
-            <td>${us}</td>
-            <td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:6px;background:var(--border);border-radius:3px"><div style="width:${pct}%;height:100%;background:var(--success);border-radius:3px"></div></div><span style="font-size:11px;font-weight:600;color:var(--success)">${pct}%</span></div></td>
-          </tr>`
-        }).join('')}
-      </tbody>
-    </table></div>
-  </div>
-  <div class="card card-pad">
-    <strong style="display:block;margin-bottom:12px">Logs de Acesso Recentes</strong>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      ${[
-        {user:'Fabio Pereira',action:'Login',time:'Hoje 21:30',ct:'CT01'},
-        {user:'Ana Costa',action:'Criou requisição REQ-2026-0041',time:'Hoje 18:22',ct:'CT01'},
-        {user:'Carlos Lima',action:'Atualizou status de atendimento',time:'Hoje 16:15',ct:'CT02'},
-        {user:'Márcia Rocha',action:'Enviou encaminhamento CREAS',time:'Ontem 14:08',ct:'CT01'},
-        {user:'Paulo Souza',action:'Login',time:'Ontem 09:33',ct:'CT03'},
-      ].map(l=>`
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:8px;font-size:12px">
-        <div class="avatar" style="width:28px;height:28px;font-size:10px;flex-shrink:0">${l.user.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
-        <div style="flex:1"><strong>${l.user}</strong> <span style="color:var(--text-muted)">${l.action}</span></div>
-        <span style="color:var(--text-muted);white-space:nowrap">${l.ct} · ${l.time}</span>
-      </div>`).join('')}
-    </div>
-  </div>`
-}
-
-// ── CONFIGURAÇÕES DO SISTEMA ──
-let systemSettings = {
-  nomeInstituicao: 'Conselho Tutelar de Salvador',
-  cidade: 'Salvador',
-  uf: 'BA',
-  emailGeral: 'ct.salvador@ba.gov.br',
-  telefone: '(71) 3116-6900',
-  notifEmail: true,
-  notifSistema: true,
-  autoLogout: '60',
-  backupAuto: true,
-}
-
-function renderSystemSettings() {
-  return `
-  <div class="page-header">
-    <h2>Configurações do Sistema</h2>
-    <p>Administração geral da plataforma Conecta-CT</p>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <div class="card card-pad">
-      <strong style="font-size:14px;display:block;margin-bottom:16px">Dados da Instituição</strong>
-      <div class="field-group"><label class="field-label">Nome da Instituição</label><input id="cfg-nome" value="${systemSettings.nomeInstituicao}" /></div>
-      <div class="field-row cols-2">
-        <div class="field-group"><label class="field-label">Cidade</label><input id="cfg-cidade" value="${systemSettings.cidade}" /></div>
-        <div class="field-group"><label class="field-label">UF</label><input id="cfg-uf" value="${systemSettings.uf}" /></div>
-      </div>
-      <div class="field-group"><label class="field-label">E-mail Geral</label><input id="cfg-email" value="${systemSettings.emailGeral}" /></div>
-      <div class="field-group"><label class="field-label">Telefone</label><input id="cfg-tel" value="${systemSettings.telefone}" /></div>
-      <button class="btn btn-primary" onclick="saveSystemSettings()">Salvar Dados</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:16px">
-      <div class="card card-pad">
-        <strong style="font-size:14px;display:block;margin-bottom:16px">Notificações</strong>
-        ${[
-          {key:'notifEmail',label:'Notificações por E-mail',desc:'Receber alertas de novos atendimentos por e-mail'},
-          {key:'notifSistema',label:'Notificações no Sistema',desc:'Exibir alertas em tempo real no painel'},
-          {key:'backupAuto',label:'Backup Automático',desc:'Backup diário dos dados às 03:00h'},
-        ].map(opt=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div>
-            <div style="font-size:13px;font-weight:600">${opt.label}</div>
-            <div style="font-size:12px;color:var(--text-muted)">${opt.desc}</div>
-          </div>
-          <div onclick="toggleSysSetting('${opt.key}')" style="width:44px;height:24px;border-radius:12px;background:${systemSettings[opt.key]?'var(--success)':'var(--border)'};cursor:pointer;position:relative;transition:background .2s;flex-shrink:0">
-            <div style="position:absolute;top:2px;left:${systemSettings[opt.key]?'22':'2'}px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)"></div>
-          </div>
-        </div>`).join('')}
-      </div>
-      <div class="card card-pad">
-        <strong style="font-size:14px;display:block;margin-bottom:12px">Segurança</strong>
-        <div class="field-group">
-          <label class="field-label">Logout Automático (minutos)</label>
-          <select id="cfg-logout" onchange="systemSettings.autoLogout=this.value">
-            ${['30','60','120','240'].map(v=>`<option ${v===systemSettings.autoLogout?'selected':''}>${v}</option>`).join('')}
-          </select>
-        </div>
-        <div style="font-size:12px;color:var(--text-muted)">Sessão encerrada automaticamente após inatividade.</div>
-      </div>
-      <div class="card card-pad">
-        <strong style="font-size:14px;display:block;margin-bottom:12px">Informações do Sistema</strong>
-        ${[
-          {label:'Versão',value:'1.0.0-beta'},
-          {label:'Ambiente',value:'Produção'},
-          {label:'Backend',value:'Vercel + Supabase'},
-          {label:'Último backup',value:'Hoje 03:00h'},
-        ].map(info=>`
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
-          <span style="color:var(--text-muted)">${info.label}</span>
-          <strong>${info.value}</strong>
-        </div>`).join('')}
-      </div>
-    </div>
-  </div>`
-}
-
-function toggleSysSetting(key) {
-  systemSettings[key] = !systemSettings[key]
-  document.getElementById('content').innerHTML = renderSystemSettings()
-  showToast('Configuração atualizada.')
-}
-
-function saveSystemSettings() {
-  systemSettings.nomeInstituicao = document.getElementById('cfg-nome').value
-  systemSettings.cidade = document.getElementById('cfg-cidade').value
-  systemSettings.uf = document.getElementById('cfg-uf').value
-  systemSettings.emailGeral = document.getElementById('cfg-email').value
-  systemSettings.telefone = document.getElementById('cfg-tel').value
-  showToast('Configurações salvas com sucesso!')
-}
-
-// ── MODAL LANÇAMENTO ──
-let lancamentosData = [
-  {protocolo:'2026/09/247',nome:'Maria da Silva',tipo:'Violência Doméstica',hora:'09:15',status:'Finalizado',sc:'finalizado'},
-  {protocolo:'2026/09/246',nome:'João Pedro Alves',tipo:'Negligência Escolar',hora:'10:30',status:'Finalizado',sc:'finalizado'},
-  {protocolo:'2026/09/245',nome:'Família Carvalho',tipo:'Visita Domiciliar',hora:'14:00',status:'Rascunho',sc:'rascunho'},
-  {protocolo:'2026/09/244',nome:'Carlos Eduardo',tipo:'Trabalho Infantil',hora:'15:45',status:'Finalizado',sc:'finalizado'},
-]
-function showLancamentoModal(idx) {
-  const editing = idx !== undefined
-  const l = editing ? lancamentosData[idx] : {nome:'',tipo:'Atendimento',hora:'',status:'Rascunho'}
-  document.getElementById('modal-root').innerHTML = `
-  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-    <div class="modal-box">
-      <div class="modal-title">${I.clipboard} ${editing?'Editar':'Novo'} Lançamento</div>
-      <div class="field-group"><label class="field-label">Nome / Família</label>
-        <input id="m-lnome" value="${l.nome}" placeholder="Nome da pessoa ou família" /></div>
-      <div class="field-row cols-2">
-        <div class="field-group"><label class="field-label">Tipo</label>
-          <select id="m-ltipo">
-            ${['Atendimento','Visita Domiciliar','Reunião','Negligência Escolar','Violência Doméstica','Trabalho Infantil','Outro'].map(t=>`<option ${l.tipo===t?'selected':''}>${t}</option>`).join('')}
-          </select></div>
-        <div class="field-group"><label class="field-label">Hora</label>
-          <input id="m-lhora" type="time" value="${l.hora||''}" /></div>
-      </div>
-      <div class="field-group"><label class="field-label">Status</label>
-        <select id="m-lstatus">
-          <option value="Rascunho" ${l.status==='Rascunho'?'selected':''}>Rascunho</option>
-          <option value="Finalizado" ${l.status==='Finalizado'?'selected':''}>Finalizado</option>
-        </select></div>
-      <div class="modal-footer">
-        ${editing?`<button class="btn btn-danger" onclick="deleteLancamento(${idx})">Excluir</button>`:''}
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveLancamento(${editing?idx:'undefined'})">Salvar</button>
-      </div>
-    </div>
-  </div>`
-}
-function saveLancamento(idx){
-  const nome=document.getElementById('m-lnome').value.trim()
-  const tipo=document.getElementById('m-ltipo').value
-  const hora=document.getElementById('m-lhora').value||'--:--'
-  const status=document.getElementById('m-lstatus').value
-  const sc=status.toLowerCase()
-  if(!nome){showToast('Informe o nome.');return}
-  const now=new Date()
-  const proto=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(Math.floor(Math.random()*900)+100)}`
-  const entry={protocolo:proto,nome,tipo,hora,status,sc}
-  if(idx===undefined||idx==='undefined') lancamentosData.unshift(entry)
-  else lancamentosData[idx]=entry
-  closeModal(); navigate('daily')
-  showToast(idx===undefined||idx==='undefined'?'Lançamento criado!':'Lançamento atualizado!')
-}
-function deleteLancamento(i){lancamentosData.splice(i,1);closeModal();navigate('daily');showToast('Lançamento excluído.')}
-
-// ── MODAL EVENTO ──
-let eventosData = [
-  {time:'09:00',title:'Atendimento – Maria Silva',sub:'Violência doméstica · Sede CT I',cls:'ev-atendimento',who:'Felipe Matos',dia:'Hoje'},
-  {time:'11:30',title:'Visita Domiciliar',sub:'Família Carvalho · Bairro Liberdade',cls:'ev-visita',who:'Ana Costa',dia:'Hoje'},
-  {time:'14:00',title:'Reunião com CRAS Bonfim',sub:'Encaminhamentos pendentes',cls:'ev-reuniao',who:'Felipe Matos',dia:'Hoje'},
-  {time:'16:30',title:'Atendimento – João Pedro',sub:'Negligência escolar',cls:'ev-atendimento',who:'Ana Costa',dia:'Hoje'},
-  {time:'09:00',title:'Plantão – Sede CT I',sub:'Início de plantão regular',cls:'ev-visita',who:'Todos',dia:'Sexta'},
-  {time:'14:00',title:'Capacitação ECA – CMDCA',sub:'Jurisprudência 2026 (obrigatório)',cls:'ev-reuniao',who:'Todos',dia:'Sexta'},
-]
-function showEventoModal(){
-  document.getElementById('modal-root').innerHTML = `
-  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-    <div class="modal-box">
-      <div class="modal-title">${I.calendar} Novo Evento</div>
-      <div class="field-group"><label class="field-label">Título</label>
-        <input id="m-etitle" placeholder="Ex: Atendimento – Nome da Família" /></div>
-      <div class="field-group"><label class="field-label">Descrição</label>
-        <input id="m-esub" placeholder="Ex: Tipo · Local" /></div>
-      <div class="field-row cols-2">
-        <div class="field-group"><label class="field-label">Hora</label>
-          <input id="m-etime" type="time" value="09:00" /></div>
-        <div class="field-group"><label class="field-label">Dia</label>
-          <select id="m-edia">
-            <option>Hoje</option><option>Sexta</option><option>Sábado</option><option>Segunda</option>
-          </select></div>
-      </div>
-      <div class="field-group"><label class="field-label">Tipo</label>
-        <select id="m-ecls">
-          <option value="ev-atendimento">Atendimento</option>
-          <option value="ev-reuniao">Reunião</option>
-          <option value="ev-visita">Visita</option>
-        </select></div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveEvento()">Salvar</button>
-      </div>
-    </div>
-  </div>`
-}
-function saveEvento(){
-  const title=document.getElementById('m-etitle').value.trim()
-  const sub=document.getElementById('m-esub').value.trim()
-  const time=document.getElementById('m-etime').value
-  const dia=document.getElementById('m-edia').value
-  const cls=document.getElementById('m-ecls').value
-  if(!title){showToast('Informe o título.');return}
-  eventosData.push({time,title,sub,cls,who:currentUser.name,dia})
-  closeModal(); navigate('agenda')
-  showToast('Evento adicionado!')
-}
-
-// ── MODAL USUÁRIO ──
-let usersData = [
-  {name:'Fabio Pereira',email:'fabio.bpereira45@gmail.com',cargo:'Coordenador',ct:'CT01',role:'master',status:'Ativo'},
-  {name:'Ana Costa',email:'ana.costa@ct.ba.gov.br',cargo:'Conselheiro(a)',ct:'CT01',role:'conselheiro',status:'Ativo'},
-  {name:'Carlos Mendes',email:'carlos.m@ct.ba.gov.br',cargo:'Atendente',ct:'CT01',role:'atendente',status:'Ativo'},
-]
-function showUserModal(idx){
-  const editing=idx!==undefined
-  const u=editing?usersData[idx]:{name:'',email:'',cargo:'Conselheiro(a)',ct:'CT01',role:'conselheiro',status:'Ativo'}
-  document.getElementById('modal-root').innerHTML=`
-  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-    <div class="modal-box">
-      <div class="modal-title">${I.users} ${editing?'Editar':'Novo'} Usuário</div>
-      <div class="field-group"><label class="field-label">Nome Completo</label>
-        <input id="m-uname" value="${u.name}" placeholder="Nome completo" /></div>
-      <div class="field-group"><label class="field-label">E-mail</label>
-        <input id="m-uemail" type="email" value="${u.email}" placeholder="email@exemplo.com" /></div>
-      <div class="field-row cols-2">
-        <div class="field-group"><label class="field-label">Cargo</label>
-          <select id="m-ucargo">
-            ${['Conselheiro(a)','Atendente','Coordenador(a)'].map(c=>`<option ${u.cargo===c?'selected':''}>${c}</option>`).join('')}
-          </select></div>
-        <div class="field-group"><label class="field-label">Perfil</label>
-          <select id="m-urole">
-            <option value="conselheiro" ${u.role==='conselheiro'?'selected':''}>Conselheiro</option>
-            <option value="atendente" ${u.role==='atendente'?'selected':''}>Atendente</option>
-            <option value="master" ${u.role==='master'?'selected':''}>Master</option>
-          </select></div>
-      </div>
-      <div class="field-row cols-2">
-        <div class="field-group"><label class="field-label">Conselho</label>
-          <select id="m-uct">
-            ${['CT01','CT02','CT03','CT04','CT05','CT06','CT07','CT08'].map(c=>`<option ${u.ct===c?'selected':''}>${c}</option>`).join('')}
-          </select></div>
-        <div class="field-group"><label class="field-label">Status</label>
-          <select id="m-ustatus">
-            <option value="Ativo" ${u.status==='Ativo'?'selected':''}>Ativo</option>
-            <option value="Inativo" ${u.status==='Inativo'?'selected':''}>Inativo</option>
-          </select></div>
-      </div>
-      <div class="modal-footer">
-        ${editing?`<button class="btn btn-danger" onclick="deleteUser(${idx})">Excluir</button>`:''}
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveUser(${editing?idx:'undefined'})">Salvar</button>
-      </div>
-    </div>
-  </div>`
-}
-function saveUser(idx){
-  const name=document.getElementById('m-uname').value.trim()
-  const email=document.getElementById('m-uemail').value.trim()
-  const cargo=document.getElementById('m-ucargo').value
-  const role=document.getElementById('m-urole').value
-  const ct=document.getElementById('m-uct').value
-  const status=document.getElementById('m-ustatus').value
-  if(!name||!email){showToast('Preencha nome e e-mail.');return}
-  const entry={name,email,cargo,ct,role,status}
-  if(idx===undefined||idx==='undefined') usersData.push(entry)
-  else usersData[idx]=entry
-  closeModal(); navigate('users')
-  showToast(idx===undefined||idx==='undefined'?'Usuário criado!':'Usuário atualizado!')
-}
-function deleteUser(i){usersData.splice(i,1);closeModal();navigate('users');showToast('Usuário removido.')}
-
 function renderPlaceholder() {
   const item = NAV_ALL.find(n=>n.id===activeModule)
   return `<div class="page-header"><h2>${item?.label||activeModule}</h2></div>
