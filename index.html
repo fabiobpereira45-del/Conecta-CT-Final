@@ -1966,10 +1966,16 @@ function renderRequisicoes() {
       <h2>Requisições de Certidão</h2>
       <p>${list.length} registro(s)${role==='master'?' · todos os conselhos':' · suas requisições'}</p>
     </div>
-    <button class="btn btn-primary" onclick="navigate('forms');setTimeout(()=>openFormFill(41),100)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Nova Requisição
-    </button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="downloadRequisicoesPDF()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar PDF
+      </button>
+      <button class="btn btn-primary" onclick="navigate('forms');setTimeout(()=>openFormFill(41),100)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova Requisição
+      </button>
+    </div>
   </div>
   <div class="card card-pad" style="margin-bottom:12px">
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -2179,17 +2185,23 @@ const CONSELHOS_BAIRROS = [
 ]
 
 function renderCouncils() {
-  const search = ''
+  const isMaster = currentUser && currentUser.role === 'master'
   return `
-  <div class="page-header">
-    <h2>Conselhos e Bairros</h2>
-    <p>Distribuição territorial dos Conselhos Tutelares de Salvador/BA</p>
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2>Conselhos e Bairros</h2>
+      <p>Distribuição territorial dos Conselhos Tutelares de Salvador/BA</p>
+    </div>
+    ${isMaster ? `<button class="btn btn-primary" onclick="showAddCouncilModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Novo Conselho
+    </button>` : ''}
   </div>
   <div class="card card-pad" style="margin-bottom:16px">
     <input id="council-search" placeholder="Buscar conselho ou bairro…" oninput="filterCouncils(this.value)" />
   </div>
   <div id="councils-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px">
-    ${CONSELHOS_BAIRROS.map(c => `
+    ${CONSELHOS_BAIRROS.map((c, idx) => `
     <div class="card council-card" data-search="${c.nome.toLowerCase()} ${c.bairros.join(' ').toLowerCase()} ${(c.coordenador||'').toLowerCase()}">
       <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
         <div style="width:42px;height:42px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;flex-shrink:0;text-align:center">${c.num}</div>
@@ -2197,6 +2209,10 @@ function renderCouncils() {
           <strong style="font-size:14px;display:block">${c.nome}</strong>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${c.regiao||''}</div>
         </div>
+        ${isMaster ? `<div style="display:flex;gap:6px">
+          <button class="btn btn-outline btn-sm" onclick="showEditCouncilModal(${idx})">Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCouncil(${idx})">Excluir</button>
+        </div>` : ''}
       </div>
       <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
         ${c.endereco ? `<div style="font-size:12px;display:flex;gap:6px;align-items:flex-start"><span style="color:var(--text-muted);flex-shrink:0">📍</span><span>${c.endereco}</span></div>` : ''}
@@ -2223,6 +2239,69 @@ function renderCouncils() {
   </div>`
 }
 
+function showCouncilModal(idx) {
+  const editing = idx !== undefined
+  const c = editing ? CONSELHOS_BAIRROS[idx] : {num:'',nome:'',regiao:'',endereco:'',telefone:'',celular:'',email:'',coordenador:''}
+  document.getElementById('modal-root').innerHTML = `
+  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+      <div class="modal-title">${editing ? 'Editar' : 'Novo'} Conselho</div>
+      <div class="field-row cols-2">
+        <div class="field-group"><label class="field-label">Número</label>
+          <input id="mc-num" value="${c.num||''}" placeholder="Ex: CT01" /></div>
+        <div class="field-group"><label class="field-label">Região</label>
+          <input id="mc-regiao" value="${c.regiao||''}" placeholder="Ex: Centro" /></div>
+      </div>
+      <div class="field-group"><label class="field-label">Nome</label>
+        <input id="mc-nome" value="${c.nome||''}" placeholder="Nome do conselho" /></div>
+      <div class="field-group"><label class="field-label">Endereço</label>
+        <input id="mc-endereco" value="${c.endereco||''}" placeholder="Endereço completo" /></div>
+      <div class="field-row cols-2">
+        <div class="field-group"><label class="field-label">Telefone</label>
+          <input id="mc-telefone" value="${c.telefone||''}" placeholder="(71) 0000-0000" /></div>
+        <div class="field-group"><label class="field-label">Celular</label>
+          <input id="mc-celular" value="${c.celular||''}" placeholder="(71) 9 0000-0000" /></div>
+      </div>
+      <div class="field-group"><label class="field-label">E-mail</label>
+        <input id="mc-email" type="email" value="${c.email||''}" placeholder="email@ct.ba.gov.br" /></div>
+      <div class="field-group"><label class="field-label">Coordenador(a)</label>
+        <input id="mc-coordenador" value="${c.coordenador||''}" placeholder="Nome do coordenador" /></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveCouncil(${editing ? idx : 'undefined'})">Salvar</button>
+      </div>
+    </div>
+  </div>`
+}
+function showAddCouncilModal() { showCouncilModal(undefined) }
+function showEditCouncilModal(idx) { showCouncilModal(idx) }
+function saveCouncil(idx) {
+  const num = document.getElementById('mc-num').value.trim()
+  const nome = document.getElementById('mc-nome').value.trim()
+  if (!nome) { showToast('Informe o nome do conselho.'); return }
+  const entry = {
+    num, nome,
+    regiao: document.getElementById('mc-regiao').value.trim(),
+    endereco: document.getElementById('mc-endereco').value.trim(),
+    telefone: document.getElementById('mc-telefone').value.trim(),
+    celular: document.getElementById('mc-celular').value.trim(),
+    email: document.getElementById('mc-email').value.trim(),
+    coordenador: document.getElementById('mc-coordenador').value.trim(),
+    bairros: (idx !== undefined && idx !== 'undefined' && CONSELHOS_BAIRROS[idx]) ? CONSELHOS_BAIRROS[idx].bairros : [],
+    conselheiros: (idx !== undefined && idx !== 'undefined' && CONSELHOS_BAIRROS[idx]) ? (CONSELHOS_BAIRROS[idx].conselheiros || []) : []
+  }
+  if (idx === undefined || idx === 'undefined') CONSELHOS_BAIRROS.push(entry)
+  else CONSELHOS_BAIRROS[idx] = entry
+  closeModal(); navigate('councils')
+  showToast(idx === undefined || idx === 'undefined' ? 'Conselho criado!' : 'Conselho atualizado!')
+}
+function deleteCouncil(idx) {
+  if (!confirm('Excluir este conselho?')) return
+  CONSELHOS_BAIRROS.splice(idx, 1)
+  navigate('councils')
+  showToast('Conselho excluído.')
+}
+
 function filterCouncils(v) {
   const q = v.toLowerCase()
   document.querySelectorAll('.council-card').forEach(el => {
@@ -2237,9 +2316,15 @@ function renderGeneralStats() {
   const data = [42,58,51,67,73,69,81,77,84,0,0,0].slice(0, currentMonth+1)
   const maxVal = Math.max(...data)
   return `
-  <div class="page-header">
-    <h2>Estatísticas Gerais</h2>
-    <p>Visão consolidada de todos os Conselhos Tutelares – ${new Date().getFullYear()}</p>
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2>Estatísticas Gerais</h2>
+      <p>Visão consolidada de todos os Conselhos Tutelares – ${new Date().getFullYear()}</p>
+    </div>
+    <button class="btn btn-outline" onclick="downloadEstatisticasPDF()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Baixar PDF
+    </button>
   </div>
   <div class="grid-3" style="margin-bottom:20px">
     ${[
@@ -2705,11 +2790,15 @@ function showLancamentoModal(idx) {
         <input id="m-lnome" value="${l.nome}" placeholder="Nome da pessoa ou família" /></div>
       <div class="field-row cols-2">
         <div class="field-group"><label class="field-label">Tipo</label>
-          <select id="m-ltipo">
+          <select id="m-ltipo" onchange="toggleLancamentoOutro(this.value)">
             ${['Atendimento','Visita Domiciliar','Reunião','Negligência Escolar','Violência Doméstica','Trabalho Infantil','Outro'].map(t=>`<option ${l.tipo===t?'selected':''}>${t}</option>`).join('')}
           </select></div>
         <div class="field-group"><label class="field-label">Hora</label>
           <input id="m-lhora" type="time" value="${l.hora||''}" /></div>
+      </div>
+      <div class="field-group" id="lancamento-outro-group" style="display:${l.tipo==='Outro'?'block':'none'}">
+        <label class="field-label">Descreva o tipo</label>
+        <textarea id="lancamento-outro-detalhe" rows="2" placeholder="Descreva o tipo de lançamento…" style="resize:vertical">${l.outroDetalhe||''}</textarea>
       </div>
       <div class="field-group"><label class="field-label">Status</label>
         <select id="m-lstatus">
@@ -2724,16 +2813,21 @@ function showLancamentoModal(idx) {
     </div>
   </div>`
 }
+function toggleLancamentoOutro(val) {
+  const g = document.getElementById('lancamento-outro-group')
+  if (g) g.style.display = val === 'Outro' ? 'block' : 'none'
+}
 function saveLancamento(idx){
   const nome=document.getElementById('m-lnome').value.trim()
   const tipo=document.getElementById('m-ltipo').value
   const hora=document.getElementById('m-lhora').value||'--:--'
   const status=document.getElementById('m-lstatus').value
   const sc=status.toLowerCase()
+  const outroDetalhe=tipo==='Outro'?(document.getElementById('lancamento-outro-detalhe')?.value.trim()||''):''
   if(!nome){showToast('Informe o nome.');return}
   const now=new Date()
   const proto=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(Math.floor(Math.random()*900)+100)}`
-  const entry={protocolo:proto,nome,tipo,hora,status,sc}
+  const entry={protocolo:proto,nome,tipo,hora,status,sc,outroDetalhe}
   if(idx===undefined||idx==='undefined') lancamentosData.unshift(entry)
   else lancamentosData[idx]=entry
   closeModal(); navigate('daily')
@@ -2772,6 +2866,23 @@ function showEventoModal(){
           <option value="ev-atendimento">Atendimento</option>
           <option value="ev-reuniao">Reunião</option>
           <option value="ev-visita">Visita</option>
+          <option value="ev-reuniao">Audiência no MP</option>
+          <option value="ev-reuniao">Audiência Remota MP ou Juizo da Infancia e Juventude</option>
+          <option value="ev-visita">Delegacia</option>
+          <option value="ev-reuniao">Reunião de Colegiado</option>
+          <option value="ev-reuniao">Reunião de Comissão</option>
+          <option value="ev-reuniao">Assembléia Ordinária e Extraordinária</option>
+          <option value="ev-atendimento">Palestra</option>
+          <option value="ev-visita">Visita em Órgãos</option>
+          <option value="ev-visita">Visita a Escola</option>
+          <option value="ev-reuniao">Evento com Parceiros</option>
+          <option value="ev-visita">Cartório</option>
+          <option value="ev-visita">Cras</option>
+          <option value="ev-visita">Creas</option>
+          <option value="ev-atendimento">Acolhimento Institucional</option>
+          <option value="ev-atendimento">Plantão Interno</option>
+          <option value="ev-atendimento">Plantão Centralizado</option>
+          <option value="ev-atendimento">Capacitação</option>
         </select></div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
@@ -3317,6 +3428,93 @@ function submitForgot() {
   document.body.appendChild(conf)
   conf.addEventListener('click', e => { if(e.target===conf) conf.remove() })
 }
+
+// ── PDF DOWNLOADS ──
+function downloadEstatisticasPDF() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+  const data = [42,58,51,67,73,69,81,77,84,0,0,0].slice(0, now.getMonth()+1)
+  const statsRows = CONSELHOS_BAIRROS.slice(0,6).map((c,i)=>{
+    const at=[84,71,63,58,77,68][i],ab=[6,8,4,7,9,5][i],enc=[27,21,19,18,24,20][i],pl=[12,10,8,11,13,9][i]
+    return `<tr><td>CT ${c.num}</td><td>${at}</td><td>${ab}</td><td>${enc}</td><td>${pl}</td></tr>`
+  }).join('')
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estatísticas Gerais CT Salvador ${year}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#1a2332;margin:30px}
+    h1{font-size:20px;color:#1e3a5f;margin-bottom:4px}
+    p{color:#6b7a90;margin-bottom:20px}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+    .stat{border:1px solid #dde3ec;border-radius:8px;padding:14px}
+    .stat .label{font-size:11px;text-transform:uppercase;color:#6b7a90;letter-spacing:.4px}
+    .stat .value{font-size:28px;font-weight:700;color:#1e3a5f;margin:4px 0}
+    .stat .sub{font-size:11px;color:#6b7a90}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:8px 12px;text-align:left;border-bottom:2px solid #dde3ec;color:#6b7a90}
+    td{padding:10px 12px;border-bottom:1px solid #dde3ec;font-size:13px}
+    h2{font-size:15px;color:#1e3a5f;margin-bottom:8px}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <h1>Conselho Tutelar – Salvador/BA</h1>
+  <p>Estatísticas Gerais – ${year} · Gerado em ${now.toLocaleDateString('pt-BR')}</p>
+  <div class="stats">
+    <div class="stat"><div class="label">Atendimentos no Ano</div><div class="value" style="color:#1e3a5f">603</div><div class="sub">todos os conselhos</div></div>
+    <div class="stat"><div class="label">Casos em Aberto</div><div class="value" style="color:#d97706">47</div><div class="sub">aguardando resolução</div></div>
+    <div class="stat"><div class="label">Requisições Enviadas</div><div class="value" style="color:#3b82f6">128</div><div class="sub">certidões solicitadas</div></div>
+    <div class="stat"><div class="label">Encaminhamentos</div><div class="value" style="color:#16a34a">214</div><div class="sub">para rede de proteção</div></div>
+    <div class="stat"><div class="label">Plantões Realizados</div><div class="value" style="color:#7c3aed">96</div><div class="sub">fins de semana</div></div>
+    <div class="stat"><div class="label">Conselheiros Ativos</div><div class="value" style="color:#0891b2">40</div><div class="sub">em 8 conselhos</div></div>
+  </div>
+  <h2>Atendimentos por Mês</h2>
+  <p style="font-size:12px">${data.map((v,i)=>months[i]+': '+v).join(' · ')}</p>
+  <h2>Por Conselho</h2>
+  <table>
+    <thead><tr><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
+    <tbody>${statsRows}</tbody>
+  </table>
+  <script>window.print();<\/script></body></html>`
+  const w = window.open('','_blank')
+  if (w) { w.document.write(html); w.document.close() }
+}
+
+function downloadRequisicoesPDF() {
+  const now = new Date()
+  const rows = requisicoes.map(r=>`<tr>
+    <td style="font-family:monospace">${r.protocolo}</td>
+    <td>${r.data} ${r.hora}</td>
+    <td>${r.solicitante}<br><small style="color:#6b7a90">${r.solicitanteCt||''}</small></td>
+    <td>${r.cartorio}${r.subdistrito?'<br><small>'+r.subdistrito+'</small>':''}</td>
+    <td>${r.tipo}</td>
+    <td>${r.status}</td>
+  </tr>`).join('')
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Requisições CT Salvador</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:30px}
+    h1{font-size:18px;color:#1e3a5f;margin-bottom:4px}
+    p{color:#6b7a90;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;text-align:left;border-bottom:2px solid #dde3ec;color:#6b7a90;background:#f4f6f9}
+    td{padding:8px 10px;border-bottom:1px solid #dde3ec;vertical-align:top}
+    small{font-size:10px}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <h1>Conselho Tutelar – Salvador/BA</h1>
+  <p>Requisições de Certidão · Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</p>
+  <table>
+    <thead><tr><th>Protocolo</th><th>Data</th><th>Solicitante</th><th>Cartório</th><th>Tipo</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <script>window.print();<\/script></body></html>`
+  const w = window.open('','_blank')
+  if (w) { w.document.write(html); w.document.close() }
+}
+
+// ── ESC key closes modals ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal();
+  }
+});
 
 // ── INIT: show auth ──
 document.getElementById('app').style.display = 'none'
