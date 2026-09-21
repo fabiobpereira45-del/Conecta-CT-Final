@@ -1215,9 +1215,90 @@ function renderReports() {
   </table></div></div>`
 }
 function rrow(n,p,t,s) {
+  const canDownload = s === 'finalizado'
   return `<tr><td><strong>${n}</strong></td><td style="color:var(--text-muted)">${p}</td><td style="color:var(--text-muted)">${t}</td>
   <td><span class="status-chip st-${s}">${s==='finalizado'?'Finalizado':'Rascunho'}</span></td>
-  <td><button class="btn btn-outline btn-sm" onclick="showToast('Exportando PDF...')">PDF</button></td></tr>`
+  <td><button class="btn btn-outline btn-sm" ${canDownload?`onclick="downloadRelatorioPDF('${n}','${p}','${t}')"`:`onclick="showToast('Relatório em rascunho – finalize antes de exportar.')"`}>PDF</button></td></tr>`
+}
+function downloadRelatorioPDF(nome, periodo, tipo) {
+  const now = new Date()
+  const user = currentUser || {}
+  const isMaster = user.role === 'master'
+  const ctInfo = isMaster ? 'Todos os 24 Conselhos' : (user.ctFull || user.ct || '')
+
+  // Dados do período para o relatório
+  const monthMap = {'Janeiro':0,'Fevereiro':1,'Março':2,'Abril':3,'Maio':4,'Junho':5,
+    'Julho':6,'Agosto':7,'Setembro':8,'Outubro':9,'Novembro':10,'Dezembro':11}
+  let statsHtml = ''
+  if (tipo === 'Estatísticas') {
+    const ctNum = (user.ct||'').replace(/^CT/,'')
+    const ctIdx = CONSELHOS_BAIRROS.findIndex(c=>c.num===ctNum)
+    const s = ctIdx>=0 ? _STATS_CT[ctIdx] : _STATS_CT[0]
+    statsHtml = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0">
+      ${[['Atendimentos',s.at,'#1e3a5f'],['Casos em Aberto',s.ab,'#d97706'],
+         ['Requisições',s.req,'#3b82f6'],['Encaminhamentos',s.enc,'#16a34a'],
+         ['Plantões',s.pl,'#7c3aed']].map(([l,v,c])=>
+        `<div style="border:1px solid #dde3ec;border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:#6b7a90;text-transform:uppercase">${l}</div>
+          <div style="font-size:24px;font-weight:700;color:${c}">${v}</div>
+        </div>`).join('')}
+    </div>`
+  } else if (tipo === 'Consolidado') {
+    const totalAt  = _STATS_CT.reduce((s,c)=>s+c.at, 0)
+    const totalAb  = _STATS_CT.reduce((s,c)=>s+c.ab, 0)
+    const totalEnc = _STATS_CT.reduce((s,c)=>s+c.enc,0)
+    const totalPl  = _STATS_CT.reduce((s,c)=>s+c.pl, 0)
+    statsHtml = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0">
+      ${[['Total Atendimentos',totalAt,'#1e3a5f'],['Casos em Aberto',totalAb,'#d97706'],
+         ['Encaminhamentos',totalEnc,'#16a34a'],['Plantões',totalPl,'#7c3aed']].map(([l,v,c])=>
+        `<div style="border:1px solid #dde3ec;border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:#6b7a90;text-transform:uppercase">${l}</div>
+          <div style="font-size:24px;font-weight:700;color:${c}">${v}</div>
+        </div>`).join('')}
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-top:12px">
+      <thead><tr style="background:#f4f6f9">
+        <th style="padding:8px;text-align:left;border-bottom:2px solid #dde3ec;font-size:11px">Conselho</th>
+        <th style="padding:8px;text-align:left;border-bottom:2px solid #dde3ec;font-size:11px">Atendimentos</th>
+        <th style="padding:8px;text-align:left;border-bottom:2px solid #dde3ec;font-size:11px">Em Aberto</th>
+        <th style="padding:8px;text-align:left;border-bottom:2px solid #dde3ec;font-size:11px">Encaminhamentos</th>
+        <th style="padding:8px;text-align:left;border-bottom:2px solid #dde3ec;font-size:11px">Plantões</th>
+      </tr></thead>
+      <tbody>${CONSELHOS_BAIRROS.map((c,i)=>{const s=_STATS_CT[i]||{at:0,ab:0,enc:0,pl:0};return`
+        <tr><td style="padding:7px 8px;border-bottom:1px solid #dde3ec"><strong>CT ${c.num}</strong></td>
+        <td style="padding:7px 8px;border-bottom:1px solid #dde3ec">${s.at}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #dde3ec;color:#d97706;font-weight:600">${s.ab}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #dde3ec">${s.enc}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #dde3ec">${s.pl}</td></tr>`}).join('')}
+      </tbody>
+    </table>`
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${nome} – ${periodo}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#1a2332;margin:30px}
+    h1{font-size:20px;color:#1e3a5f;margin-bottom:2px}
+    h2{font-size:15px;color:#1e3a5f;margin:20px 0 8px}
+    .meta{color:#6b7a90;font-size:12px;margin-bottom:4px}
+    .badge{display:inline-block;background:#dcfce7;color:#16a34a;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin-top:6px}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <h1>${nome}</h1>
+  <div class="meta">Período: <strong>${periodo}</strong></div>
+  <div class="meta">Tipo: <strong>${tipo}</strong></div>
+  <div class="meta">Conselho: <strong>${ctInfo}</strong></div>
+  <div class="meta">Responsável: <strong>${user.name||''}</strong></div>
+  <div class="meta">Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+  <div class="badge">✓ Finalizado</div>
+  <h2>Resumo do Período</h2>
+  ${statsHtml || '<p style="color:#6b7a90">Sem dados disponíveis para este período.</p>'}
+  <script>window.print();<\/script></body></html>`
+  const w = window.open('','_blank')
+  if (w) { w.document.write(html); w.document.close() }
+  else showToast('Permita pop-ups para gerar o PDF.')
 }
 
 // ── FORMS ──
@@ -2062,7 +2143,7 @@ function renderFormFill(id) {
       <!-- Salvar/Gerar -->
       <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px">
         <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
-        <button class="btn btn-primary" onclick="showToast('Ficha salva com sucesso!')">${I.download} Salvar e Gerar PDF</button>
+        <button class="btn btn-primary" onclick="gerarFormGenericoPDF()">${I.download} Salvar e Gerar PDF</button>
       </div>
     </div>
   </div>`
@@ -2228,7 +2309,88 @@ function renderFormGenerico(form) {
     </div>
   </div>`
 }
-function gerarFormGenericoPDF() { showToast('Documento gerado e baixado!') }
+function gerarFormGenericoPDF() {
+  const now = new Date()
+  const user = currentUser || {}
+  const ctInfo = user.role==='master' ? 'Administração – Todos os 24 Conselhos' : (user.ctFull || user.ct || '')
+
+  // Coleta campos do formulário atual (todos os inputs/selects/textareas visíveis)
+  const container = document.getElementById('content')
+  if (!container) { showToast('Formulário não encontrado.'); return }
+
+  // Título do formulário
+  const titleEl = container.querySelector('h2, h3, .form-title, [id*="form-title"]')
+  const formTitle = titleEl ? titleEl.textContent.trim() : 'Formulário'
+
+  // Coleta todos os pares label + valor
+  const fieldGroups = container.querySelectorAll('.field-group, .field-row')
+  let fieldsHtml = ''
+  container.querySelectorAll('label').forEach(lbl => {
+    const text = lbl.textContent.trim()
+    if (!text || text.length > 80) return
+    // Tenta pegar o input associado
+    let val = ''
+    const forId = lbl.htmlFor
+    const inp = forId ? document.getElementById(forId) : lbl.nextElementSibling
+    if (inp) {
+      if (inp.type === 'checkbox') val = inp.checked ? 'Sim' : 'Não'
+      else val = inp.value || inp.textContent || ''
+    }
+    if (text && val) {
+      fieldsHtml += `<tr>
+        <td style="width:40%;padding:7px 10px;border-bottom:1px solid #dde3ec;color:#6b7a90;font-size:12px">${text}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #dde3ec;font-size:13px">${val}</td>
+      </tr>`
+    }
+  })
+
+  // Checkboxes marcados (violações, encaminhamentos etc.)
+  const checked = [...container.querySelectorAll('input[type=checkbox]:checked')]
+    .map(cb => cb.parentElement?.textContent?.trim() || cb.labels?.[0]?.textContent?.trim() || '')
+    .filter(Boolean)
+  const checkedHtml = checked.length
+    ? `<h2 style="font-size:14px;color:#1e3a5f;margin:16px 0 8px">Itens Marcados</h2>
+       <ul style="font-size:13px;padding-left:20px">${checked.map(c=>`<li>${c}</li>`).join('')}</ul>`
+    : ''
+
+  // Textareas (descrições)
+  let textareasHtml = ''
+  container.querySelectorAll('textarea').forEach(ta => {
+    if (ta.value && ta.value.trim()) {
+      const lbl = ta.labels?.[0]?.textContent || ta.placeholder || 'Descrição'
+      textareasHtml += `<h2 style="font-size:14px;color:#1e3a5f;margin:16px 0 6px">${lbl}</h2>
+        <p style="font-size:13px;border:1px solid #dde3ec;border-radius:6px;padding:10px;white-space:pre-line">${ta.value.trim()}</p>`
+    }
+  })
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${formTitle}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#1a2332;margin:30px}
+    h1{font-size:18px;color:#1e3a5f;margin-bottom:4px}
+    .meta{color:#6b7a90;font-size:12px;margin-bottom:2px}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:7px 10px;text-align:left;border-bottom:2px solid #dde3ec;color:#6b7a90;background:#f4f6f9}
+    .sig{margin-top:40px;display:flex;gap:60px}
+    .sig-line{border-top:1px solid #000;padding-top:6px;min-width:200px;font-size:12px;color:#6b7a90}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <h1>${formTitle}</h1>
+  <div class="meta">Conselho: <strong>${ctInfo}</strong></div>
+  <div class="meta">Responsável: <strong>${user.name||''}</strong></div>
+  <div class="meta">Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+  ${fieldsHtml ? `<table><thead><tr><th>Campo</th><th>Valor</th></tr></thead><tbody>${fieldsHtml}</tbody></table>` : ''}
+  ${checkedHtml}
+  ${textareasHtml}
+  <div class="sig">
+    <div class="sig-line">Assinatura do Responsável</div>
+    <div class="sig-line">Data</div>
+  </div>
+  <script>window.print();<\/script></body></html>`
+  const w = window.open('','_blank')
+  if (w) { w.document.write(html); w.document.close() }
+  else showToast('Permita pop-ups para gerar o PDF.')
+}
 
 function renderFormRequisicaoCertidao(form) {
   const header = `
@@ -3932,7 +4094,43 @@ function genDutyRoster() {
 }
 
 function exportDutyRoster() {
-  showToast('Exportação PDF disponível na versão completa do sistema.')
+  const state = dutyRosterState
+  if (!state || !state.month || !state.year) { showToast('Gere a escala primeiro.'); return }
+  const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                      'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+  const rows = generateDutyRoster(state.month, state.year)
+  const now = new Date()
+
+  const rowsHtml = rows.map(row => {
+    const satShiftsHtml = row.satShifts.map(s=>`
+      <tr><td style="color:#1e3a5f;font-weight:700">CT ${s.council}</td><td>${s.conselheiro}</td><td>Sábado – Grupo ${row.satGroup}</td></tr>`).join('')
+    const sunShiftsHtml = row.sun ? row.sunShifts.map(s=>`
+      <tr><td style="color:#0891b2;font-weight:700">CT ${s.council}</td><td>${s.conselheiro}</td><td>Domingo – Grupo ${row.sunGroup}</td></tr>`).join('') : ''
+    return `<tr><td colspan="3" style="background:#f4f6f9;font-weight:700;font-size:12px;padding:6px 10px">Semana ${row.weekNum} — ${formatDate(row.sat)}${row.sun?' · '+formatDate(row.sun):''}</td></tr>
+    ${satShiftsHtml}${sunShiftsHtml}`
+  }).join('')
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>Escala de Plantão – ${monthNames[state.month-1]} ${state.year}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#1a2332;margin:30px}
+    h1{font-size:20px;color:#1e3a5f;margin-bottom:4px}
+    p{color:#6b7a90;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse}
+    th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;text-align:left;border-bottom:2px solid #dde3ec;color:#6b7a90;background:#f4f6f9}
+    td{padding:8px 10px;border-bottom:1px solid #dde3ec}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <h1>Conselho Tutelar – Salvador/BA</h1>
+  <p>Escala de Plantão – ${monthNames[state.month-1]} ${state.year} · Gerado em ${now.toLocaleDateString('pt-BR')}</p>
+  <table>
+    <thead><tr><th>Conselho</th><th>Conselheiro</th><th>Turno</th></tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  <script>window.print();<\/script></body></html>`
+  const w = window.open('','_blank')
+  if (w) { w.document.write(html); w.document.close() }
+  else showToast('Permita pop-ups para gerar o PDF.')
 }
 
 // ── TOGGLE PASSWORD VISIBILITY ──
@@ -3994,47 +4192,88 @@ function downloadEstatisticasPDF() {
   const now = new Date()
   const year = now.getFullYear()
   const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-  const data = [42,58,51,67,73,69,81,77,84,0,0,0].slice(0, now.getMonth()+1)
-  const statsRows = CONSELHOS_BAIRROS.slice(0,6).map((c,i)=>{
-    const at=[84,71,63,58,77,68][i],ab=[6,8,4,7,9,5][i],enc=[27,21,19,18,24,20][i],pl=[12,10,8,11,13,9][i]
-    return `<tr><td>CT ${c.num}</td><td>${at}</td><td>${ab}</td><td>${enc}</td><td>${pl}</td></tr>`
-  }).join('')
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estatísticas Gerais CT Salvador ${year}</title>
+  const isMaster = currentUser?.role === 'master'
+  const user = currentUser || {}
+
+  let titulo, subtitulo, statsCards, tableHtml, mensalHtml
+
+  if (isMaster) {
+    // Visão global
+    const totalAt  = _STATS_CT.reduce((s,c)=>s+c.at, 0)
+    const totalAb  = _STATS_CT.reduce((s,c)=>s+c.ab, 0)
+    const totalReq = _STATS_CT.reduce((s,c)=>s+c.req,0)
+    const totalEnc = _STATS_CT.reduce((s,c)=>s+c.enc,0)
+    const totalPl  = _STATS_CT.reduce((s,c)=>s+c.pl, 0)
+    const totalCons= CONSELHOS_BAIRROS.reduce((s,c)=>s+(c.conselheiros||[]).length,0)
+    titulo = 'Estatísticas Gerais – Todos os Conselhos'
+    subtitulo = 'Visão consolidada · Salvador/BA'
+    statsCards = [
+      ['Atendimentos no Ano',totalAt,'#1e3a5f'],['Casos em Aberto',totalAb,'#d97706'],
+      ['Requisições',totalReq,'#3b82f6'],['Encaminhamentos',totalEnc,'#16a34a'],
+      ['Plantões',totalPl,'#7c3aed'],['Conselheiros',totalCons,'#0891b2']
+    ]
+    const dataGlobal = Array.from({length:now.getMonth()+1},(_,i)=>_STATS_CT.reduce((s,c)=>s+(c.data[i]||0),0))
+    mensalHtml = dataGlobal.map((v,i)=>months[i]+': <strong>'+v+'</strong>').join(' &nbsp;·&nbsp; ')
+    tableHtml = `<table>
+      <thead><tr style="background:#f4f6f9"><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
+      <tbody>${CONSELHOS_BAIRROS.map((c,i)=>{const s=_STATS_CT[i]||{at:0,ab:0,enc:0,pl:0};return`
+        <tr><td><strong>CT ${c.num}</strong> <span style="color:#6b7a90;font-size:11px">${c.nome}</span></td>
+        <td>${s.at}</td><td style="color:#d97706;font-weight:600">${s.ab}</td><td>${s.enc}</td><td>${s.pl}</td></tr>`}).join('')}
+      </tbody></table>`
+  } else {
+    // Visão do CT
+    const ctNum = (user.ct||'').replace(/^CT/,'')
+    const ctIdx = CONSELHOS_BAIRROS.findIndex(c=>c.num===ctNum)
+    const s = ctIdx>=0 ? _STATS_CT[ctIdx] : _STATS_CT[0]
+    const ctObj = ctIdx>=0 ? CONSELHOS_BAIRROS[ctIdx] : CONSELHOS_BAIRROS[0]
+    const consTotal = (ctObj.conselheiros||[]).length
+    titulo = `Minhas Estatísticas – ${ctObj.nome}`
+    subtitulo = `${ctObj.regiao}`
+    statsCards = [
+      ['Atendimentos no Ano',s.at,'#1e3a5f'],['Casos em Aberto',s.ab,'#d97706'],
+      ['Requisições',s.req,'#3b82f6'],['Encaminhamentos',s.enc,'#16a34a'],
+      ['Plantões',s.pl,'#7c3aed'],['Conselheiros',consTotal,'#0891b2']
+    ]
+    const dataM = s.data.slice(0,now.getMonth()+1)
+    mensalHtml = dataM.map((v,i)=>months[i]+': <strong>'+v+'</strong>').join(' &nbsp;·&nbsp; ')
+    tableHtml = `<table>
+      <thead><tr style="background:#f4f6f9"><th>Conselheiro(a)</th></tr></thead>
+      <tbody>${(ctObj.conselheiros||[]).map(n=>`<tr><td>${n}</td></tr>`).join('')}</tbody>
+    </table>`
+  }
+
+  const cardsHtml = statsCards.map(([l,v,c])=>`
+    <div style="border:1px solid #dde3ec;border-radius:8px;padding:12px">
+      <div style="font-size:10px;text-transform:uppercase;color:#6b7a90;letter-spacing:.4px">${l}</div>
+      <div style="font-size:26px;font-weight:700;color:${c};margin:4px 0">${v}</div>
+    </div>`).join('')
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${titulo} – ${year}</title>
   <style>
     body{font-family:Arial,sans-serif;font-size:13px;color:#1a2332;margin:30px}
-    h1{font-size:20px;color:#1e3a5f;margin-bottom:4px}
-    p{color:#6b7a90;margin-bottom:20px}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
-    .stat{border:1px solid #dde3ec;border-radius:8px;padding:14px}
-    .stat .label{font-size:11px;text-transform:uppercase;color:#6b7a90;letter-spacing:.4px}
-    .stat .value{font-size:28px;font-weight:700;color:#1e3a5f;margin:4px 0}
-    .stat .sub{font-size:11px;color:#6b7a90}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:8px 12px;text-align:left;border-bottom:2px solid #dde3ec;color:#6b7a90}
-    td{padding:10px 12px;border-bottom:1px solid #dde3ec;font-size:13px}
-    h2{font-size:15px;color:#1e3a5f;margin-bottom:8px}
+    h1{font-size:18px;color:#1e3a5f;margin-bottom:2px}
+    h2{font-size:14px;color:#1e3a5f;margin:20px 0 8px}
+    .meta{color:#6b7a90;font-size:12px;margin-bottom:2px}
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 10px;text-align:left;border-bottom:2px solid #dde3ec;color:#6b7a90}
+    td{padding:7px 10px;border-bottom:1px solid #dde3ec}
     @media print{body{margin:10px}}
   </style></head><body>
-  <h1>Conselho Tutelar – Salvador/BA</h1>
-  <p>Estatísticas Gerais – ${year} · Gerado em ${now.toLocaleDateString('pt-BR')}</p>
-  <div class="stats">
-    <div class="stat"><div class="label">Atendimentos no Ano</div><div class="value" style="color:#1e3a5f">603</div><div class="sub">todos os conselhos</div></div>
-    <div class="stat"><div class="label">Casos em Aberto</div><div class="value" style="color:#d97706">47</div><div class="sub">aguardando resolução</div></div>
-    <div class="stat"><div class="label">Requisições Enviadas</div><div class="value" style="color:#3b82f6">128</div><div class="sub">certidões solicitadas</div></div>
-    <div class="stat"><div class="label">Encaminhamentos</div><div class="value" style="color:#16a34a">214</div><div class="sub">para rede de proteção</div></div>
-    <div class="stat"><div class="label">Plantões Realizados</div><div class="value" style="color:#7c3aed">96</div><div class="sub">fins de semana</div></div>
-    <div class="stat"><div class="label">Conselheiros Ativos</div><div class="value" style="color:#0891b2">40</div><div class="sub">em 8 conselhos</div></div>
-  </div>
-  <h2>Atendimentos por Mês</h2>
-  <p style="font-size:12px">${data.map((v,i)=>months[i]+': '+v).join(' · ')}</p>
-  <h2>Por Conselho</h2>
-  <table>
-    <thead><tr><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
-    <tbody>${statsRows}</tbody>
-  </table>
+  <h1>${titulo}</h1>
+  <div class="meta">${subtitulo}</div>
+  <div class="meta">Responsável: <strong>${user.name||''}</strong></div>
+  <div class="meta">Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+  <div class="cards">${cardsHtml}</div>
+  <h2>Atendimentos por Mês – ${year}</h2>
+  <p style="font-size:12px;line-height:2">${mensalHtml}</p>
+  <h2>${isMaster ? 'Por Conselho' : 'Equipe do Conselho'}</h2>
+  ${tableHtml}
   <script>window.print();<\/script></body></html>`
   const w = window.open('','_blank')
   if (w) { w.document.write(html); w.document.close() }
+  else showToast('Permita pop-ups para gerar o PDF.')
 }
 
 function downloadRequisicoesPDF() {
