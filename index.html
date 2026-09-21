@@ -1151,155 +1151,239 @@ function deleteNotice(i){
 }
 
 // ── STATISTICS ──
+
+// ════════════════════════════════════════════════════
+//  DB LOCAL — funções de persistência de fichas
+//  Trocar apenas estas duas para integrar Supabase
+// ════════════════════════════════════════════════════
+function _db_salvarFicha(ficha) {
+  // Garante array de fichas no localStorage
+  let fichas = []
+  try { fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]') } catch(e){}
+  // Remove versão anterior com mesmo protocolo (atualização)
+  fichas = fichas.filter(f => f.protocolo !== ficha.protocolo)
+  fichas.unshift(ficha)
+  try { localStorage.setItem('cct_fichasDB', JSON.stringify(fichas)) } catch(e){}
+}
+function _db_buscarFicha(protocolo) {
+  try {
+    const fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
+    return fichas.find(f => f.protocolo === protocolo.trim()) || null
+  } catch(e) { return null }
+}
+function _db_listarFichas(ctDestino) {
+  try {
+    const fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
+    if (!ctDestino) return fichas
+    return fichas.filter(f => f.ctDestino === ctDestino)
+  } catch(e) { return [] }
+}
+function _db_marcarLida(protocolo) {
+  try {
+    const fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
+    const f = fichas.find(x => x.protocolo === protocolo)
+    if (f) { f.lida = true; localStorage.setItem('cct_fichasDB', JSON.stringify(fichas)) }
+  } catch(e){}
+}
+
 // ── FICHAS INBOX ──
 function renderFichasInbox() {
-  const role = currentUser.role
-  const minhas = role === 'master'
-    ? fichasEnviadas
-    : fichasEnviadas.filter(f => f.ctDestino === currentUser.ct)
+  const role   = currentUser.role
+  const ct     = role === 'master' ? null : currentUser.ct
+  const fichas = _db_listarFichas(ct)
 
-  const unread = minhas.filter(f => !f.lida)
+  // Também inclui as fichas do array em memória para compatibilidade
+  const memFichas = (role === 'master' ? fichasEnviadas : fichasEnviadas.filter(f => f.ctDestino === currentUser.ct))
+    .filter(f => !fichas.find(x => x.protocolo === f.protocolo))
+  const todas = [...fichas, ...memFichas]
+
+  const unread = todas.filter(f => !f.lida).length
 
   return `
-  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Fichas Recebidas</h2>
-      <p>${minhas.length} ficha(s)${unread.length > 0 ? ` · <strong style="color:var(--danger)">${unread.length} nova(s)</strong>` : ' · Tudo em dia'}</p>
+      <p>${todas.length} ficha(s)${unread > 0 ? ` · <strong style="color:var(--danger)">${unread} nova(s)</strong>` : ' · Tudo em dia'}</p>
     </div>
   </div>
-  ${minhas.length === 0
+
+  <!-- ── Busca por protocolo ── -->
+  <div class="card card-pad" style="margin-bottom:16px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">🔑 Abrir Ficha por Protocolo</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="inbox-protocolo-input"
+        placeholder="Cole ou digite o protocolo — ex: 2026/09/247"
+        style="flex:1;min-width:200px;font-family:monospace;font-size:14px;letter-spacing:.5px"
+        onkeydown="if(event.key==='Enter')abrirFichaPorProtocolo()"
+      />
+      <button class="btn btn-primary" onclick="abrirFichaPorProtocolo()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Abrir Ficha
+      </button>
+    </div>
+    <div id="inbox-protocolo-msg" style="margin-top:8px;font-size:12px;display:none"></div>
+  </div>
+
+  <!-- ── Lista de fichas ── -->
+  ${todas.length === 0
     ? `<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
         <div style="font-size:48px;margin-bottom:16px">📥</div>
         <p style="font-weight:600;margin-bottom:6px">Nenhuma ficha recebida</p>
-        <p style="font-size:12px">As fichas enviadas pelo atendente aparecerão aqui.</p>
+        <p style="font-size:12px">O atendente salva a ficha e você recebe o protocolo para abri-la aqui.</p>
       </div>`
     : `<div class="card"><div class="table-wrap"><table>
-        <thead><tr><th></th><th>Protocolo</th><th>Criança/Adolescente</th><th>Tipo</th><th>Enviado por</th><th>Data/Hora</th><th>Ações</th></tr></thead>
-        <tbody>${minhas.map((f,i)=>`<tr style="${!f.lida?'background:rgba(59,130,246,.06);font-weight:600':''}">
-          <td>${!f.lida?'<span style="width:8px;height:8px;background:var(--accent);border-radius:50%;display:inline-block"></span>':''}</td>
-          <td><span style="font-family:monospace;font-size:11px;color:var(--text-muted)">${f.protocolo}</span></td>
-          <td>${f.nomeCrianca||'—'}</td>
-          <td style="color:var(--text-muted);font-size:12px">${f.tipo||'Atendimento'}</td>
+        <thead><tr>
+          <th></th><th>Protocolo</th><th>Criança/Adolescente</th>
+          <th>Enviado por</th><th>Data/Hora</th><th>Ações</th>
+        </tr></thead>
+        <tbody>${todas.map((f,i)=>`<tr style="${!f.lida?'background:rgba(59,130,246,.06);font-weight:500':''}">
+          <td>${!f.lida?'<span style="width:8px;height:8px;background:var(--accent);border-radius:50%;display:inline-block" title="Nova"></span>':''}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-family:monospace;font-size:12px;color:var(--primary);font-weight:700">${f.protocolo}</span>
+              <button title="Copiar protocolo" onclick="copiarProtocolo('${f.protocolo}')"
+                style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;color:var(--text-muted)">
+                📋 Copiar
+              </button>
+            </div>
+          </td>
+          <td style="font-weight:600">${f.nomeCrianca||'—'}</td>
           <td style="font-size:12px">${f.enviadoPor}</td>
           <td style="font-size:11px;color:var(--text-muted)">${f.dataHora}</td>
           <td>
-            <button class="btn btn-primary btn-sm" onclick="abrirFichaInbox(${i})">Abrir</button>
+            <button class="btn btn-primary btn-sm" onclick="abrirFichaInboxDireto('${f.protocolo}')">Abrir</button>
           </td>
         </tr>`).join('')}</tbody>
       </table></div></div>`}
   `
 }
 
-function abrirFichaInbox(idx) {
-  const role = currentUser.role
-  const minhas = role === 'master'
-    ? fichasEnviadas
-    : fichasEnviadas.filter(f => f.ctDestino === currentUser.ct)
-  const f = minhas[idx]
-  if (!f) return
+function copiarProtocolo(proto) {
+  navigator.clipboard.writeText(proto).then(() => {
+    showToast(`📋 Protocolo ${proto} copiado!`)
+    // Preenche o campo de busca automaticamente
+    const inp = document.getElementById('inbox-protocolo-input')
+    if (inp) inp.value = proto
+  }).catch(() => {
+    // Fallback para browsers sem clipboard API
+    const inp = document.getElementById('inbox-protocolo-input')
+    if (inp) { inp.value = proto; inp.select() }
+    showToast('Protocolo copiado para o campo de busca.')
+  })
+}
 
-  // Marca como lida e salva
-  f.lida = true
-  _saveState()
-  buildNav()
+function abrirFichaInboxDireto(protocolo) {
+  const inp = document.getElementById('inbox-protocolo-input')
+  if (inp) inp.value = protocolo
+  abrirFichaPorProtocolo()
+}
 
-  // Fecha qualquer modal aberto
-  closeModal()
+function abrirFichaPorProtocolo() {
+  const inp  = document.getElementById('inbox-protocolo-input')
+  const msg  = document.getElementById('inbox-protocolo-msg')
+  const proto = (inp?.value || '').trim()
 
-  // Se tiver snapshot com camposSnapshot (nova estrutura), abre o formulário real
-  if (f.camposSnapshot) {
-    const formId = typeof f.formId === 'number' ? f.formId : 0
-    formsFillActive = formId
+  const mostrarMsg = (texto, cor) => {
+    if (!msg) return
+    msg.style.display = ''
+    msg.style.color = cor || 'var(--danger)'
+    msg.textContent = texto
+  }
 
-    // Navega para a tela de formulários
-    navigate('forms')
+  if (!proto) { mostrarMsg('Digite ou cole o protocolo da ficha.', 'var(--text-muted)'); return }
 
-    // Após render, restaura os campos e desbloqueia seção do conselheiro
-    setTimeout(() => {
-      // Restaura todos os campos do snapshot
-      const snap = f.camposSnapshot
-      Object.entries(snap).forEach(([id, val]) => {
-        const el = document.getElementById(id)
-        if (!el) return
-        if (el.type === 'checkbox' || el.type === 'radio') {
-          el.checked = !!val
-        } else {
-          el.value = val
-        }
-      })
-
-      // Desabilita campos da seção atendente (read-only para conselheiro)
-      document.querySelectorAll('#ficha-secao-atendente input, #ficha-secao-atendente select, #ficha-secao-atendente textarea').forEach(el => {
-        if (el.id !== 'form-data-atual' && el.id !== 'form-hora-atual') el.disabled = true
-      })
-
-      // Mostra e habilita seção do conselheiro
-      const secCons = document.getElementById('ficha-secao-conselheiro')
-      if (secCons) {
-        secCons.style.display = 'block'
-        secCons.querySelectorAll('input, select, textarea').forEach(el => { el.disabled = false })
-      }
-
-      // Atualiza label
-      const lbl = document.getElementById('ficha-conselheiro-label')
-      if (lbl) lbl.textContent = `Responsável: ${f.conselheiroDest || currentUser.name}`
-
-      // Desabilita botão de direcionar (já foi direcionado)
-      const btnDir = document.querySelector('[onclick="direcionarFichaConselheiro()"]')
-      if (btnDir) {
-        btnDir.textContent = '✓ Direcionado'
-        btnDir.disabled = true
-        btnDir.style.background = '#2ecc71'
-      }
-
-      showToast(`📋 Ficha ${f.protocolo} aberta – preencha a seção do conselheiro.`)
-    }, 300)
+  // Busca no DB local
+  const f = _db_buscarFicha(proto)
+  if (!f) {
+    mostrarMsg(`❌ Protocolo "${proto}" não encontrado. Verifique se o atendente salvou a ficha.`, 'var(--danger)')
     return
   }
 
-  // Fallback: exibe modal com dados (fichas antigas sem snapshot)
-  document.getElementById('modal-root').innerHTML = `
-  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-    <div class="modal-box" style="max-width:640px">
-      <div class="modal-title">📋 Ficha Recebida – ${f.protocolo}</div>
-      <div style="background:var(--primary-subtle);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px">
-        <strong>Enviado por:</strong> ${f.enviadoPor} &nbsp;|&nbsp; <strong>CT:</strong> ${f.ctDestino||'—'} &nbsp;|&nbsp; <strong>Em:</strong> ${f.dataHora}
-      </div>
-      <div style="display:grid;gap:8px;font-size:13px">
-        ${Object.entries(f.dados||{}).map(([k,v])=>v?`<div style="display:flex;gap:8px;border-bottom:1px solid var(--border);padding-bottom:6px">
-          <span style="font-weight:600;width:180px;flex-shrink:0;color:var(--text-muted)">${k}</span>
-          <span>${v}</span>
-        </div>`:'').join('')}
-      </div>
-      <div class="modal-footer" style="margin-top:20px">
-        <button class="btn btn-outline" onclick="closeModal()">Fechar</button>
-      </div>
-    </div>
-  </div>`
+  // Verifica permissão de CT
+  if (currentUser.role !== 'master' && f.ctDestino && f.ctDestino !== currentUser.ct) {
+    mostrarMsg('⛔ Esta ficha pertence a outro Conselho Tutelar.', 'var(--danger)'); return
+  }
+
+  // Marca como lida
+  _db_marcarLida(proto)
+  const idx = fichasEnviadas.findIndex(x => x.protocolo === proto)
+  if (idx >= 0) fichasEnviadas[idx].lida = true
+  _saveState()
+  buildNav()
+
+  // Abre formulário com dados pré-preenchidos
+  const formId = typeof f.formId === 'number' ? f.formId : 0
+  formsFillActive = formId
+  navigate('forms')
+
+  setTimeout(() => {
+    // Restaura campos do snapshot
+    const snap = f.camposSnapshot || {}
+    Object.entries(snap).forEach(([id, val]) => {
+      const el = document.getElementById(id)
+      if (!el) return
+      if (el.type === 'checkbox' || el.type === 'radio') el.checked = !!val
+      else el.value = val || ''
+    })
+
+    // Seção atendente vira somente-leitura
+    document.querySelectorAll('#ficha-secao-atendente input, #ficha-secao-atendente select, #ficha-secao-atendente textarea').forEach(el => {
+      if (el.id !== 'form-data-atual' && el.id !== 'form-hora-atual') el.disabled = true
+    })
+
+    // Desabilita botão "Enviar ao Conselheiro" — já enviado
+    document.querySelectorAll('[onclick="enviarFichaAoConselheiro()"]').forEach(b => {
+      b.disabled = true; b.textContent = '✓ Enviada'; b.style.opacity = '.5'
+    })
+
+    // Mostra e habilita seção do conselheiro
+    const secCons = document.getElementById('ficha-secao-conselheiro')
+    if (secCons) {
+      secCons.style.display = 'block'
+      secCons.querySelectorAll('input, select, textarea').forEach(el => { el.disabled = false })
+    }
+
+    // Label do responsável
+    const lbl = document.getElementById('ficha-conselheiro-label')
+    if (lbl) lbl.textContent = `Responsável: ${f.conselheiroDest || currentUser.name}`
+
+    // Botão "Direcionar" → já direcionado
+    const btnDir = document.querySelector('[onclick="direcionarFichaConselheiro()"]')
+    if (btnDir) { btnDir.textContent = '✓ Direcionado'; btnDir.disabled = true; btnDir.style.background = '#2ecc71' }
+
+    // Banner de protocolo no topo do formulário
+    const fillHeader = document.querySelector('.fill-header')
+    if (fillHeader) {
+      const banner = document.createElement('div')
+      banner.style.cssText = 'background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px;display:flex;align-items:center;gap:10px'
+      banner.innerHTML = `<span style="font-size:18px">📋</span><div><strong>Ficha recebida do atendente ${f.enviadoPor}</strong> · ${f.dataHora}<br><span style="font-family:monospace;color:var(--primary);font-weight:700">Protocolo: ${f.protocolo}</span> · ${f.nomeCrianca}</div>`
+      fillHeader.after(banner)
+    }
+
+    showToast(`✅ Ficha ${proto} aberta — preencha a seção do Conselheiro.`)
+  }, 350)
 }
 
 function enviarFichaAoConselheiro() {
-  // Collect all form fields
   const container = document.getElementById('content')
   if (!container) { showToast('Formulário não encontrado.'); return }
 
-  const dados = {}
-  container.querySelectorAll('input:not([type=hidden]), select, textarea').forEach(el => {
-    const label = el.closest('.field-group')?.querySelector('.field-label, label')?.textContent?.trim()
-      || el.placeholder || el.id || ''
-    const val = el.type === 'checkbox' ? (el.checked ? 'Sim' : '') : (el.value?.trim() || '')
-    if (label && val) dados[label] = val
-  })
+  // Valida nome da criança — campo real do formulário
+  const nomeCriancaEl = document.getElementById('ficha-nome-crianca')
+  const nomeCrianca = nomeCriancaEl?.value?.trim() || ''
+  if (!nomeCrianca) {
+    showToast('⚠️ Preencha o nome da criança/adolescente antes de enviar.')
+    nomeCriancaEl?.focus()
+    return
+  }
 
-  if (Object.keys(dados).length === 0) { showToast('Preencha o formulário antes de enviar.'); return }
-
-  const protocolo = document.getElementById('f-protocolo')?.value || document.getElementById('m-protocolo')?.value
-    || `${new Date().getFullYear()}/${String(new Date().getMonth()+1).padStart(2,'0')}/${String(Math.floor(Math.random()*900)+100)}`
-  const nomeCrianca = document.getElementById('f-nome')?.value || dados['Nome Completo da Criança/Adolescente'] || 'Não informado'
+  // Gera protocolo único
   const now = new Date()
+  const protocolo = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(Math.floor(Math.random()*9000)+1000)}`
+
   const dataHora = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
 
-  // Captura snapshot de todos os campos com ID para restauração no inbox
+  // Captura snapshot de todos os campos com ID
   const camposSnapshot = {}
   container.querySelectorAll('input, select, textarea').forEach(el => {
     if (!el.id) return
@@ -1310,7 +1394,16 @@ function enviarFichaAoConselheiro() {
     }
   })
 
-  fichasEnviadas.unshift({
+  // Coleta dados legíveis para exibição
+  const dados = {}
+  container.querySelectorAll('input:not([type=hidden]), select, textarea').forEach(el => {
+    const label = el.closest('.field-group')?.querySelector('.field-label, label')?.textContent?.trim()
+      || el.placeholder || el.id || ''
+    const val = el.type === 'checkbox' ? (el.checked ? 'Sim' : '') : (el.value?.trim() || '')
+    if (label && val) dados[label] = val
+  })
+
+  const ficha = {
     protocolo,
     nomeCrianca,
     tipo: dados['Tipo'] || 'Atendimento',
@@ -1322,12 +1415,40 @@ function enviarFichaAoConselheiro() {
     camposSnapshot,
     lida: false,
     createdAt: now.toISOString()
-  })
+  }
 
+  // Salva no DB (localStorage agora, Supabase futuramente)
+  _db_salvarFicha(ficha)
+
+  // Também mantém em memória para compatibilidade
+  fichasEnviadas.unshift(ficha)
   _saveState()
-  // Badge visual no sidebar
   buildNav()
-  showToast('✅ Ficha enviada ao conselheiro plantonista!')
+
+  // Exibe modal com protocolo e botão copiar
+  const mr = document.getElementById('modal-root')
+  if (mr) {
+    mr.innerHTML = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)this.remove()">
+      <div style="background:#fff;border-radius:14px;padding:36px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+        <div style="font-size:48px;margin-bottom:8px;">✅</div>
+        <h2 style="color:#1a3a6b;margin:0 0 8px;">Ficha Salva com Sucesso</h2>
+        <p style="color:#555;margin:0 0 20px;font-size:14px;">Passe o protocolo abaixo ao conselheiro plantonista para que ele abra a ficha.</p>
+        <div style="background:#f0f4ff;border:2px solid #1a3a6b;border-radius:10px;padding:16px;margin-bottom:20px;">
+          <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Número do Protocolo</div>
+          <div id="proto-display" style="font-size:28px;font-weight:900;color:#1a3a6b;letter-spacing:2px;">${protocolo}</div>
+          <div style="font-size:12px;color:#888;margin-top:6px;">${nomeCrianca}</div>
+        </div>
+        <button onclick="navigator.clipboard.writeText('${protocolo}').then(()=>{ this.textContent='✔ Copiado!'; setTimeout(()=>this.textContent='📋 Copiar Protocolo',2000) }).catch(()=>{ const t=document.createElement('textarea');t.value='${protocolo}';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();this.textContent='✔ Copiado!';setTimeout(()=>this.textContent='📋 Copiar Protocolo',2000) })"
+          style="background:#1a3a6b;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-bottom:10px;">
+          📋 Copiar Protocolo
+        </button>
+        <button onclick="document.getElementById('modal-root').innerHTML=''" style="background:none;border:1px solid #ccc;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;width:100%;color:#555;">
+          Fechar
+        </button>
+      </div>
+    </div>`
+  }
 }
 
 function renderStatistics() {
@@ -2116,23 +2237,71 @@ async function enviarEmail() {
     showToast('Requisição salva localmente (sem conexão com servidor)')
   }
 }
-function _councilBannerHtml() {
+function _councilBannerHtml(formNum) {
   const ctNum  = currentUser?.ct || ''
   const ctInfo = CONSELHOS_BAIRROS.find(c => 'CT'+c.num === ctNum)
+
+  // Logo oficial CT Salvador (SVG inline – brasão estilizado)
+  const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 90" width="72" height="72" style="flex-shrink:0">
+    <!-- fundo circular azul -->
+    <circle cx="45" cy="45" r="43" fill="#1a3a6b" stroke="#c9a227" stroke-width="3"/>
+    <!-- círculo dourado interno -->
+    <circle cx="45" cy="45" r="35" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+    <!-- figura humana estilizada -->
+    <circle cx="45" cy="26" r="7" fill="#fff"/>
+    <path d="M28 60 Q36 40 45 38 Q54 40 62 60" fill="#c9a227"/>
+    <path d="M30 52 Q38 44 45 42 Q52 44 60 52 L62 60 Q45 55 28 60Z" fill="#1a3a6b"/>
+    <!-- arcos / ramos -->
+    <path d="M18 38 Q22 20 38 16" fill="none" stroke="#c9a227" stroke-width="2" stroke-linecap="round"/>
+    <path d="M72 38 Q68 20 52 16" fill="none" stroke="#c9a227" stroke-width="2" stroke-linecap="round"/>
+    <!-- estrelas decorativas -->
+    <text x="24" y="42" fill="#c9a227" font-size="8" text-anchor="middle">✦</text>
+    <text x="66" y="42" fill="#c9a227" font-size="8" text-anchor="middle">✦</text>
+    <!-- texto inferior -->
+    <text x="45" y="74" fill="#c9a227" font-size="7" font-weight="bold" text-anchor="middle" font-family="sans-serif">CONSELHO TUTELAR</text>
+    <text x="45" y="82" fill="#fff" font-size="5.5" text-anchor="middle" font-family="sans-serif">SALVADOR - BA</text>
+  </svg>`
+
+  // Número sequencial do formulário (canto direito) — passado como arg ou da ficha
+  const numBox = formNum != null
+    ? `<div style="min-width:40px;height:40px;background:#1a3a6b;color:#fff;font-size:22px;font-weight:900;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${formNum}</div>`
+    : ''
+
   if (!ctInfo) {
-    return `<div class="council-banner card">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
-      <div class="cb-text"><strong>CT Salvador – Todos os Conselhos</strong>Prefeitura Municipal de Salvador · SEDH</div>
+    // Master / sem CT específico
+    return `
+    <div style="border:2px solid #1a3a6b;border-radius:8px;padding:16px 20px;margin-bottom:16px;background:#fff;print-color-adjust:exact">
+      <div style="display:flex;align-items:center;gap:16px">
+        ${logoSvg}
+        <div style="flex:1;text-align:center;border-left:2px solid #1a3a6b;border-right:2px solid #1a3a6b;padding:0 16px">
+          <div style="font-size:15px;font-weight:800;color:#1a3a6b;letter-spacing:.5px;text-transform:uppercase">Conselho Tutelar Salvador</div>
+          <div style="font-size:10.5px;color:#444;margin-top:2px">Lei Federal 8.069/90 – Lei Municipal 6.266</div>
+          <div style="font-size:10px;color:#555;margin-top:4px">Prefeitura Municipal de Salvador · SEDH</div>
+          <div style="font-size:10px;color:#555">Tel.: 3202-0270 – E-mail: sedh@salvador.ba.gov.br</div>
+        </div>
+        ${numBox}
+      </div>
     </div>`
   }
-  const tel = ctInfo.telefone ? ` · (71) ${ctInfo.telefone}` : ''
-  const cel = ctInfo.celular  ? ` · Cel: ${ctInfo.celular}` : ''
-  return `<div class="council-banner card">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></svg>
-    <div class="cb-text">
-      <strong>${ctInfo.nome} – CT ${ctInfo.num}</strong>
-      ${ctInfo.endereco} · Salvador/BA${tel}${cel}
-      ${ctInfo.email ? ` · ${ctInfo.email}` : ''}
+
+  const endCEP  = ctInfo.endereco ? `${ctInfo.endereco} – Salvador/Ba – CEP:` : 'Salvador/Ba'
+  const telLine = [
+    ctInfo.telefone ? `Tel.: ${ctInfo.telefone}` : '',
+    ctInfo.celular  ? `/ ${ctInfo.celular}` : '',
+  ].filter(Boolean).join(' ')
+  const emailLine = ctInfo.email ? `E-mail: ${ctInfo.email}` : ''
+
+  return `
+  <div style="border:2px solid #1a3a6b;border-radius:8px;padding:16px 20px;margin-bottom:16px;background:#fff;print-color-adjust:exact">
+    <div style="display:flex;align-items:center;gap:16px">
+      ${logoSvg}
+      <div style="flex:1;text-align:center;border-left:2px solid #1a3a6b;border-right:2px solid #1a3a6b;padding:0 16px">
+        <div style="font-size:15px;font-weight:800;color:#1a3a6b;letter-spacing:.5px;text-transform:uppercase">Conselho Tutelar – ${ctInfo.nome.replace(/^CT \w+ – /,'')}</div>
+        <div style="font-size:10.5px;color:#444;margin-top:2px">Lei Federal 8.069/90 – Lei Municipal 6.266</div>
+        <div style="font-size:10px;color:#555;margin-top:4px">${endCEP}</div>
+        <div style="font-size:10px;color:#555">${[telLine, emailLine].filter(Boolean).join(' – ')}</div>
+      </div>
+      ${numBox}
     </div>
   </div>`
 }
@@ -2785,14 +2954,27 @@ function downloadFormDocx() {
     if (secAtual.linhas.length) secoes.push(secAtual)
   }
 
-  // ── Brasão SVG oficial (simplificado, estilo CT Salvador) ──
-  const brasaoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="48" fill="#1e3a5f" stroke="#c8a435" stroke-width="3"/>
-    <text x="50" y="38" font-family="serif" font-size="11" fill="#c8a435" text-anchor="middle" font-weight="bold">PREFEITURA</text>
-    <text x="50" y="52" font-family="serif" font-size="10" fill="#fff" text-anchor="middle">SALVADOR</text>
-    <text x="50" y="64" font-family="serif" font-size="9" fill="#c8a435" text-anchor="middle">BAHIA · BRASIL</text>
-    <circle cx="50" cy="50" r="44" fill="none" stroke="#c8a435" stroke-width="1" stroke-dasharray="3 2"/>
+  // ── Brasão SVG oficial CT Salvador ──
+  const brasaoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 90" width="72" height="72">
+    <circle cx="45" cy="45" r="43" fill="#1a3a6b" stroke="#c9a227" stroke-width="3"/>
+    <circle cx="45" cy="45" r="35" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+    <circle cx="45" cy="26" r="7" fill="#fff"/>
+    <path d="M28 60 Q36 40 45 38 Q54 40 62 60" fill="#c9a227"/>
+    <path d="M30 52 Q38 44 45 42 Q52 44 60 52 L62 60 Q45 55 28 60Z" fill="#1a3a6b"/>
+    <path d="M18 38 Q22 20 38 16" fill="none" stroke="#c9a227" stroke-width="2" stroke-linecap="round"/>
+    <path d="M72 38 Q68 20 52 16" fill="none" stroke="#c9a227" stroke-width="2" stroke-linecap="round"/>
+    <text x="24" y="42" fill="#c9a227" font-size="8" text-anchor="middle">✦</text>
+    <text x="66" y="42" fill="#c9a227" font-size="8" text-anchor="middle">✦</text>
+    <text x="45" y="74" fill="#c9a227" font-size="7" font-weight="bold" text-anchor="middle" font-family="sans-serif">CONSELHO TUTELAR</text>
+    <text x="45" y="82" fill="#fff" font-size="5.5" text-anchor="middle" font-family="sans-serif">SALVADOR - BA</text>
   </svg>`
+
+  // Dados completos do CT para o PDF
+  const ctTel   = ctInfo ? `Tel.: ${ctInfo.telefone}` : ''
+  const ctCel   = ctInfo ? `/ ${ctInfo.celular}` : ''
+  const ctEmail = ctInfo ? `E-mail: ${ctInfo.email}` : ''
+  const ctEndPdf = ctInfo ? `${ctInfo.endereco} – ${ctInfo.regiao} – Salvador/BA` : ctEnd
+  const telEmailLine = [ctTel, ctCel, ctEmail].filter(Boolean).join(' ')
 
   // ── Montar HTML do documento ──
   const secoesHtml = secoes.map(s => `
@@ -2809,20 +2991,25 @@ function downloadFormDocx() {
   body{ font-family: Arial, sans-serif; font-size: 11pt; color: #111; background:#fff }
   .page{ max-width: 700px; margin: 0 auto; padding: 20px 0 }
 
-  /* Cabeçalho */
-  .header{ display:flex; align-items:center; gap:16px; border-bottom:3px solid #1e3a5f; padding-bottom:14px; margin-bottom:8px }
-  .header-text{ flex:1 }
-  .org-name{ font-size:9pt; font-weight:bold; color:#555; text-transform:uppercase; letter-spacing:.5px }
-  .ct-name{ font-size:15pt; font-weight:bold; color:#1e3a5f; margin:2px 0 }
-  .form-title{ font-size:12pt; font-weight:bold; color:#333 }
-  .ct-address{ font-size:9pt; color:#666; margin-top:3px }
+  /* Cabeçalho oficial */
+  .header{ display:flex; align-items:center; gap:0; border:2px solid #1a3a6b; border-radius:6px; overflow:hidden; margin-bottom:10px }
+  .header-logo{ padding:12px 14px; background:#fff; flex-shrink:0 }
+  .header-text{ flex:1; text-align:center; padding:10px 12px; border-left:2px solid #1a3a6b; border-right:2px solid #1a3a6b }
+  .ct-name{ font-size:14pt; font-weight:bold; color:#1a3a6b; margin-bottom:2px }
+  .ct-lei{ font-size:9pt; color:#444; margin-bottom:3px }
+  .ct-address{ font-size:8.5pt; color:#555; line-height:1.5 }
+  .header-num{ padding:10px 14px; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; min-width:40px }
+  .header-num span{ font-size:22pt; font-weight:900; color:#1a3a6b }
+
+  /* Título do formulário */
+  .form-title-bar{ text-align:right; font-size:11pt; font-weight:bold; color:#333; margin:6px 0 10px; text-transform:uppercase; letter-spacing:.3px }
 
   /* Linha de protocolo */
-  .proto-bar{ display:flex; justify-content:center; gap:40px; background:#f0f4f8; border:1px solid #c9d4e0; border-radius:4px; padding:8px 16px; margin:10px 0 18px; font-size:10pt }
-  .proto-bar span{ font-weight:bold; color:#1e3a5f }
+  .proto-bar{ display:flex; justify-content:center; gap:30px; background:#f0f4f8; border:1px solid #c9d4e0; border-radius:4px; padding:7px 16px; margin:0 0 16px; font-size:9.5pt }
+  .proto-bar span{ font-weight:bold; color:#1a3a6b }
 
   /* Seções */
-  .sec-title{ font-size:11pt; font-weight:bold; color:#1e3a5f; border-left:4px solid #1e3a5f; padding-left:8px; margin:16px 0 6px; text-transform:uppercase; letter-spacing:.3px }
+  .sec-title{ font-size:11pt; font-weight:bold; color:#1a3a6b; border-left:4px solid #1a3a6b; padding-left:8px; margin:16px 0 6px; text-transform:uppercase; letter-spacing:.3px }
   .data-table{ width:100%; border-collapse:collapse; margin-bottom:4px }
   .data-table tr{ border-bottom:1px solid #e0e6ef }
   .data-table td{ padding:5px 8px; vertical-align:top }
@@ -2836,20 +3023,23 @@ function downloadFormDocx() {
   .sig-line{ border-top:1px solid #555; margin-top:44px; padding-top:6px; font-size:9.5pt; color:#444 }
 
   /* Rodapé */
-  .footer{ margin-top:30px; border-top:1px solid #c9d4e0; padding-top:8px; text-align:center; font-size:8.5pt; color:#888 }
+  .footer{ margin-top:30px; border-top:1px solid #c9d4e0; padding-top:8px; text-align:center; font-size:8pt; color:#888 }
   @media print{ body{ margin:0 } .page{ padding:0 } }
 </style></head><body>
 <div class="page">
 
   <div class="header">
-    ${brasaoSvg}
+    <div class="header-logo">${brasaoSvg}</div>
     <div class="header-text">
-      <div class="org-name">Prefeitura Municipal de Salvador – SEDH</div>
       <div class="ct-name">${ctNome}</div>
-      <div class="form-title">${formTitle}</div>
-      <div class="ct-address">${ctEnd}</div>
+      <div class="ct-lei">Lei Federal 8.069/90 – Lei Municipal 6.266</div>
+      <div class="ct-address">${ctEndPdf}</div>
+      ${telEmailLine ? `<div class="ct-address">${telEmailLine}</div>` : ''}
     </div>
+    <div class="header-num"><span>3</span></div>
   </div>
+
+  <div class="form-title-bar">Ficha de Atendimento: [ ]</div>
 
   <div class="proto-bar">
     <div>Data: <span>${dataStr}</span></div>
@@ -3288,58 +3478,100 @@ const CONSELHOS_BAIRROS = [
   { num:'XXIV', nome:'CT XXIV – Brotas', regiao:'Prefeitura Bairro I – Centro/Brotas', endereco:'Rua Carlos Chenaud nº18 – Vila Laura/Matatu Brotas – SEDE PROVISÓRIA', telefone:'3202-7353', celular:'71 99923-3463', email:'conselho.brotas@salvador.ba.gov.br', coordenador:'Esthela Monica Gomes da Costa', conselheiros:['Esthela Monica Gomes da Costa','Carine Souza Santos','Soraia do Nascimento Veiga','Jhon Victor Oliveira dos Santos','Adriana Marinho Santos'], bairros:['Acupe Brotas','Boa Vista de Brotas','Candeal','Engenho Velho de Brotas','Horto Florestal'] },
 ]
 
+function _councilCardHtml(c, idx, isMaster) {
+  const nomeCurto = c.nome.replace(/^CT [IVXLCDM]+ – /,'')
+  return `
+  <div class="card council-card" data-search="${c.nome.toLowerCase()} ${(c.bairros||[]).join(' ').toLowerCase()} ${(c.coordenador||'').toLowerCase()} ${(c.conselheiros||[]).join(' ').toLowerCase()}">
+    <!-- cabeçalho do card -->
+    <div style="background:linear-gradient(135deg,#1a3a6b 0%,#2563eb 100%);padding:14px 16px;border-radius:10px 10px 0 0;display:flex;align-items:center;gap:10px">
+      <div style="width:44px;height:44px;border-radius:50%;background:#c9a227;border:2px solid #fff3;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:11px;flex-shrink:0;text-align:center;line-height:1.1">${c.num}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nomeCurto}</div>
+        <div style="font-size:10.5px;color:rgba(255,255,255,.75);margin-top:2px">${c.regiao||''}</div>
+      </div>
+      ${isMaster ? `<div style="display:flex;gap:5px;flex-shrink:0">
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:3px 9px;font-size:11px" onclick="showEditCouncilModal(${idx})">Editar</button>
+      </div>` : ''}
+    </div>
+    <!-- corpo -->
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+      ${c.endereco ? `<div style="font-size:12px;display:flex;gap:6px;align-items:flex-start;color:var(--text)"><span style="font-size:14px;flex-shrink:0">📍</span><span>${c.endereco} – Salvador/BA</span></div>` : ''}
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        ${c.telefone ? `<div style="font-size:12px;display:flex;gap:4px;align-items:center;color:var(--text)"><span>📞</span><span>${c.telefone}</span></div>` : ''}
+        ${c.celular  ? `<div style="font-size:12px;display:flex;gap:4px;align-items:center;color:var(--text)"><span>📱</span><span>${c.celular}</span></div>` : ''}
+      </div>
+      ${c.email ? `<div style="font-size:12px;display:flex;gap:5px;align-items:center"><span>✉️</span><a href="mailto:${c.email}" style="color:var(--accent);text-decoration:none">${c.email}</a></div>` : ''}
+      ${c.coordenador ? `
+      <div style="background:var(--primary-subtle);border-left:3px solid var(--primary);padding:7px 10px;border-radius:0 6px 6px 0;font-size:12px">
+        <span style="color:var(--text-muted);font-size:11px;display:block;margin-bottom:1px">Coordenador(a)</span>
+        <strong>${c.coordenador}</strong>
+      </div>` : ''}
+      <!-- Conselheiros -->
+      ${c.conselheiros && c.conselheiros.length ? `
+      <details style="font-size:12px">
+        <summary style="cursor:pointer;color:var(--primary);font-weight:700;list-style:none;display:flex;align-items:center;gap:6px">
+          <span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px">${c.conselheiros.length}</span>
+          Conselheiros Titulares
+        </summary>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px;padding-left:4px">
+          ${c.conselheiros.map((n,i)=>`<div style="display:flex;gap:7px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span style="width:20px;height:20px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</span>
+            ${n}${i===0?' <span style="font-size:10px;background:#c9a227;color:#fff;border-radius:10px;padding:1px 6px;margin-left:4px">Coord.</span>':''}
+          </div>`).join('')}
+        </div>
+      </details>` : ''}
+      <!-- Bairros -->
+      ${c.bairros && c.bairros.length ? `
+      <details style="font-size:12px">
+        <summary style="cursor:pointer;color:var(--accent);font-weight:700;list-style:none;display:flex;align-items:center;gap:6px">
+          <span style="background:var(--accent);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px">${c.bairros.length}</span>
+          Bairros / Localidades
+        </summary>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding-left:4px">
+          ${c.bairros.map(b=>`<span style="font-size:11px;background:var(--primary-subtle);color:var(--primary);padding:3px 10px;border-radius:20px;border:1px solid var(--primary-subtle)">${b}</span>`).join('')}
+        </div>
+      </details>` : ''}
+    </div>
+  </div>`
+}
+
 function renderCouncils() {
   const isMaster = currentUser && currentUser.role === 'master'
+  const totalBairros = CONSELHOS_BAIRROS.reduce((s,c)=>s+(c.bairros||[]).length,0)
+  const totalCons    = CONSELHOS_BAIRROS.reduce((s,c)=>s+(c.conselheiros||[]).length,0)
+
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Conselhos e Bairros</h2>
-      <p>Distribuição territorial dos Conselhos Tutelares de Salvador/BA</p>
+      <p>Distribuição territorial dos 24 Conselhos Tutelares de Salvador/BA</p>
     </div>
     ${isMaster ? `<button class="btn btn-primary" onclick="showAddCouncilModal()">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Novo Conselho
     </button>` : ''}
   </div>
-  <div class="card card-pad" style="margin-bottom:16px">
-    <input id="council-search" placeholder="Buscar conselho ou bairro…" oninput="filterCouncils(this.value)" />
-  </div>
-  <div id="councils-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px">
-    ${CONSELHOS_BAIRROS.map((c, idx) => `
-    <div class="card council-card" data-search="${c.nome.toLowerCase()} ${c.bairros.join(' ').toLowerCase()} ${(c.coordenador||'').toLowerCase()}">
-      <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;flex-shrink:0;text-align:center">${c.num}</div>
-        <div style="flex:1;min-width:0">
-          <strong style="font-size:14px;display:block">${c.nome}</strong>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${c.regiao||''}</div>
-        </div>
-        ${isMaster ? `<div style="display:flex;gap:6px">
-          <button class="btn btn-outline btn-sm" onclick="showEditCouncilModal(${idx})">Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteCouncil(${idx})">Excluir</button>
-        </div>` : ''}
-      </div>
-      <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
-        ${c.endereco ? `<div style="font-size:12px;display:flex;gap:6px;align-items:flex-start"><span style="color:var(--text-muted);flex-shrink:0">📍</span><span>${c.endereco}</span></div>` : ''}
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
-          ${c.telefone ? `<div style="font-size:12px;display:flex;gap:4px;align-items:center"><span style="color:var(--text-muted)">📞</span><span>${c.telefone}</span></div>` : ''}
-          ${c.celular ? `<div style="font-size:12px;display:flex;gap:4px;align-items:center"><span style="color:var(--text-muted)">📱</span><span>${c.celular}</span></div>` : ''}
-        </div>
-        ${c.email ? `<div style="font-size:12px;display:flex;gap:6px;align-items:center"><span style="color:var(--text-muted)">✉️</span><a href="mailto:${c.email}" style="color:var(--accent)">${c.email}</a></div>` : ''}
-        ${c.coordenador ? `<div style="font-size:12px;background:var(--primary-subtle);padding:6px 10px;border-radius:6px"><span style="color:var(--text-muted)">Coordenador(a): </span><strong>${c.coordenador}</strong></div>` : ''}
-        <details style="font-size:12px">
-          <summary style="cursor:pointer;color:var(--accent);font-weight:600;margin-bottom:6px">${c.bairros.length} bairros / localidades</summary>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
-            ${c.bairros.map(b => `<span style="font-size:11px;background:var(--primary-subtle);color:var(--primary);padding:3px 9px;border-radius:20px">${b}</span>`).join('')}
-          </div>
-        </details>
-        ${c.conselheiros && c.conselheiros.length ? `<details style="font-size:12px">
-          <summary style="cursor:pointer;color:var(--accent);font-weight:600;margin-bottom:6px">${c.conselheiros.length} conselheiros</summary>
-          <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
-            ${c.conselheiros.map(n=>`<div style="padding:4px 8px;background:var(--bg);border-radius:6px">${n}</div>`).join('')}
-          </div>
-        </details>` : ''}
+
+  <!-- Resumo numérico -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:16px">
+    ${[
+      {label:'Conselhos', val:CONSELHOS_BAIRROS.length, icon:'🏛️', color:'#1a3a6b'},
+      {label:'Conselheiros', val:totalCons, icon:'👤', color:'#2563eb'},
+      {label:'Bairros cobertos', val:totalBairros, icon:'📍', color:'#0891b2'},
+    ].map(s=>`<div class="card" style="padding:12px 14px;display:flex;gap:10px;align-items:center">
+      <span style="font-size:22px">${s.icon}</span>
+      <div>
+        <div style="font-size:20px;font-weight:800;color:${s.color}">${s.val}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${s.label}</div>
       </div>
     </div>`).join('')}
+  </div>
+
+  <div class="card card-pad" style="margin-bottom:16px">
+    <input id="council-search" placeholder="🔍  Buscar por conselho, bairro, conselheiro ou coordenador…" oninput="filterCouncils(this.value)" style="width:100%;box-sizing:border-box" />
+  </div>
+  <div id="councils-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px">
+    ${CONSELHOS_BAIRROS.map((c, idx) => _councilCardHtml(c, idx, isMaster)).join('')}
   </div>`
 }
 
