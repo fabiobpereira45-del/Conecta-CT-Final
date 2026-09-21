@@ -1153,32 +1153,138 @@ function deleteNotice(i){
 // ── STATISTICS ──
 
 // ════════════════════════════════════════════════════
-//  DB LOCAL — funções de persistência de fichas
-//  Trocar apenas estas duas para integrar Supabase
+//  DB — Supabase REST API
+//  Projeto: zahooolpzeqrmpjcxakz
 // ════════════════════════════════════════════════════
-function _db_salvarFicha(ficha) {
-  // Garante array de fichas no localStorage
+const _SB_URL  = 'https://zahooolpzeqrmpjcxakz.supabase.co'
+const _SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphaG9vb2xwemVxcm1wamN4YWt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3MTg4MjgsImV4cCI6MjEwNTI5NDgyOH0.PatkY5m5Al1pkJZ7BEoaq2sOZehBL772W7LhrDpbU58'
+
+function _sbHeaders() {
+  return {
+    'apikey': _SB_KEY,
+    'Authorization': 'Bearer ' + _SB_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal'
+  }
+}
+
+// Converte objeto JS (camelCase) → colunas Supabase (snake_case)
+function _fichaToRow(ficha) {
+  return {
+    protocolo:       ficha.protocolo,
+    nome_crianca:    ficha.nomeCrianca,
+    tipo:            ficha.tipo || 'Atendimento',
+    enviado_por:     ficha.enviadoPor,
+    ct_destino:      ficha.ctDestino,
+    data_hora:       ficha.dataHora,
+    form_id:         ficha.formId || 0,
+    campos_snapshot: ficha.camposSnapshot || {},
+    dados:           ficha.dados || {},
+    lida:            ficha.lida || false,
+    created_at:      ficha.createdAt || new Date().toISOString()
+  }
+}
+
+// Converte linha Supabase → objeto JS
+function _rowToFicha(row) {
+  return {
+    protocolo:       row.protocolo,
+    nomeCrianca:     row.nome_crianca,
+    tipo:            row.tipo,
+    enviadoPor:      row.enviado_por,
+    ctDestino:       row.ct_destino,
+    dataHora:        row.data_hora,
+    formId:          row.form_id,
+    camposSnapshot:  row.campos_snapshot || {},
+    dados:           row.dados || {},
+    lida:            row.lida,
+    createdAt:       row.created_at
+  }
+}
+
+async function _db_salvarFicha(ficha) {
+  const row = _fichaToRow(ficha)
+  try {
+    const res = await fetch(`${_SB_URL}/rest/v1/fichas`, {
+      method: 'POST',
+      headers: { ..._sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(row)
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      console.warn('_db_salvarFicha error', res.status, err)
+      _db_salvarFichaLocal(ficha) // fallback local
+    }
+  } catch(e) {
+    console.warn('_db_salvarFicha network error', e)
+    _db_salvarFichaLocal(ficha)
+  }
+}
+
+async function _db_buscarFicha(protocolo) {
+  try {
+    const res = await fetch(
+      `${_SB_URL}/rest/v1/fichas?protocolo=eq.${encodeURIComponent(protocolo.trim())}&limit=1`,
+      { headers: _sbHeaders() }
+    )
+    if (res.ok) {
+      const rows = await res.json()
+      if (rows.length > 0) return _rowToFicha(rows[0])
+    }
+  } catch(e) { console.warn('_db_buscarFicha network error', e) }
+  // Fallback local
+  return _db_buscarFichaLocal(protocolo)
+}
+
+async function _db_listarFichas(ctDestino) {
+  try {
+    let url = `${_SB_URL}/rest/v1/fichas?order=created_at.desc&limit=200`
+    if (ctDestino) url += `&ct_destino=eq.${encodeURIComponent(ctDestino)}`
+    const res = await fetch(url, { headers: _sbHeaders() })
+    if (res.ok) {
+      const rows = await res.json()
+      return rows.map(_rowToFicha)
+    }
+  } catch(e) { console.warn('_db_listarFichas network error', e) }
+  return _db_listarFichasLocal(ctDestino)
+}
+
+async function _db_marcarLida(protocolo) {
+  try {
+    await fetch(
+      `${_SB_URL}/rest/v1/fichas?protocolo=eq.${encodeURIComponent(protocolo)}`,
+      {
+        method: 'PATCH',
+        headers: _sbHeaders(),
+        body: JSON.stringify({ lida: true })
+      }
+    )
+  } catch(e) { console.warn('_db_marcarLida error', e) }
+  _db_marcarLidaLocal(protocolo)
+}
+
+// ── Fallback localStorage (offline / erro de rede) ──
+function _db_salvarFichaLocal(ficha) {
   let fichas = []
   try { fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]') } catch(e){}
-  // Remove versão anterior com mesmo protocolo (atualização)
   fichas = fichas.filter(f => f.protocolo !== ficha.protocolo)
   fichas.unshift(ficha)
   try { localStorage.setItem('cct_fichasDB', JSON.stringify(fichas)) } catch(e){}
 }
-function _db_buscarFicha(protocolo) {
+function _db_buscarFichaLocal(protocolo) {
   try {
     const fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
     return fichas.find(f => f.protocolo === protocolo.trim()) || null
   } catch(e) { return null }
 }
-function _db_listarFichas(ctDestino) {
+function _db_listarFichasLocal(ctDestino) {
   try {
     const fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
     if (!ctDestino) return fichas
     return fichas.filter(f => f.ctDestino === ctDestino)
   } catch(e) { return [] }
 }
-function _db_marcarLida(protocolo) {
+function _db_marcarLidaLocal(protocolo) {
   try {
     const fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
     const f = fichas.find(x => x.protocolo === protocolo)
@@ -1188,22 +1294,15 @@ function _db_marcarLida(protocolo) {
 
 // ── FICHAS INBOX ──
 function renderFichasInbox() {
-  const role   = currentUser.role
-  const ct     = role === 'master' ? null : currentUser.ct
-  const fichas = _db_listarFichas(ct)
-
-  // Também inclui as fichas do array em memória para compatibilidade
-  const memFichas = (role === 'master' ? fichasEnviadas : fichasEnviadas.filter(f => f.ctDestino === currentUser.ct))
-    .filter(f => !fichas.find(x => x.protocolo === f.protocolo))
-  const todas = [...fichas, ...memFichas]
-
-  const unread = todas.filter(f => !f.lida).length
+  // Renderiza esqueleto imediatamente, carrega dados async
+  const ct = currentUser.role === 'master' ? null : currentUser.ct
+  setTimeout(() => _carregarInbox(ct), 0)
 
   return `
-  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+  <div class="page-header">
     <div>
       <h2>Fichas Recebidas</h2>
-      <p>${todas.length} ficha(s)${unread > 0 ? ` · <strong style="color:var(--danger)">${unread} nova(s)</strong>` : ' · Tudo em dia'}</p>
+      <p id="inbox-count-label" style="color:var(--text-muted)">Carregando fichas...</p>
     </div>
   </div>
 
@@ -1212,7 +1311,7 @@ function renderFichasInbox() {
     <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">🔑 Abrir Ficha por Protocolo</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input id="inbox-protocolo-input"
-        placeholder="Cole ou digite o protocolo — ex: 2026/09/247"
+        placeholder="Cole ou digite o protocolo — ex: 20260921-1234"
         style="flex:1;min-width:200px;font-family:monospace;font-size:14px;letter-spacing:.5px"
         onkeydown="if(event.key==='Enter')abrirFichaPorProtocolo()"
       />
@@ -1224,38 +1323,65 @@ function renderFichasInbox() {
     <div id="inbox-protocolo-msg" style="margin-top:8px;font-size:12px;display:none"></div>
   </div>
 
-  <!-- ── Lista de fichas ── -->
-  ${todas.length === 0
-    ? `<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
-        <div style="font-size:48px;margin-bottom:16px">📥</div>
-        <p style="font-weight:600;margin-bottom:6px">Nenhuma ficha recebida</p>
-        <p style="font-size:12px">O atendente salva a ficha e você recebe o protocolo para abri-la aqui.</p>
-      </div>`
-    : `<div class="card"><div class="table-wrap"><table>
-        <thead><tr>
-          <th></th><th>Protocolo</th><th>Criança/Adolescente</th>
-          <th>Enviado por</th><th>Data/Hora</th><th>Ações</th>
-        </tr></thead>
-        <tbody>${todas.map((f,i)=>`<tr style="${!f.lida?'background:rgba(59,130,246,.06);font-weight:500':''}">
-          <td>${!f.lida?'<span style="width:8px;height:8px;background:var(--accent);border-radius:50%;display:inline-block" title="Nova"></span>':''}</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="font-family:monospace;font-size:12px;color:var(--primary);font-weight:700">${f.protocolo}</span>
-              <button title="Copiar protocolo" onclick="copiarProtocolo('${f.protocolo}')"
-                style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;color:var(--text-muted)">
-                📋 Copiar
-              </button>
-            </div>
-          </td>
-          <td style="font-weight:600">${f.nomeCrianca||'—'}</td>
-          <td style="font-size:12px">${f.enviadoPor}</td>
-          <td style="font-size:11px;color:var(--text-muted)">${f.dataHora}</td>
-          <td>
-            <button class="btn btn-primary btn-sm" onclick="abrirFichaInboxDireto('${f.protocolo}')">Abrir</button>
-          </td>
-        </tr>`).join('')}</tbody>
-      </table></div></div>`}
-  `
+  <!-- ── Lista de fichas (preenchida assincronamente) ── -->
+  <div id="inbox-lista">
+    <div style="text-align:center;padding:40px;color:var(--text-muted)">
+      <div style="font-size:32px;margin-bottom:12px">⏳</div>
+      <p>Buscando fichas no servidor...</p>
+    </div>
+  </div>`
+}
+
+async function _carregarInbox(ct) {
+  const fichas = await _db_listarFichas(ct)
+
+  // Merge fichas em memória para compatibilidade offline
+  const memFichas = (ct ? fichasEnviadas.filter(f => f.ctDestino === ct) : fichasEnviadas)
+    .filter(f => !fichas.find(x => x.protocolo === f.protocolo))
+  const todas = [...fichas, ...memFichas]
+
+  const unread = todas.filter(f => !f.lida).length
+
+  const label = document.getElementById('inbox-count-label')
+  if (label) label.innerHTML = `${todas.length} ficha(s)${unread > 0
+    ? ` · <strong style="color:var(--danger)">${unread} nova(s)</strong>` : ' · Tudo em dia'}`
+
+  const lista = document.getElementById('inbox-lista')
+  if (!lista) return
+
+  if (todas.length === 0) {
+    lista.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
+      <div style="font-size:48px;margin-bottom:16px">📥</div>
+      <p style="font-weight:600;margin-bottom:6px">Nenhuma ficha recebida</p>
+      <p style="font-size:12px">O atendente salva a ficha e você recebe o protocolo para abri-la aqui.</p>
+    </div>`
+    return
+  }
+
+  lista.innerHTML = `<div class="card"><div class="table-wrap"><table>
+    <thead><tr>
+      <th></th><th>Protocolo</th><th>Criança/Adolescente</th>
+      <th>Enviado por</th><th>Data/Hora</th><th>Ações</th>
+    </tr></thead>
+    <tbody>${todas.map(f => `<tr style="${!f.lida ? 'background:rgba(59,130,246,.06);font-weight:500' : ''}">
+      <td>${!f.lida ? '<span style="width:8px;height:8px;background:var(--accent);border-radius:50%;display:inline-block" title="Nova"></span>' : ''}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-family:monospace;font-size:12px;color:var(--primary);font-weight:700">${f.protocolo}</span>
+          <button title="Copiar protocolo" onclick="copiarProtocolo('${f.protocolo}')"
+            style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;color:var(--text-muted)">
+            📋 Copiar
+          </button>
+        </div>
+      </td>
+      <td style="font-weight:600">${f.nomeCrianca || '—'}</td>
+      <td style="font-size:12px">${f.enviadoPor}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${f.dataHora}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="abrirFichaInboxDireto('${f.protocolo}')">Abrir</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table></div></div>`
 }
 
 function copiarProtocolo(proto) {
@@ -1278,7 +1404,7 @@ function abrirFichaInboxDireto(protocolo) {
   abrirFichaPorProtocolo()
 }
 
-function abrirFichaPorProtocolo() {
+async function abrirFichaPorProtocolo() {
   const inp  = document.getElementById('inbox-protocolo-input')
   const msg  = document.getElementById('inbox-protocolo-msg')
   const proto = (inp?.value || '').trim()
@@ -1292,8 +1418,10 @@ function abrirFichaPorProtocolo() {
 
   if (!proto) { mostrarMsg('Digite ou cole o protocolo da ficha.', 'var(--text-muted)'); return }
 
-  // Busca no DB local
-  const f = _db_buscarFicha(proto)
+  mostrarMsg('🔍 Buscando ficha...', 'var(--text-muted)')
+
+  // Busca no Supabase (com fallback local)
+  const f = await _db_buscarFicha(proto)
   if (!f) {
     mostrarMsg(`❌ Protocolo "${proto}" não encontrado. Verifique se o atendente salvou a ficha.`, 'var(--danger)')
     return
