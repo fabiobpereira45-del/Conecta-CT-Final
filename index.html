@@ -1222,9 +1222,10 @@ async function _db_salvarFicha(ficha) {
 }
 
 async function _db_buscarFicha(protocolo) {
+  const proto = protocolo.trim()
   try {
     const res = await fetch(
-      `${_SB_URL}/rest/v1/fichas?protocolo=eq.${encodeURIComponent(protocolo.trim())}&limit=1`,
+      `${_SB_URL}/rest/v1/fichas?protocolo=eq.${encodeURIComponent(proto)}&limit=1`,
       { headers: _sbHeaders() }
     )
     if (res.ok) {
@@ -1232,8 +1233,8 @@ async function _db_buscarFicha(protocolo) {
       if (rows.length > 0) return _rowToFicha(rows[0])
     }
   } catch(e) { console.warn('_db_buscarFicha network error', e) }
-  // Fallback local
-  return _db_buscarFichaLocal(protocolo)
+  // Fallback local (busca exata E busca parcial para compatibilidade com formatos antigos)
+  return _db_buscarFichaLocal(proto)
 }
 
 async function _db_listarFichas(ctDestino) {
@@ -1263,6 +1264,26 @@ async function _db_marcarLida(protocolo) {
   _db_marcarLidaLocal(protocolo)
 }
 
+async function _db_excluirFicha(protocolo) {
+  try {
+    const res = await fetch(
+      `${_SB_URL}/rest/v1/fichas?protocolo=eq.${encodeURIComponent(protocolo)}`,
+      { method: 'DELETE', headers: _sbHeaders() }
+    )
+    if (!res.ok) console.warn('_db_excluirFicha error', res.status)
+  } catch(e) { console.warn('_db_excluirFicha network error', e) }
+  // Remove do localStorage também
+  try {
+    let fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
+    fichas = fichas.filter(f => f.protocolo !== protocolo)
+    localStorage.setItem('cct_fichasDB', JSON.stringify(fichas))
+  } catch(e){}
+  // Remove do array em memória
+  const idx = fichasEnviadas.findIndex(f => f.protocolo === protocolo)
+  if (idx >= 0) fichasEnviadas.splice(idx, 1)
+  _saveState()
+}
+
 // ── Fallback localStorage (offline / erro de rede) ──
 function _db_salvarFichaLocal(ficha) {
   let fichas = []
@@ -1273,8 +1294,12 @@ function _db_salvarFichaLocal(ficha) {
 }
 function _db_buscarFichaLocal(protocolo) {
   try {
+    const proto = protocolo.trim()
     const fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
-    return fichas.find(f => f.protocolo === protocolo.trim()) || null
+    // Busca exata primeiro, depois parcial para compatibilidade com formatos antigos
+    return fichas.find(f => f.protocolo === proto)
+        || fichas.find(f => f.protocolo?.includes(proto) || proto.includes(f.protocolo))
+        || null
   } catch(e) { return null }
 }
 function _db_listarFichasLocal(ctDestino) {
@@ -1374,14 +1399,58 @@ async function _carregarInbox(ct) {
           </button>
         </div>
       </td>
-      <td style="font-weight:600">${f.nomeCrianca || '—'}</td>
+      <td style="font-weight:600">${(f.nomeCrianca && f.nomeCrianca !== 'Não informado') ? f.nomeCrianca : '<span style="color:var(--text-muted);font-style:italic;font-weight:400">Não informado</span>'}</td>
       <td style="font-size:12px">${f.enviadoPor}</td>
       <td style="font-size:11px;color:var(--text-muted)">${f.dataHora}</td>
       <td>
-        <button class="btn btn-primary btn-sm" onclick="abrirFichaInboxDireto('${f.protocolo}')">Abrir</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-primary btn-sm" onclick="abrirFichaInboxDireto('${f.protocolo}')">Abrir</button>
+          <button title="Excluir ficha" onclick="confirmarExcluirFicha('${f.protocolo}','${(f.nomeCrianca||'').replace(/'/g,"\\'")}')"
+            style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:#dc2626;font-weight:600;white-space:nowrap">
+            🗑️
+          </button>
+        </div>
       </td>
     </tr>`).join('')}</tbody>
   </table></div></div>`
+}
+
+function confirmarExcluirFicha(protocolo, nomeCrianca) {
+  const mr = document.getElementById('modal-root')
+  if (!mr) return
+  mr.innerHTML = `
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)this.remove()">
+    <div style="background:#fff;border-radius:14px;padding:32px 28px;max-width:400px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+      <div style="font-size:44px;margin-bottom:8px;">🗑️</div>
+      <h2 style="color:#dc2626;margin:0 0 8px;font-size:18px;">Excluir Ficha</h2>
+      <p style="color:#555;font-size:14px;margin:0 0 10px;">Tem certeza que deseja excluir permanentemente esta ficha?</p>
+      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:20px;">
+        <div style="font-family:monospace;font-size:15px;font-weight:700;color:#dc2626">${protocolo}</div>
+        <div style="font-size:12px;color:#666;margin-top:4px">${nomeCrianca || ''}</div>
+      </div>
+      <p style="color:#dc2626;font-size:12px;font-weight:600;margin:0 0 20px;">⚠️ Esta ação não pode ser desfeita.</p>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('modal-root').innerHTML=''"
+          style="flex:1;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:11px;font-size:14px;cursor:pointer;font-weight:600;color:#374151">
+          Cancelar
+        </button>
+        <button onclick="executarExcluirFicha('${protocolo}')"
+          style="flex:1;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer">
+          Sim, Excluir
+        </button>
+      </div>
+    </div>
+  </div>`
+}
+
+async function executarExcluirFicha(protocolo) {
+  document.getElementById('modal-root').innerHTML = ''
+  showToast('🗑️ Excluindo ficha...')
+  await _db_excluirFicha(protocolo)
+  buildNav()
+  showToast('✅ Ficha excluída com sucesso.')
+  // Recarrega inbox
+  navigate('inbox')
 }
 
 function copiarProtocolo(proto) {
