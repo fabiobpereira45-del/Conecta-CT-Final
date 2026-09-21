@@ -740,13 +740,15 @@ async function doLogin() {
     const initials = (row.nome || 'U').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
 
     currentUser = {
-      id:      row.id,
-      name:    row.nome,
-      email:   row.email,
-      role:    row.role,
-      ct:      row.ct || null,
-      ctFull:  row.role === 'master' ? 'Todos os 24 Conselhos' : ctFull,
-      initials
+      id:        row.id,
+      name:      row.nome,
+      email:     row.email,
+      role:      row.role,
+      ct:        row.ct || null,
+      ctFull:    row.role === 'master' ? 'Todos os 24 Conselhos' : ctFull,
+      initials,
+      senhaHash: row.senha_hash,
+      telefone:  row.telefone || ''
     }
 
     _loadState()
@@ -1076,24 +1078,24 @@ function renderProfile() {
       </div>
       <div class="divider"></div>
       <div class="field-row cols-2" style="margin-bottom:12px">
-        <div><label class="field-label">Nome</label><input value="${u.name}" /></div>
+        <div><label class="field-label">Nome</label><input id="prof-nome" value="${u.name}" /></div>
         <div><label class="field-label">Conselho</label><input value="${u.ctFull}" readonly /></div>
       </div>
       <div class="field-row cols-2" style="margin-bottom:12px">
-        <div><label class="field-label">E-mail</label><input value="fabio.bpereira45@gmail.com" /></div>
-        <div><label class="field-label">Telefone</label><input value="(71) 99999-0000" /></div>
+        <div><label class="field-label">E-mail</label><input id="prof-email" value="${u.email||''}" /></div>
+        <div><label class="field-label">Telefone</label><input id="prof-tel" value="${u.telefone||''}" placeholder="(71) 9 9999-9999" /></div>
       </div>
       ${u.role !== 'atendente' ? `
       <div style="margin-bottom:12px"><label class="field-label">Cargo</label><input value="${roleLabel}" readonly /></div>` : ''}
-      <button class="btn btn-primary" onclick="showToast('Perfil salvo!')" style="margin-top:8px">Salvar alterações</button>
+      <button class="btn btn-primary" onclick="salvarPerfil()" style="margin-top:8px">Salvar alterações</button>
     </div>
     <div>
       <div class="card card-pad" style="margin-bottom:16px">
         <h3 style="font-size:14px;font-weight:600;margin-bottom:14px">Segurança</h3>
-        <div style="margin-bottom:12px"><label class="field-label">Senha atual</label><input type="password" value="••••••••" /></div>
-        <div style="margin-bottom:12px"><label class="field-label">Nova senha</label><input type="password" placeholder="Nova senha" /></div>
-        <div style="margin-bottom:16px"><label class="field-label">Confirmar</label><input type="password" placeholder="Confirme" /></div>
-        <button class="btn btn-outline" onclick="showToast('Senha alterada!')">Alterar senha</button>
+        <div style="margin-bottom:12px"><label class="field-label">Senha atual</label><input type="password" id="prof-senha-atual" placeholder="••••••••" /></div>
+        <div style="margin-bottom:12px"><label class="field-label">Nova senha</label><input type="password" id="prof-senha-nova" placeholder="Nova senha" /></div>
+        <div style="margin-bottom:16px"><label class="field-label">Confirmar</label><input type="password" id="prof-senha-conf" placeholder="Confirme" /></div>
+        <button class="btn btn-outline" onclick="alterarSenha()">Alterar senha</button>
       </div>
       ${u.role !== 'atendente' ? `
       <div class="card card-pad">
@@ -5659,6 +5661,62 @@ function removeAvatar() {
   updateSidebarUser()
   document.getElementById('content').innerHTML = renderProfile()
   showToast('Foto removida.')
+}
+
+async function salvarPerfil() {
+  const nome  = (document.getElementById('prof-nome')?.value || '').trim()
+  const email = (document.getElementById('prof-email')?.value || '').trim()
+  const tel   = (document.getElementById('prof-tel')?.value || '').trim()
+  if (!nome) { showToast('O nome não pode ficar em branco.'); return }
+  if (!email) { showToast('O e-mail não pode ficar em branco.'); return }
+  try {
+    const res = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${currentUser.id}`, {
+      method: 'PATCH',
+      headers: { ..._sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({ nome, email, telefone: tel || null })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      showToast('Erro ao salvar: ' + (err.message || res.status)); return
+    }
+    currentUser.name     = nome
+    currentUser.email    = email
+    currentUser.telefone = tel
+    currentUser.initials = nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()
+    updateSidebarUser()
+    document.getElementById('content').innerHTML = renderProfile()
+    showToast('Perfil salvo com sucesso!')
+  } catch(e) {
+    showToast('Falha de conexão ao salvar perfil.')
+  }
+}
+
+async function alterarSenha() {
+  const atual = (document.getElementById('prof-senha-atual')?.value || '')
+  const nova  = (document.getElementById('prof-senha-nova')?.value || '')
+  const conf  = (document.getElementById('prof-senha-conf')?.value || '')
+  if (!atual || !nova || !conf) { showToast('Preencha todos os campos de senha.'); return }
+  if (nova !== conf) { showToast('Nova senha e confirmação não conferem.'); return }
+  if (nova.length < 6) { showToast('A nova senha deve ter pelo menos 6 caracteres.'); return }
+  // Verifica senha atual
+  const hashAtual = await sha256(atual)
+  if (hashAtual !== currentUser.senhaHash) { showToast('Senha atual incorreta.'); return }
+  const hashNova = await sha256(nova)
+  try {
+    const res = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${currentUser.id}`, {
+      method: 'PATCH',
+      headers: { ..._sbHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senha_hash: hashNova })
+    })
+    if (!res.ok) { showToast('Erro ao alterar senha.'); return }
+    currentUser.senhaHash = hashNova
+    document.getElementById('prof-senha-atual').value = ''
+    document.getElementById('prof-senha-nova').value  = ''
+    document.getElementById('prof-senha-conf').value  = ''
+    showToast('Senha alterada com sucesso!')
+  } catch(e) {
+    showToast('Falha de conexão ao alterar senha.')
+  }
 }
 
 // ── CEP AUTOMÁTICO ──
