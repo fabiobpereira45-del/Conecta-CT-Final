@@ -613,11 +613,45 @@ function toggleAdminCode() {
 }
 
 // Credenciais em memória – senha: "senha123" para demo
-const CREDENTIALS = [
+let CREDENTIALS = [
   { email:'fabio.bpereira45@gmail.com', senha:'admin123', role:'master' },
   { email:'ana.costa@ct.ba.gov.br',     senha:'senha123', role:'conselheiro' },
   { email:'carlos.m@ct.ba.gov.br',      senha:'senha123', role:'atendente' },
 ]
+
+// ── PERSISTÊNCIA ──
+const _DEFAULT_CREDENTIALS = [
+  { email:'fabio.bpereira45@gmail.com', senha:'admin123', role:'master' },
+  { email:'ana.costa@ct.ba.gov.br',     senha:'senha123', role:'conselheiro' },
+  { email:'carlos.m@ct.ba.gov.br',      senha:'senha123', role:'atendente' },
+]
+const _DEFAULT_USERS = [
+  {name:'Fabio Pereira',email:'fabio.bpereira45@gmail.com',cargo:'Coordenador',ct:null,role:'master',status:'Ativo'},
+  {name:'Ana Costa',email:'ana.costa@ct.ba.gov.br',cargo:'Conselheiro(a)',ct:'CTI',role:'conselheiro',status:'Ativo'},
+  {name:'Carlos Mendes',email:'carlos.m@ct.ba.gov.br',cargo:'Atendente',ct:'CTI',role:'atendente',status:'Ativo'},
+]
+
+function _saveState() {
+  try {
+    localStorage.setItem('cct_usersData', JSON.stringify(usersData))
+    localStorage.setItem('cct_credentials', JSON.stringify(CREDENTIALS))
+    localStorage.setItem('cct_pendingUsers', JSON.stringify(pendingUsers))
+    localStorage.setItem('cct_fichasEnviadas', JSON.stringify(fichasEnviadas))
+  } catch(e) { console.warn('_saveState error', e) }
+}
+
+function _loadState() {
+  try {
+    const u = localStorage.getItem('cct_usersData')
+    if (u) usersData = JSON.parse(u)
+    const c = localStorage.getItem('cct_credentials')
+    if (c) CREDENTIALS = JSON.parse(c)
+    const p = localStorage.getItem('cct_pendingUsers')
+    if (p) pendingUsers = JSON.parse(p)
+    const f = localStorage.getItem('cct_fichasEnviadas')
+    if (f) fichasEnviadas = JSON.parse(f)
+  } catch(e) { console.warn('_loadState error', e) }
+}
 
 function _findUserByEmail(email) {
   return usersData.find(u => u.email.toLowerCase() === email.toLowerCase())
@@ -637,6 +671,7 @@ function _buildProfile(userData) {
 }
 
 function doLogin() {
+  _loadState() // Restaura usuários aprovados e credenciais do localStorage
   const email = (document.getElementById('login-email')?.value || '').trim()
   const pass  = (document.getElementById('login-pass')?.value  || '').trim()
   const errEl = document.getElementById('login-error')
@@ -676,6 +711,7 @@ function loginDemo(role) {
 
 function _enterApp() {
   if (!currentUser) return
+  _loadState() // Restaura estado persistido
   document.getElementById('auth-screen').style.display = 'none'
   document.getElementById('app').style.display = 'flex'
   updateSidebarUser()
@@ -713,6 +749,7 @@ function doRegister() {
     created: dateStr
   }
   pendingUsers.push(newEntry)
+  _saveState()
 
   document.getElementById('auth-screen').style.display = 'none'
   document.getElementById('pending-screen').style.display = 'flex'
@@ -1160,10 +1197,67 @@ function abrirFichaInbox(idx) {
     : fichasEnviadas.filter(f => f.ctDestino === currentUser.ct)
   const f = minhas[idx]
   if (!f) return
-  // Marca como lida
-  f.lida = true
-  buildNav() // Atualiza badge
 
+  // Marca como lida e salva
+  f.lida = true
+  _saveState()
+  buildNav()
+
+  // Fecha qualquer modal aberto
+  closeModal()
+
+  // Se tiver snapshot com camposSnapshot (nova estrutura), abre o formulário real
+  if (f.camposSnapshot) {
+    const formId = typeof f.formId === 'number' ? f.formId : 0
+    formsFillActive = formId
+
+    // Navega para a tela de formulários
+    navigate('forms')
+
+    // Após render, restaura os campos e desbloqueia seção do conselheiro
+    setTimeout(() => {
+      // Restaura todos os campos do snapshot
+      const snap = f.camposSnapshot
+      Object.entries(snap).forEach(([id, val]) => {
+        const el = document.getElementById(id)
+        if (!el) return
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          el.checked = !!val
+        } else {
+          el.value = val
+        }
+      })
+
+      // Desabilita campos da seção atendente (read-only para conselheiro)
+      document.querySelectorAll('#ficha-secao-atendente input, #ficha-secao-atendente select, #ficha-secao-atendente textarea').forEach(el => {
+        if (el.id !== 'form-data-atual' && el.id !== 'form-hora-atual') el.disabled = true
+      })
+
+      // Mostra e habilita seção do conselheiro
+      const secCons = document.getElementById('ficha-secao-conselheiro')
+      if (secCons) {
+        secCons.style.display = 'block'
+        secCons.querySelectorAll('input, select, textarea').forEach(el => { el.disabled = false })
+      }
+
+      // Atualiza label
+      const lbl = document.getElementById('ficha-conselheiro-label')
+      if (lbl) lbl.textContent = `Responsável: ${f.conselheiroDest || currentUser.name}`
+
+      // Desabilita botão de direcionar (já foi direcionado)
+      const btnDir = document.querySelector('[onclick="direcionarFichaConselheiro()"]')
+      if (btnDir) {
+        btnDir.textContent = '✓ Direcionado'
+        btnDir.disabled = true
+        btnDir.style.background = '#2ecc71'
+      }
+
+      showToast(`📋 Ficha ${f.protocolo} aberta – preencha a seção do conselheiro.`)
+    }, 300)
+    return
+  }
+
+  // Fallback: exibe modal com dados (fichas antigas sem snapshot)
   document.getElementById('modal-root').innerHTML = `
   <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
     <div class="modal-box" style="max-width:640px">
@@ -1179,7 +1273,6 @@ function abrirFichaInbox(idx) {
       </div>
       <div class="modal-footer" style="margin-top:20px">
         <button class="btn btn-outline" onclick="closeModal()">Fechar</button>
-        <button class="btn btn-primary" onclick="closeModal();downloadFormDocxFromData(${JSON.stringify(f).replace(/"/g,'&quot;')})">Gerar PDF</button>
       </div>
     </div>
   </div>`
@@ -1206,6 +1299,17 @@ function enviarFichaAoConselheiro() {
   const now = new Date()
   const dataHora = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
 
+  // Captura snapshot de todos os campos com ID para restauração no inbox
+  const camposSnapshot = {}
+  container.querySelectorAll('input, select, textarea').forEach(el => {
+    if (!el.id) return
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      camposSnapshot[el.id] = el.checked
+    } else {
+      camposSnapshot[el.id] = el.value
+    }
+  })
+
   fichasEnviadas.unshift({
     protocolo,
     nomeCrianca,
@@ -1214,10 +1318,13 @@ function enviarFichaAoConselheiro() {
     ctDestino: currentUser.ct,
     dataHora,
     dados,
+    formId: typeof formsFillActive !== 'undefined' ? formsFillActive : 0,
+    camposSnapshot,
     lida: false,
     createdAt: now.toISOString()
   })
 
+  _saveState()
   // Badge visual no sidebar
   buildNav()
   showToast('✅ Ficha enviada ao conselheiro plantonista!')
@@ -3139,6 +3246,7 @@ function approveUser(id) {
   // Adiciona às credenciais para poder fazer login
   CREDENTIALS.push({ email: u.email, senha: u.senha || 'senha123', role })
 
+  _saveState()
   showToast(`✅ ${u.name} aprovado(a)! Acesso liberado.`)
   document.getElementById('content').innerHTML = renderApprovals()
 }
@@ -3146,6 +3254,7 @@ function rejectUser(id) {
   const u = pendingUsers.find(p => p.id === id)
   if (!u) return
   pendingUsers = pendingUsers.filter(p => p.id !== id)
+  _saveState()
   showToast(`❌ Cadastro de ${u.name} recusado.`)
   document.getElementById('content').innerHTML = renderApprovals()
 }
@@ -4044,10 +4153,11 @@ function saveUser(idx){
   const entry={name,email,cargo,ct:role==='master'?null:ct,role,status}
   if(idx===undefined||idx==='undefined') usersData.push(entry)
   else usersData[idx]=entry
+  _saveState()
   closeModal(); navigate('users')
   showToast(idx===undefined||idx==='undefined'?'Usuário criado!':'Usuário atualizado!')
 }
-function deleteUser(i){usersData.splice(i,1);closeModal();navigate('users');showToast('Usuário removido.')}
+function deleteUser(i){usersData.splice(i,1);_saveState();closeModal();navigate('users');showToast('Usuário removido.')}
 
 function renderPlaceholder() {
   const item = NAV_ALL.find(n=>n.id===activeModule)
@@ -4705,6 +4815,45 @@ function direcionarFichaConselheiro() {
   const nome = sel ? sel.value : ''
   if (!nome) { showToast('Selecione um conselheiro antes de direcionar.'); return }
   fichaConselheiroDirecionado = nome
+
+  // ── Captura snapshot completo de todos os campos do formulário ──
+  const camposSnapshot = {}
+  document.querySelectorAll('#content input, #content select, #content textarea').forEach(el => {
+    if (!el.id) return
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      camposSnapshot[el.id] = el.checked
+    } else {
+      camposSnapshot[el.id] = el.value
+    }
+  })
+
+  const protocolo = document.getElementById('f-protocolo')?.value || document.getElementById('m-protocolo')?.value
+    || `${new Date().getFullYear()}/${String(new Date().getMonth()+1).padStart(2,'0')}/${String(Math.floor(Math.random()*900)+100)}`
+  const nomeCrianca = document.getElementById('ficha-nome-crianca')?.value
+    || document.getElementById('f-nome')?.value || 'Não informado'
+  const now = new Date()
+  const dataHora = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+
+  // Determina CT do conselheiro destino
+  const conselheiros = usersData.filter(u => u.role === 'conselheiro' && u.ct === currentUser.ct)
+  const conselhDestino = conselheiros.find(u => u.name === nome)
+
+  fichasEnviadas.unshift({
+    protocolo,
+    nomeCrianca,
+    tipo: 'Atendimento',
+    enviadoPor: currentUser.name,
+    ctDestino: currentUser.ct,
+    conselheiroDest: nome,
+    dataHora,
+    formId: typeof formsFillActive !== 'undefined' ? formsFillActive : 0,
+    camposSnapshot,
+    lida: false,
+    createdAt: now.toISOString()
+  })
+  _saveState()
+  buildNav() // Atualiza badge
+
   // Mostrar seção do conselheiro se o usuário atual for o selecionado ou master
   const secCons = document.getElementById('ficha-secao-conselheiro')
   const lbl = document.getElementById('ficha-conselheiro-label')
@@ -4722,7 +4871,7 @@ function direcionarFichaConselheiro() {
     btnDir.disabled = true
     btnDir.style.background = '#2ecc71'
   }
-  showToast(`✅ Demanda direcionada para ${nome}`)
+  showToast(`✅ Demanda direcionada para ${nome} e salva na caixa de fichas!`)
 }
 
 // ── FICHA: REMETER PARA OUTRO CONSELHEIRO DO CT ──
