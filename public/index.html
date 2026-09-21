@@ -130,6 +130,10 @@ nav{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:2px;overflow
 .page-header p{color:var(--text-muted);font-size:13px;margin-top:4px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
 .card-pad{padding:20px}
+/* Formulários são documentos — sempre fundo branco + texto escuro independente do tema */
+.form-document,.form-document *:not(button):not(.btn):not(input):not(select):not(textarea){color:#1a2332 !important}
+.form-document{background:#fff !important;border-color:#dde3ec !important}
+.form-document input,.form-document select,.form-document textarea{background:#fff !important;color:#1a2332 !important;border-color:#999 !important}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 @media(max-width:900px){.grid-3{grid-template-columns:repeat(2,1fr)}}
@@ -728,7 +732,7 @@ async function _sb_aprovarPendente(id, role) {
   const r2 = await fetch(`${_SB_URL}/rest/v1/usuarios`, {
     method: 'POST',
     headers: { ..._sbHeaders(), 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ nome: u.nome, email: u.email, senha_hash: u.senha_hash, ct: u.ct, role, ativo: true })
+    body: JSON.stringify({ nome: u.nome, email: u.email, senha_hash: u.senha_hash, ct: u.ct, cargo: u.cargo, role, ativo: true })
   })
   if (!r2.ok) {
     const e = await r2.json().catch(() => ({}))
@@ -2658,7 +2662,7 @@ function renderFormFill(id) {
   </div>
   ${_councilBannerHtml()}
   <!-- ══ SEÇÃO DO ATENDENTE ══ -->
-  <div class="card card-pad" id="ficha-secao-atendente">
+  <div class="card card-pad form-document" id="ficha-secao-atendente">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--primary)">
       <div style="width:32px;height:32px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -2826,7 +2830,7 @@ function renderFormFill(id) {
   </div>
 
   <!-- ══ SEÇÃO DO CONSELHEIRO (visível apenas para o conselheiro vinculado) ══ -->
-  <div class="card card-pad" id="ficha-secao-conselheiro" style="display:none;margin-top:16px">
+  <div class="card card-pad form-document" id="ficha-secao-conselheiro" style="display:none;margin-top:16px">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2ecc71">
       <div style="width:32px;height:32px;background:#2ecc71;border-radius:8px;display:flex;align-items:center;justify-content:center">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -2963,7 +2967,7 @@ function _formHeader(form) {
 }
 
 function _docWrap(content) {
-  return `<div class="card card-pad"><div style="font-size:13px;line-height:2;font-family:'Times New Roman',serif;color:#222;text-align:justify">${content}</div><div style="margin-top:24px;text-align:right"><button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button></div></div>`
+  return `<div class="card card-pad form-document"><div style="font-size:13px;line-height:2;font-family:'Times New Roman',serif;text-align:justify">${content}</div><div style="margin-top:24px;text-align:right"><button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button></div></div>`
 }
 
 // ── ID 2: Remessa de Atendimento ──
@@ -3321,7 +3325,7 @@ function renderForm01(form) {
 // ── ID 3: Ficha de Atendimento ──
 function renderForm03(form) {
   const I2 = (w) => `style="display:inline-block;width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-size:inherit;font-family:inherit;padding:0 2px;outline:none;"`
-  return _formHeader(form) + `<div class="card card-pad"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif;color:#222">
+  return _formHeader(form) + `<div class="card card-pad form-document"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
     <p style="text-align:center;font-size:15px;font-weight:700">FICHA DE ATENDIMENTO</p>
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <tr style="background:#f0f4f8">
@@ -3716,7 +3720,7 @@ function renderForm33(form) {
 
 // ── ID 34: Fiscalização de Entidades ──
 function renderForm34(form) {
-  return _formHeader(form) + `<div class="card card-pad"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif;color:#222">
+  return _formHeader(form) + `<div class="card card-pad form-document"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
     <p style="text-align:center;font-size:15px;font-weight:700">INSPEÇÃO ANUAL – ACOLHIMENTO INSTITUCIONAL</p>
     <p style="text-align:center;font-size:12px;font-style:italic">ECA Art. 95. As entidades governamentais e não-governamentais referidas no art. 90 serão fiscalizadas pelo Judiciário, pelo Ministério Público e pelos Conselhos Tutelares.</p>
     <p style="margin-top:8px">Ano: <input ${_INL_W('80px')} placeholder="______"> &nbsp;&nbsp; Modalidade: <label><input type="checkbox" style="width:auto"> Acolhimento Institucional</label> &nbsp; <label><input type="checkbox" style="width:auto"> Casa Lar</label></p>
@@ -3819,7 +3823,7 @@ function renderForm38(form) {
 
 // ── ID 39: Formulário de Solicitação para Acolhimento Provisório – URGÊNCIA ──
 function renderForm39(form) {
-  return _formHeader(form) + `<div class="card card-pad"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif;color:#222">
+  return _formHeader(form) + `<div class="card card-pad form-document"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
     <p style="text-align:center;font-size:14px;font-weight:700;text-transform:uppercase">FORMULÁRIO DE SOLICITAÇÃO PARA ACOLHIMENTO PROVISÓRIO DA CRIANÇA E DO ADOLESCENTE – URGÊNCIA</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
       <p>Data: <input ${_INL_W('110px')} type="date"> Horário: <input ${_INL_W('80px')} placeholder="__:__"></p>
