@@ -356,8 +356,8 @@ tr:hover td{background:var(--sidebar-hover)}
           <input placeholder="Código de administrador" />
         </div>
       </div>
-      <div class="field-group" style="margin-top:16px"><label class="field-label">E-mail</label><input type="email" placeholder="seu@email.com" /></div>
-      <div class="field-group"><label class="field-label">Senha</label><input type="password" placeholder="Mínimo 8 caracteres" /></div>
+      <div class="field-group" style="margin-top:16px"><label class="field-label">E-mail</label><input id="reg-email" type="email" placeholder="seu@email.com" /></div>
+      <div class="field-group"><label class="field-label">Senha</label><input id="reg-senha" type="password" placeholder="Mínimo 6 caracteres" /></div>
       <button class="auth-btn" onclick="doRegister()">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
         Cadastrar
@@ -685,9 +685,38 @@ function _enterApp() {
   showToast(`Bem-vindo(a), ${currentUser.name}!`)
 }
 function doRegister() {
+  const name  = (document.getElementById('reg-name')?.value  || '').trim()
+  const cargo = (document.getElementById('reg-cargo')?.value || '').trim()
+  const ct    = (document.getElementById('reg-ct')?.value    || '').trim()
+  const email = (document.getElementById('reg-email')?.value || '').trim()
+  const senha = (document.getElementById('reg-senha')?.value || '').trim()
+
+  if (!name || !email || !senha) {
+    showToast('Preencha nome, e-mail e senha.')
+    return
+  }
+  if (senha.length < 6) {
+    showToast('Senha deve ter pelo menos 6 caracteres.')
+    return
+  }
+  if (usersData.find(u => u.email.toLowerCase() === email.toLowerCase()) ||
+      pendingUsers.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+    showToast('Este e-mail já está cadastrado.')
+    return
+  }
+
+  const today = new Date()
+  const dateStr = today.toLocaleDateString('pt-BR')
+  const newEntry = {
+    id: 'p' + Date.now(),
+    name, email, cargo, ct,
+    senha,
+    created: dateStr
+  }
+  pendingUsers.push(newEntry)
+
   document.getElementById('auth-screen').style.display = 'none'
-  const ps = document.getElementById('pending-screen')
-  ps.style.display = 'flex'
+  document.getElementById('pending-screen').style.display = 'flex'
 }
 function showAuth() {
   document.getElementById('pending-screen').style.display = 'none'
@@ -2555,15 +2584,28 @@ function renderApprovals() {
   </div>`
 }
 function approveUser(id) {
-  const u = pendingUsers.find(p=>p.id===id)
-  pendingUsers = pendingUsers.filter(p=>p.id!==id)
-  showToast(`${u.name} aprovado(a)! Acesso liberado.`)
+  const u = pendingUsers.find(p => p.id === id)
+  if (!u) return
+  pendingUsers = pendingUsers.filter(p => p.id !== id)
+
+  // Determina role pelo cargo
+  const roleMap = { 'Conselheiro(a)':'conselheiro', 'Atendente':'atendente', 'Coordenador(a)':'master' }
+  const role = roleMap[u.cargo] || 'conselheiro'
+
+  // Adiciona a usersData
+  usersData.push({ name: u.name, email: u.email, cargo: u.cargo, ct: u.ct || null, role, status: 'Ativo' })
+
+  // Adiciona às credenciais para poder fazer login
+  CREDENTIALS.push({ email: u.email, senha: u.senha || 'senha123', role })
+
+  showToast(`✅ ${u.name} aprovado(a)! Acesso liberado.`)
   document.getElementById('content').innerHTML = renderApprovals()
 }
 function rejectUser(id) {
-  const u = pendingUsers.find(p=>p.id===id)
-  pendingUsers = pendingUsers.filter(p=>p.id!==id)
-  showToast(`Cadastro de ${u.name} recusado.`)
+  const u = pendingUsers.find(p => p.id === id)
+  if (!u) return
+  pendingUsers = pendingUsers.filter(p => p.id !== id)
+  showToast(`❌ Cadastro de ${u.name} recusado.`)
   document.getElementById('content').innerHTML = renderApprovals()
 }
 
