@@ -586,10 +586,7 @@ let darkMode = false
 let demoRole = 'master'
 
 // Pending users list (simulated)
-let pendingUsers = [
-  {id:'p1', name:'Ana Lima', email:'ana.lima@ct.ba.gov.br', cargo:'Conselheiro(a)', ct:'Conselho I', created:'18/09/2026'},
-  {id:'p2', name:'Carlos Mendes', email:'carlos.m@ct.ba.gov.br', cargo:'Atendente', ct:'Conselho II', created:'17/09/2026'},
-]
+let pendingUsers = []
 
 // ── AUTH ──
 function showAuthTab(tab) {
@@ -1110,22 +1107,56 @@ function deleteNotice(i){
 // ── STATISTICS ──
 function renderStatistics() {
   const role = currentUser.role
-  const title = role === 'conselheiro' ? 'Minhas Estatísticas' : 'Estatísticas – CT01'
-  const sub = role === 'conselheiro' ? `${currentUser.name} · Setembro 2026` : 'Setembro 2026 · Todos os conselheiros'
+  const now = new Date()
+  const mesAtual = now.getMonth()
+  const anoAtual = now.getFullYear()
+  const nomeMes = now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})
+
+  // Filter lancamentos by current user/CT and current month
+  let myLancs = lancamentosData.filter(l => {
+    if (!l.createdAt) return false
+    const d = new Date(l.createdAt)
+    return d.getMonth() === mesAtual && d.getFullYear() === anoAtual
+  })
+  if (role !== 'master') {
+    myLancs = myLancs.filter(l => l.ct === currentUser.ct)
+    if (role === 'conselheiro') myLancs = myLancs.filter(l => l.author === currentUser.name)
+  }
+
+  const totalAt  = myLancs.filter(l=>l.tipo!=='Medida Protetiva'&&l.tipo!=='Encaminhamento').length
+  const totalMed = myLancs.filter(l=>l.tipo==='Medida Protetiva').length
+  const totalEnc = myLancs.filter(l=>l.tipo==='Encaminhamento').length
+  const total    = myLancs.length
+
+  // Count by tipo for bar chart
+  const tiposCount = {}
+  myLancs.forEach(l=>{ tiposCount[l.tipo]=(tiposCount[l.tipo]||0)+1 })
+  const barData = Object.entries(tiposCount).sort((a,b)=>b[1]-a[1]).slice(0,6)
+    .map(([t,v],i)=>[t,v,['#1e3a5f','#2d5a9e','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'][i]])
+
+  const title = role === 'master' ? 'Estatísticas Gerais' : (role === 'conselheiro' ? 'Minhas Estatísticas' : `Estatísticas – ${currentUser.ctFull||'CT'}`)
+  const sub = `${nomeMes} · ${role === 'master' ? 'Todos os Conselhos' : currentUser.name}`
+
+  const emptyMsg = total === 0 ? `<div style="text-align:center;padding:40px;color:var(--text-muted)">
+    <div style="font-size:32px;margin-bottom:12px">📊</div>
+    <p style="font-weight:600;margin-bottom:4px">Nenhum lançamento este mês</p>
+    <p style="font-size:12px">As estatísticas serão geradas conforme novos lançamentos forem registrados.</p>
+  </div>` : ''
+
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
     <div><h2>${title}</h2><p>${sub}</p></div>
-    <button class="btn btn-outline">Exportar PDF</button>
+    <button class="btn btn-outline" onclick="downloadEstatisticasPDF()">Exportar PDF</button>
   </div>
   <div class="grid-3" style="margin-bottom:20px">
-    ${tile('Atendimentos','247','Total do mês','+12%','up')}
-    ${tile('Medidas Aplicadas','38','Em setembro','','neu')}
-    ${tile('Encaminhamentos','89','CRAS, CREAS, CAPS','-3%','down')}
+    ${tile('Atendimentos',String(totalAt),'Total do mês','','neu')}
+    ${tile('Medidas Aplicadas',String(totalMed),'Este mês','','neu')}
+    ${tile('Encaminhamentos',String(totalEnc),'CRAS, CREAS, CAPS','','neu')}
   </div>
-  <div class="card card-pad">
-    <strong style="font-size:14px;display:block;margin-bottom:16px">Atendimentos por Tipo</strong>
-    ${bar([['Violência Doméstica',72,'#1e3a5f'],['Negligência',58,'#2d5a9e'],['Abandono',34,'#3b82f6'],['Trabalho Infantil',28,'#60a5fa'],['Violência Sexual',21,'#93c5fd'],['Outros',34,'#bfdbfe']])}
-  </div>`
+  ${total === 0 ? emptyMsg : `<div class="card card-pad">
+    <strong style="font-size:14px;display:block;margin-bottom:16px">Lançamentos por Tipo</strong>
+    ${barData.length > 0 ? bar(barData) : '<p style="color:var(--text-muted);font-size:13px">Sem dados disponíveis.</p>'}
+  </div>`}`
 }
 function bar(data) {
   const max = Math.max(...data.map(d=>d[1]))
@@ -1142,42 +1173,48 @@ function bar(data) {
 // ── DAILY ──
 function renderDaily() {
   const role = currentUser.role
-  const rows = role === 'conselheiro'
-    ? [['2026/09/247','Maria da Silva','Violência Doméstica','09:15','Finalizado','finalizado'],
-       ['2026/09/245','Família Carvalho','Visita Domiciliar','14:00','Rascunho','rascunho']]
-    : [['2026/09/247','Maria da Silva','Violência Doméstica','09:15','Finalizado','finalizado'],
-       ['2026/09/246','João Pedro Alves','Negligência Escolar','10:30','Finalizado','finalizado'],
-       ['2026/09/245','Família Carvalho','Visita Domiciliar','14:00','Rascunho','rascunho'],
-       ['2026/09/244','Carlos Eduardo','Trabalho Infantil','15:45','Finalizado','finalizado']]
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})
+  // Filter by role
+  let myLancs = [...lancamentosData]
+  if (role === 'conselheiro') myLancs = myLancs.filter(l => l.author === currentUser.name)
+  else if (role === 'atendente') myLancs = myLancs.filter(l => l.ct === currentUser.ct)
+
+  const emptyState = `<div style="text-align:center;padding:48px 20px;color:var(--text-muted)">
+    <div style="font-size:36px;margin-bottom:12px">📝</div>
+    <p style="font-weight:600;margin-bottom:6px">Nenhum lançamento registrado</p>
+    <p style="font-size:12px;margin-bottom:20px">Clique em <strong>+ Novo</strong> para registrar o primeiro atendimento.</p>
+  </div>`
+
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
     <div><h2>Lançamentos Diários</h2>
-    <p>18 set. 2026${role==='conselheiro'?' · Apenas seus registros':''}</p></div>
+    <p>${hoje}${role==='conselheiro'?' · Apenas seus registros':''}</p></div>
     <button class="btn btn-primary" onclick="showLancamentoModal()">${I.plus} Novo</button>
   </div>
   ${role==='conselheiro'?`<div style="padding:10px 14px;background:var(--primary-subtle);border-radius:8px;font-size:12px;color:var(--primary);margin-bottom:16px">
     Você está visualizando apenas seus próprios lançamentos.
   </div>`:''}
-  <div class="card"><div class="table-wrap"><table>
+  ${myLancs.length === 0 ? emptyState : `<div class="card"><div class="table-wrap"><table>
     <thead><tr><th>Protocolo</th><th>Nome</th><th>Tipo</th><th>Hora</th><th>Status</th><th>Ações</th></tr></thead>
-    <tbody>${lancamentosData.map((l,i)=>`<tr>
+    <tbody>${myLancs.map((l,i)=>`<tr>
       <td><span style="font-size:11px;font-family:monospace;color:var(--text-muted)">${l.protocolo}</span></td>
       <td><strong>${l.nome}</strong></td><td style="color:var(--text-muted)">${l.tipo}</td>
       <td style="font-variant-numeric:tabular-nums">${l.hora}</td>
       <td><span class="status-chip st-${l.sc}">${l.status}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="showLancamentoModal(${i})">Editar</button></td>
+      <td><button class="btn btn-outline btn-sm" onclick="showLancamentoModal(${lancamentosData.indexOf(l)})">Editar</button></td>
     </tr>`).join('')}</tbody>
-  </table></div></div>`
+  </table></div></div>`}`
 }
 
 // ── AGENDA ──
 function renderAgenda() {
   const role = currentUser.role
   const canAdd = role !== 'atendente'
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
     <div><h2>Agenda</h2>
-    <p>${role==='atendente'?'Todos os conselheiros – CT01':'Semana de 15 a 21/09/2026'}</p></div>
+    <p>${role==='atendente'?`Todos os conselheiros · ${hoje}`:`Semana atual`}</p></div>
     ${canAdd?`<button class="btn btn-primary" onclick="showEventoModal()">${I.plus} Novo</button>`:''}
   </div>
   ${role==='atendente'?`<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#16a34a;margin-bottom:16px">
@@ -3090,14 +3127,7 @@ function renderGeneralStats() {
 }
 
 // ── ÁLBUM DE FOTOS ──
-let photosData = [
-  {id:1,title:'Reunião Plenária – Agosto 2026',date:'15/08/2026',tags:['reunião','plenária'],color:'#1e3a5f'},
-  {id:2,title:'Capacitação em Rede de Proteção',date:'02/08/2026',tags:['capacitação','formação'],color:'#0891b2'},
-  {id:3,title:'Visita ao CREAS Brotas',date:'20/07/2026',tags:['visita','CREAS'],color:'#16a34a'},
-  {id:4,title:'Plantão Centralizado – Julho',date:'05/07/2026',tags:['plantão'],color:'#7c3aed'},
-  {id:5,title:'Semana da Criança 2025',date:'12/10/2025',tags:['evento','criança'],color:'#d97706'},
-  {id:6,title:'Formatura Conselheiros 2025',date:'20/12/2025',tags:['evento','formatura'],color:'#dc2626'},
-]
+let photosData = []
 let photosFilter = ''
 
 function renderPhotos() {
@@ -3106,7 +3136,7 @@ function renderPhotos() {
     : photosData
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
-    <div><h2>Álbum de Fotos</h2><p>${photosData.length} álbuns registrados</p></div>
+    <div><h2>Álbum de Fotos</h2><p>${photosData.length === 0 ? 'Nenhuma foto registrada' : photosData.length + ' álbuns registrados'}</p></div>
     <button class="btn btn-primary" onclick="showAddAlbumModal()">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Novo Álbum
@@ -3493,12 +3523,7 @@ function saveSystemSettings() {
 }
 
 // ── MODAL LANÇAMENTO ──
-let lancamentosData = [
-  {protocolo:'2026/09/247',nome:'Maria da Silva',tipo:'Violência Doméstica',hora:'09:15',status:'Finalizado',sc:'finalizado'},
-  {protocolo:'2026/09/246',nome:'João Pedro Alves',tipo:'Negligência Escolar',hora:'10:30',status:'Finalizado',sc:'finalizado'},
-  {protocolo:'2026/09/245',nome:'Família Carvalho',tipo:'Visita Domiciliar',hora:'14:00',status:'Rascunho',sc:'rascunho'},
-  {protocolo:'2026/09/244',nome:'Carlos Eduardo',tipo:'Trabalho Infantil',hora:'15:45',status:'Finalizado',sc:'finalizado'},
-]
+let lancamentosData = []
 function showLancamentoModal(idx) {
   const editing = idx !== undefined
   const l = editing ? lancamentosData[idx] : {nome:'',tipo:'Atendimento',hora:'',status:'Rascunho'}
@@ -3547,23 +3572,16 @@ function saveLancamento(idx){
   if(!nome){showToast('Informe o nome.');return}
   const now=new Date()
   const proto=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(Math.floor(Math.random()*900)+100)}`
-  const entry={protocolo:proto,nome,tipo,hora,status,sc,outroDetalhe}
+  const entry={protocolo:proto,nome,tipo,hora,status,sc,outroDetalhe,ct:currentUser.ct,author:currentUser.name,createdAt:now.toISOString()}
   if(idx===undefined||idx==='undefined') lancamentosData.unshift(entry)
-  else lancamentosData[idx]=entry
+  else lancamentosData[idx]={...lancamentosData[idx],...entry}
   closeModal(); navigate('daily')
   showToast(idx===undefined||idx==='undefined'?'Lançamento criado!':'Lançamento atualizado!')
 }
 function deleteLancamento(i){lancamentosData.splice(i,1);closeModal();navigate('daily');showToast('Lançamento excluído.')}
 
 // ── MODAL EVENTO ──
-let eventosData = [
-  {time:'09:00',title:'Atendimento – Maria Silva',sub:'Violência doméstica · Sede CT I',cls:'ev-atendimento',who:'Felipe Matos',dia:'Hoje'},
-  {time:'11:30',title:'Visita Domiciliar',sub:'Família Carvalho · Bairro Liberdade',cls:'ev-visita',who:'Ana Costa',dia:'Hoje'},
-  {time:'14:00',title:'Reunião com CRAS Bonfim',sub:'Encaminhamentos pendentes',cls:'ev-reuniao',who:'Felipe Matos',dia:'Hoje'},
-  {time:'16:30',title:'Atendimento – João Pedro',sub:'Negligência escolar',cls:'ev-atendimento',who:'Ana Costa',dia:'Hoje'},
-  {time:'09:00',title:'Plantão – Sede CT I',sub:'Início de plantão regular',cls:'ev-visita',who:'Todos',dia:'Sexta'},
-  {time:'14:00',title:'Capacitação ECA – CMDCA',sub:'Jurisprudência 2026 (obrigatório)',cls:'ev-reuniao',who:'Todos',dia:'Sexta'},
-]
+let eventosData = []
 function showEventoModal(){
   document.getElementById('modal-root').innerHTML = `
   <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
@@ -3618,7 +3636,7 @@ function saveEvento(){
   const dia=document.getElementById('m-edia').value
   const cls=document.getElementById('m-ecls').value
   if(!title){showToast('Informe o título.');return}
-  eventosData.push({time,title,sub,cls,who:currentUser.name,dia})
+  eventosData.push({time,title,sub,cls,who:currentUser.name,dia,ct:currentUser.ct,createdAt:new Date().toISOString()})
   closeModal(); navigate('agenda')
   showToast('Evento adicionado!')
 }
