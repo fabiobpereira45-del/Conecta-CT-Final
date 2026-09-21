@@ -439,6 +439,7 @@ const I = {
   clock:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   image:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
   filetext:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>',
+  inbox:`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`,
   book:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
   scale:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10"/><line x1="12" x2="12" y1="3" y2="21"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
   shield:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
@@ -455,6 +456,7 @@ const I = {
 // ── ROLE PERMISSIONS ──
 const NAV_ALL = [
   { id:'home', label:'Início', icon:'home', roles:['master','conselheiro','atendente'] },
+  { id:'fichas-inbox', label:'Fichas Recebidas', icon:'inbox', roles:['conselheiro','master'] },
   { id:'profile', label:'Meu Perfil', icon:'user', roles:['master','conselheiro','atendente'] },
   { id:'notices', label:'Convocatórias e Avisos', icon:'megaphone', roles:['master','conselheiro','atendente'] },
   { id:'councils', label:'Conselhos e Bairros', icon:'building', roles:['master','conselheiro','atendente'] },
@@ -760,12 +762,18 @@ function buildNav() {
   const role = currentUser?.role || 'conselheiro'
   const nav = document.getElementById('nav')
   const items = NAV_ALL.filter(n => n.roles.includes(role))
+  // Count unread fichas for badge
+  const unreadFichas = fichasEnviadas
+    ? fichasEnviadas.filter(f => !f.lida && (role==='master' || f.ctDestino===currentUser.ct)).length
+    : 0
   nav.innerHTML = items.map(item => {
     if (item.id === '__sep__') return '<div class="nav-sep"></div>'
-    // Label dinâmico: "Estatísticas Gerais" só para master; conselheiro/atendente vê "Minhas Estatísticas"
     const label = (item.id === 'general-stats' && role !== 'master') ? 'Minhas Estatísticas' : item.label
-    return `<button class="nav-item${activeModule===item.id?' active':''}" onclick="navigate('${item.id}')">
-      ${I[item.icon]||''}<span>${label}</span>
+    const badge = (item.id === 'fichas-inbox' && unreadFichas > 0)
+      ? `<span style="margin-left:auto;background:var(--danger);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 7px;min-width:18px;text-align:center">${unreadFichas}</span>`
+      : ''
+    return `<button class="nav-item${activeModule===item.id?' active':''}" onclick="navigate('${item.id}')" style="justify-content:flex-start">
+      ${I[item.icon]||''}<span style="flex:1">${label}</span>${badge}
     </button>`
   }).join('')
 }
@@ -818,6 +826,7 @@ function renderContent() {
     case 'daily': el.innerHTML = renderDaily(); break
     case 'agenda': el.innerHTML = renderAgenda(); break
     case 'forms': el.innerHTML = renderForms(); attachFormsEvents(); break
+    case 'fichas-inbox': el.innerHTML = renderFichasInbox(); break
     case 'reports': el.innerHTML = renderReports(); break
     case 'users': el.innerHTML = renderUsers(); break
     case 'approvals': el.innerHTML = renderApprovals(); break
@@ -1105,6 +1114,115 @@ function deleteNotice(i){
 }
 
 // ── STATISTICS ──
+// ── FICHAS INBOX ──
+function renderFichasInbox() {
+  const role = currentUser.role
+  const minhas = role === 'master'
+    ? fichasEnviadas
+    : fichasEnviadas.filter(f => f.ctDestino === currentUser.ct)
+
+  const unread = minhas.filter(f => !f.lida)
+
+  return `
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <h2>Fichas Recebidas</h2>
+      <p>${minhas.length} ficha(s)${unread.length > 0 ? ` · <strong style="color:var(--danger)">${unread.length} nova(s)</strong>` : ' · Tudo em dia'}</p>
+    </div>
+  </div>
+  ${minhas.length === 0
+    ? `<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
+        <div style="font-size:48px;margin-bottom:16px">📥</div>
+        <p style="font-weight:600;margin-bottom:6px">Nenhuma ficha recebida</p>
+        <p style="font-size:12px">As fichas enviadas pelo atendente aparecerão aqui.</p>
+      </div>`
+    : `<div class="card"><div class="table-wrap"><table>
+        <thead><tr><th></th><th>Protocolo</th><th>Criança/Adolescente</th><th>Tipo</th><th>Enviado por</th><th>Data/Hora</th><th>Ações</th></tr></thead>
+        <tbody>${minhas.map((f,i)=>`<tr style="${!f.lida?'background:rgba(59,130,246,.06);font-weight:600':''}">
+          <td>${!f.lida?'<span style="width:8px;height:8px;background:var(--accent);border-radius:50%;display:inline-block"></span>':''}</td>
+          <td><span style="font-family:monospace;font-size:11px;color:var(--text-muted)">${f.protocolo}</span></td>
+          <td>${f.nomeCrianca||'—'}</td>
+          <td style="color:var(--text-muted);font-size:12px">${f.tipo||'Atendimento'}</td>
+          <td style="font-size:12px">${f.enviadoPor}</td>
+          <td style="font-size:11px;color:var(--text-muted)">${f.dataHora}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" onclick="abrirFichaInbox(${i})">Abrir</button>
+          </td>
+        </tr>`).join('')}</tbody>
+      </table></div></div>`}
+  `
+}
+
+function abrirFichaInbox(idx) {
+  const role = currentUser.role
+  const minhas = role === 'master'
+    ? fichasEnviadas
+    : fichasEnviadas.filter(f => f.ctDestino === currentUser.ct)
+  const f = minhas[idx]
+  if (!f) return
+  // Marca como lida
+  f.lida = true
+  buildNav() // Atualiza badge
+
+  document.getElementById('modal-root').innerHTML = `
+  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box" style="max-width:640px">
+      <div class="modal-title">📋 Ficha Recebida – ${f.protocolo}</div>
+      <div style="background:var(--primary-subtle);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px">
+        <strong>Enviado por:</strong> ${f.enviadoPor} &nbsp;|&nbsp; <strong>CT:</strong> ${f.ctDestino||'—'} &nbsp;|&nbsp; <strong>Em:</strong> ${f.dataHora}
+      </div>
+      <div style="display:grid;gap:8px;font-size:13px">
+        ${Object.entries(f.dados||{}).map(([k,v])=>v?`<div style="display:flex;gap:8px;border-bottom:1px solid var(--border);padding-bottom:6px">
+          <span style="font-weight:600;width:180px;flex-shrink:0;color:var(--text-muted)">${k}</span>
+          <span>${v}</span>
+        </div>`:'').join('')}
+      </div>
+      <div class="modal-footer" style="margin-top:20px">
+        <button class="btn btn-outline" onclick="closeModal()">Fechar</button>
+        <button class="btn btn-primary" onclick="closeModal();downloadFormDocxFromData(${JSON.stringify(f).replace(/"/g,'&quot;')})">Gerar PDF</button>
+      </div>
+    </div>
+  </div>`
+}
+
+function enviarFichaAoConselheiro() {
+  // Collect all form fields
+  const container = document.getElementById('content')
+  if (!container) { showToast('Formulário não encontrado.'); return }
+
+  const dados = {}
+  container.querySelectorAll('input:not([type=hidden]), select, textarea').forEach(el => {
+    const label = el.closest('.field-group')?.querySelector('.field-label, label')?.textContent?.trim()
+      || el.placeholder || el.id || ''
+    const val = el.type === 'checkbox' ? (el.checked ? 'Sim' : '') : (el.value?.trim() || '')
+    if (label && val) dados[label] = val
+  })
+
+  if (Object.keys(dados).length === 0) { showToast('Preencha o formulário antes de enviar.'); return }
+
+  const protocolo = document.getElementById('f-protocolo')?.value || document.getElementById('m-protocolo')?.value
+    || `${new Date().getFullYear()}/${String(new Date().getMonth()+1).padStart(2,'0')}/${String(Math.floor(Math.random()*900)+100)}`
+  const nomeCrianca = document.getElementById('f-nome')?.value || dados['Nome Completo da Criança/Adolescente'] || 'Não informado'
+  const now = new Date()
+  const dataHora = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+
+  fichasEnviadas.unshift({
+    protocolo,
+    nomeCrianca,
+    tipo: dados['Tipo'] || 'Atendimento',
+    enviadoPor: currentUser.name,
+    ctDestino: currentUser.ct,
+    dataHora,
+    dados,
+    lida: false,
+    createdAt: now.toISOString()
+  })
+
+  // Badge visual no sidebar
+  buildNav()
+  showToast('✅ Ficha enviada ao conselheiro plantonista!')
+}
+
 function renderStatistics() {
   const role = currentUser.role
   const now = new Date()
@@ -1916,7 +2034,8 @@ function renderFormFill(id) {
       <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">${form.category} · Nº ${String(form.id).padStart(2,'0')}</div>
       <h2 style="font-size:18px;font-weight:700">${form.name}</h2>
     </div>
-    <button class="btn btn-primary" onclick="showToast('Documento gerado e baixado!')">${I.download} Baixar .docx</button>
+    ${currentUser?.role==='atendente'?`<button class="btn btn-outline" onclick="enviarFichaAoConselheiro()" style="border-color:var(--primary);color:var(--primary)">📤 Enviar ao Conselheiro</button>`:''}
+    <button class="btn btn-primary" onclick="downloadFormDocx()">${I.download} Baixar .docx</button>
   </div>
   <div class="council-banner card">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
@@ -2429,6 +2548,58 @@ function gerarFormGenericoPDF() {
   else showToast('Permita pop-ups para gerar o PDF.')
 }
 
+function downloadFormDocx() {
+  // Collect form data from all visible inputs/selects/textareas
+  const fields = []
+  const container = document.getElementById('content')
+  if (!container) { showToast('Formulário não encontrado.'); return }
+
+  container.querySelectorAll('input:not([type=hidden]), select, textarea').forEach(el => {
+    const label = el.closest('.field-group')?.querySelector('.field-label, label')?.textContent?.trim()
+      || el.placeholder || el.id || ''
+    const val = el.type === 'checkbox' ? (el.checked ? '☑ Sim' : '☐ Não') : (el.value || '')
+    if (label && val) fields.push({label, val})
+  })
+
+  const title = document.querySelector('#content h2, #content .modal-title')?.textContent?.trim() || 'Formulário'
+  const ct = currentUser?.ctFull || 'Conselho Tutelar'
+  const proto = document.getElementById('f-protocolo')?.value || document.getElementById('m-protocolo')?.value || 'S/N'
+  const now = new Date().toLocaleDateString('pt-BR')
+
+  // Build HTML for print (acts as .docx equivalent via browser save)
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    body{font-family:'Times New Roman',serif;font-size:12pt;margin:2cm;color:#000}
+    h1{font-size:14pt;text-align:center;margin-bottom:4px}
+    .sub{text-align:center;font-size:11pt;color:#444;margin-bottom:20px}
+    .row{display:flex;margin-bottom:8px;border-bottom:1px solid #ddd;padding-bottom:6px}
+    .row .lbl{width:180px;font-weight:bold;flex-shrink:0;color:#333}
+    .row .val{flex:1}
+    .header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}
+    .proto{font-size:11pt;background:#f5f5f5;padding:4px 10px;border-radius:4px;display:inline-block}
+    @media print{body{margin:1cm}}
+  </style></head><body>
+  <div class="header">
+    <h1>CT Salvador – ${ct}</h1>
+    <div class="sub">${title}</div>
+    <div>Data: ${now} &nbsp;|&nbsp; <span class="proto">Protocolo: ${proto}</span></div>
+  </div>
+  ${fields.map(f=>`<div class="row"><div class="lbl">${f.label}:</div><div class="val">${f.val}</div></div>`).join('')}
+  <br><br>
+  <div style="margin-top:40px;border-top:1px solid #000;padding-top:10px;display:flex;justify-content:space-between">
+    <div style="text-align:center;width:45%"><div style="border-top:1px solid #000;margin-top:40px;padding-top:4px">Assinatura do Conselheiro</div></div>
+    <div style="text-align:center;width:45%"><div style="border-top:1px solid #000;margin-top:40px;padding-top:4px">Assinatura do Responsável</div></div>
+  </div>
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`
+
+  const w = window.open('','_blank','width=900,height=700')
+  if (!w) { showToast('Permita pop-ups para baixar o documento.'); return }
+  w.document.write(html)
+  w.document.close()
+}
+
 function renderFormRequisicaoCertidao(form) {
   const header = `
   <div class="fill-header">
@@ -2437,7 +2608,7 @@ function renderFormRequisicaoCertidao(form) {
       <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">${form.category} · Nº 41</div>
       <h2 style="font-size:18px;font-weight:700">${form.name}</h2>
     </div>
-    <button class="btn btn-primary" onclick="showToast('Documento gerado e baixado!')">${I.download} Baixar .docx</button>
+    <button class="btn btn-primary" onclick="downloadFormDocx()">${I.download} Baixar .docx</button>
   </div>
   <div class="council-banner card">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
@@ -3523,6 +3694,8 @@ function saveSystemSettings() {
 }
 
 // ── MODAL LANÇAMENTO ──
+// ── FICHAS INBOX (fichas enviadas pelo atendente ao conselheiro) ──
+let fichasEnviadas = []
 let lancamentosData = []
 function showLancamentoModal(idx) {
   const editing = idx !== undefined
@@ -3750,6 +3923,8 @@ function formatCep(input) {
   const found = document.getElementById('cep-found')
   const err = document.getElementById('cep-error')
   if (found) { found.style.display='none'; err.style.display='none' }
+  // Auto-busca ao completar 8 dígitos
+  if (v.replace(/\D/g,'').length === 8) lookupCep()
 }
 
 async function lookupCep() {
@@ -3778,11 +3953,13 @@ async function lookupCep() {
       err.style.display = 'block'
     } else {
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val }
-      set('addr-logradouro', data.logradouro)
-      set('addr-bairro', data.bairro)
+      // Fill all possible address field IDs used across different form sections
+      set('addr-logradouro', data.logradouro); set('f-logradouro', data.logradouro)
+      set('addr-bairro', data.bairro);         set('f-bairro', data.bairro)
       set('addr-cidade', `${data.localidade} – ${data.uf}`)
+      set('f-cidade', data.localidade); set('f-uf', data.uf)
       // foca no número após preencher
-      const num = document.getElementById('addr-numero')
+      const num = document.getElementById('addr-numero') || document.getElementById('f-numero')
       if (num) { num.value = ''; num.focus() }
       found.textContent = `✓ ${data.logradouro ? data.logradouro + ', ' : ''}${data.bairro} – ${data.localidade}/${data.uf}`
       found.style.display = 'block'
@@ -3796,10 +3973,11 @@ async function lookupCep() {
     }
     const demo = sample[cep] || {logradouro:'Rua Exemplo',bairro:'Bairro',localidade:'Salvador',uf:'BA'}
     const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val }
-    set('addr-logradouro', demo.logradouro)
-    set('addr-bairro', demo.bairro)
+    set('addr-logradouro', demo.logradouro); set('f-logradouro', demo.logradouro)
+    set('addr-bairro', demo.bairro);         set('f-bairro', demo.bairro)
     set('addr-cidade', `${demo.localidade} – ${demo.uf}`)
-    const num = document.getElementById('addr-numero')
+    set('f-cidade', demo.localidade); set('f-uf', demo.uf)
+    const num = document.getElementById('addr-numero') || document.getElementById('f-numero')
     if (num) { num.value = ''; num.focus() }
     found.textContent = `✓ (prévia) ${demo.logradouro}, ${demo.bairro} – ${demo.localidade}/${demo.uf}`
     found.style.display = 'block'
