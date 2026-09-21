@@ -1679,17 +1679,17 @@ async function enviarEmail() {
 }
 function renderFormFill(id) {
   const form = FORMS.find(f => f.id === id)
+  if (!form) return '<p>Formulário não encontrado.</p>'
   if (id === 41) return renderFormRequisicaoCertidao(form)
-  // Gerar protocolo automático para Ficha de Atendimento Recepção (id:0)
+  if (id !== 0) return renderFormGenerico(form)
+  // ── id === 0: Ficha de Atendimento Recepção ──
   let protocoloAtendimento = ''
-  if (id === 0) {
-    atendimentoCounter++
-    const now2 = new Date()
-    const yy2 = now2.getFullYear()
-    const mm2 = String(now2.getMonth()+1).padStart(2,'0')
-    const seq2 = String(atendimentoCounter).padStart(3,'0')
-    protocoloAtendimento = `${yy2}/${mm2}/${seq2}`
-  }
+  atendimentoCounter++
+  const now2 = new Date()
+  const yy2 = now2.getFullYear()
+  const mm2 = String(now2.getMonth()+1).padStart(2,'0')
+  const seq2 = String(atendimentoCounter).padStart(3,'0')
+  protocoloAtendimento = `${yy2}/${mm2}/${seq2}`
   // Setar data/hora atual após render
   setTimeout(setFormDataHoraAtual, 50)
   return `
@@ -1968,6 +1968,169 @@ function renderFormFill(id) {
     </div>
   </div>`
 }
+// ── TEMPLATE GENÉRICO para formulários que ainda não têm layout específico ──
+function renderFormGenerico(form) {
+  setTimeout(setFormDataHoraAtual, 50)
+  const conselheiro = currentUser.name
+  const cargo = {master:'Coordenador',conselheiro:'Conselheiro Tutelar',atendente:'Atendente'}[currentUser.role]
+
+  // Campos por categoria
+  const camposPorCategoria = {
+    'Atendimento': [
+      {label:'Nome Completo', type:'text', placeholder:'Nome da criança/adolescente'},
+      {label:'Data de Nascimento', type:'date'},
+      {label:'Responsável', type:'text', placeholder:'Nome do responsável'},
+      {label:'Telefone', type:'text', placeholder:'(71) 9 9999-9999'},
+      {label:'Motivo / Situação', type:'textarea', placeholder:'Descreva a situação…'},
+      {label:'Providências', type:'textarea', placeholder:'Providências tomadas…'},
+    ],
+    'Comunicados': [
+      {label:'Destinatário / Órgão', type:'text', placeholder:'Nome do órgão ou pessoa'},
+      {label:'Assunto', type:'text', placeholder:'Assunto do comunicado'},
+      {label:'Nome da Criança/Adolescente', type:'text', placeholder:'Nome completo'},
+      {label:'Data de Nascimento', type:'date'},
+      {label:'Descrição da Violação', type:'textarea', placeholder:'Descreva a violação de direitos…'},
+      {label:'Providências Solicitadas', type:'textarea', placeholder:'O que está sendo solicitado…'},
+    ],
+    'Encaminhamentos': [
+      {label:'Nome da Criança/Adolescente', type:'text', placeholder:'Nome completo'},
+      {label:'Data de Nascimento', type:'date'},
+      {label:'Responsável', type:'text', placeholder:'Nome do responsável'},
+      {label:'Telefone', type:'text', placeholder:'(71) 9 9999-9999'},
+      {label:'Órgão / Serviço de Destino', type:'text', placeholder:'Ex: CRAS Liberdade'},
+      {label:'Motivo do Encaminhamento', type:'textarea', placeholder:'Justificativa para o encaminhamento…'},
+      {label:'Observações', type:'textarea', placeholder:'Informações complementares…'},
+    ],
+    'Termos': [
+      {label:'Nome do(a) Responsável', type:'text', placeholder:'Nome completo'},
+      {label:'CPF', type:'text', placeholder:'000.000.000-00'},
+      {label:'Nome da Criança/Adolescente', type:'text', placeholder:'Nome completo'},
+      {label:'Data de Nascimento', type:'date'},
+      {label:'Objeto do Termo', type:'textarea', placeholder:'Descreva o objeto deste termo…'},
+      {label:'Compromissos / Obrigações', type:'textarea', placeholder:'Liste os compromissos assumidos…'},
+    ],
+    'Notificações': [
+      {label:'Notificado(a)', type:'text', placeholder:'Nome do(a) notificado(a)'},
+      {label:'Endereço para Notificação', type:'text', placeholder:'Endereço completo'},
+      {label:'Assunto / Determinação', type:'textarea', placeholder:'Descreva a determinação…'},
+      {label:'Prazo para Cumprimento', type:'text', placeholder:'Ex: 15 dias corridos'},
+    ],
+    'Requisições': [
+      {label:'Destinatário / Órgão', type:'text', placeholder:'Nome do órgão ou instituição'},
+      {label:'Nome da Criança/Adolescente', type:'text', placeholder:'Nome completo'},
+      {label:'Data de Nascimento', type:'date'},
+      {label:'O que está sendo requisitado', type:'textarea', placeholder:'Descreva o objeto da requisição…'},
+      {label:'Justificativa', type:'textarea', placeholder:'Justificativa legal ou situacional…'},
+    ],
+    'Medidas': [
+      {label:'Nome da Criança/Adolescente', type:'text', placeholder:'Nome completo'},
+      {label:'Data de Nascimento', type:'date'},
+      {label:'Responsável', type:'text', placeholder:'Nome do responsável'},
+      {label:'Medida Aplicada', type:'text', placeholder:'Descrição da medida'},
+      {label:'Fundamento Legal', type:'text', placeholder:'Ex: Art. 101, ECA'},
+      {label:'Prazo / Condições', type:'textarea', placeholder:'Condições e prazo da medida…'},
+    ],
+    'Atestados': [
+      {label:'Nome do(a) Atestado(a)', type:'text', placeholder:'Nome completo'},
+      {label:'Data de Comparecimento', type:'date'},
+      {label:'Hora de Entrada', type:'time'},
+      {label:'Hora de Saída', type:'time'},
+      {label:'Finalidade / Motivo', type:'text', placeholder:'Ex: Atendimento no CT'},
+    ],
+    'Certidões': [
+      {label:'Nome do(a) Requerente', type:'text', placeholder:'Nome completo'},
+      {label:'CPF', type:'text', placeholder:'000.000.000-00'},
+      {label:'Data de Nascimento', type:'date'},
+      {label:'Objeto da Certidão', type:'textarea', placeholder:'Descreva o que está sendo certificado…'},
+    ],
+    'Convites': [
+      {label:'Destinatário', type:'text', placeholder:'Nome do(a) convidado(a)'},
+      {label:'Data do Evento', type:'date'},
+      {label:'Hora', type:'time'},
+      {label:'Local', type:'text', placeholder:'Endereço ou local do evento'},
+      {label:'Finalidade / Assunto', type:'textarea', placeholder:'Descreva o motivo do convite…'},
+    ],
+    'Representações': [
+      {label:'Representado(a)', type:'text', placeholder:'Nome do(a) representado(a)'},
+      {label:'Órgão / Entidade', type:'text', placeholder:'Nome da entidade ou órgão'},
+      {label:'Fatos', type:'textarea', placeholder:'Descreva os fatos que motivam a representação…'},
+      {label:'Pedidos', type:'textarea', placeholder:'O que está sendo requerido…'},
+    ],
+    'Fiscalização': [
+      {label:'Entidade Fiscalizada', type:'text', placeholder:'Nome da entidade'},
+      {label:'Endereço', type:'text', placeholder:'Endereço completo'},
+      {label:'Responsável pela Entidade', type:'text', placeholder:'Nome do responsável'},
+      {label:'Data da Fiscalização', type:'date'},
+      {label:'Hora', type:'time'},
+      {label:'Resultado / Observações', type:'textarea', placeholder:'Descreva os achados…'},
+      {label:'Providências Recomendadas', type:'textarea', placeholder:'Medidas recomendadas…'},
+    ],
+    'Administrativo': [
+      {label:'Assunto', type:'text', placeholder:'Assunto do documento'},
+      {label:'Envolvidos', type:'text', placeholder:'Nomes dos envolvidos'},
+      {label:'Descrição', type:'textarea', placeholder:'Descreva o conteúdo…'},
+      {label:'Observações', type:'textarea', placeholder:'Informações adicionais…'},
+    ],
+    'Ética': [
+      {label:'Envolvido(a)', type:'text', placeholder:'Nome do(a) envolvido(a)'},
+      {label:'Cargo', type:'text', placeholder:'Cargo ou função'},
+      {label:'Fato Relatado', type:'textarea', placeholder:'Descreva o fato de forma objetiva…'},
+      {label:'Testemunhas', type:'text', placeholder:'Nomes das testemunhas (se houver)'},
+    ],
+  }
+
+  const campos = camposPorCategoria[form.category] || camposPorCategoria['Administrativo']
+
+  const renderCampo = (c, i) => {
+    if (c.type === 'textarea') return `
+      <div key="${i}"><label class="field-label">${c.label}</label>
+        <textarea rows="3" style="resize:vertical" placeholder="${c.placeholder||''}"></textarea>
+      </div>`
+    return `
+      <div key="${i}"><label class="field-label">${c.label}</label>
+        <input type="${c.type}" ${c.placeholder?`placeholder="${c.placeholder}"`:''}
+          ${(c.type==='time'||c.type==='date')?`id="form-${c.type}-${i}"`:''}
+        /></div>`
+  }
+
+  return `
+  <div class="fill-header">
+    <button onclick="backToForms()">${I.arrowleft} Voltar</button>
+    <div style="flex:1">
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">${form.category} · Nº ${String(form.id).padStart(2,'0')}</div>
+      <h2 style="font-size:18px;font-weight:700">${form.name}</h2>
+    </div>
+    <button class="btn btn-primary" onclick="gerarFormGenericoPDF()">${I.download} Baixar .docx</button>
+  </div>
+  <div class="council-banner card">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
+    <div class="cb-text"><strong>Cabeçalho preenchido automaticamente – Conselho Tutelar I</strong>Av. Princesa Isabel, 1000 · Bonfim · Salvador/BA · (71) 3115-0001</div>
+  </div>
+  <div class="card card-pad">
+    <div style="display:grid;gap:16px">
+      <!-- Identificação -->
+      <div class="field-row cols-2">
+        <div><label class="field-label">Data</label><input type="date" id="form-data-atual" /></div>
+        <div><label class="field-label">Hora</label><input type="time" id="form-hora-atual" /></div>
+      </div>
+      <!-- Campos dinâmicos por categoria -->
+      ${campos.map((c,i) => renderCampo(c,i)).join('')}
+      <!-- Assinatura -->
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div class="field-row cols-2">
+          <div><label class="field-label">Conselheiro(a) Responsável</label><input value="${conselheiro}" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
+          <div><label class="field-label">Cargo</label><input value="${cargo}" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
+      <button class="btn btn-primary" onclick="gerarFormGenericoPDF()">${I.download} Gerar e Baixar</button>
+    </div>
+  </div>`
+}
+function gerarFormGenericoPDF() { showToast('Documento gerado e baixado!') }
+
 function renderFormRequisicaoCertidao(form) {
   const header = `
   <div class="fill-header">
