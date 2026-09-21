@@ -279,6 +279,33 @@ tr:hover td{background:var(--sidebar-hover)}
 
 #toast{position:fixed;bottom:24px;right:24px;background:#1a2332;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.25);transform:translateY(120%);transition:transform .3s ease;z-index:999;max-width:320px}
 #toast.show{transform:translateY(0)}
+
+/* ── IMPRESSÃO GLOBAL ── */
+@media print {
+  /* Ocultar elementos de navegação e UI */
+  #sidebar,
+  #topbar,
+  #hamburger,
+  #overlay,
+  .fill-header,
+  #toast,
+  #modal-root,
+  button,
+  .btn,
+  .dark-toggle,
+  .modal-backdrop {
+    display: none !important;
+  }
+  /* Remover margens do layout e deixar conteúdo ocupar tudo */
+  body { margin: 0 !important; background: #fff !important; }
+  #app { display: block !important; height: auto !important; overflow: visible !important; }
+  #main { margin: 0 !important; padding: 0 !important; width: 100% !important; overflow: visible !important; }
+  #content { padding: 8px 16px !important; }
+  /* Cards sem sombra na impressão */
+  .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+  /* Garantir cores corretas (banner azul do CT) */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
 </style>
 
 <!-- AUTH -->
