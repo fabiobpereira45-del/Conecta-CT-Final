@@ -773,12 +773,13 @@ async function _sb_aprovarPendente(id, role) {
   const rows = await r1.json()
   const u = rows[0]
   if (!u) throw new Error('Usuário pendente não encontrado')
+  if (!u.auth_id) throw new Error('Pedido antigo, sem conta no Auth. Peça ao usuário para se cadastrar de novo.')
 
   // insere em usuarios
   const r2 = await fetch(`${_SB_URL}/rest/v1/usuarios`, {
     method: 'POST',
     headers: { ..._sbHeaders(), 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ nome: u.nome, email: u.email, senha_hash: u.senha_hash, ct: u.ct, cargo: u.cargo, role, ativo: true })
+    body: JSON.stringify({ nome: u.nome, email: u.email, auth_id: u.auth_id, ct: u.ct, cargo: u.cargo, role, ativo: true })
   })
   if (!r2.ok) {
     const e = await r2.json().catch(() => ({}))
@@ -902,22 +903,25 @@ async function doRegister() {
   const btn   = document.querySelector('#auth-screen .btn-register, #auth-screen .btn-primary[onclick*="Register"]')
 
   if (!name || !email || !senha) { showToast('Preencha nome, e-mail e senha.'); return }
-  if (senha.length < 6) { showToast('Senha deve ter pelo menos 6 caracteres.'); return }
+  if (senha.length < 8) { showToast('Senha deve ter pelo menos 8 caracteres.'); return }
 
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando...' }
 
   try {
-    const emailQ = encodeURIComponent(email)
-    const [ru, rp] = await Promise.all([
-      fetch(`${_SB_URL}/rest/v1/usuarios?email=eq.${emailQ}&select=id`, { headers: _sbHeaders() }),
-      fetch(`${_SB_URL}/rest/v1/usuarios_pendentes?email=eq.${emailQ}&status=eq.pendente&select=id`, { headers: _sbHeaders() })
-    ])
-    if ((ru.ok && (await ru.json()).length) || (rp.ok && (await rp.json()).length)) {
-      showToast('Este e-mail já está cadastrado ou aguardando aprovação.')
+    // Cria a conta no Supabase Auth; o acesso só existe depois que o master aprovar
+    const rs = await fetch(`${_SB_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'apikey': _SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: senha })
+    })
+    const ds = await rs.json().catch(() => ({}))
+    const authId = ds.user?.id || ds.id
+    if (!rs.ok || !authId) {
+      const m = (ds.msg || ds.message || ds.error_description || '').toLowerCase()
+      showToast(m.includes('already') || m.includes('registered') ? 'Este e-mail já está cadastrado ou aguardando aprovação.' : (ds.msg || ds.message || 'Erro ao criar conta.'))
       return
     }
-    const senha_hash = await _hashSenha(senha)
-    await _sb_criarPendente({ nome: name, email, cargo, ct: ct || null, senha_hash, status: 'pendente' })
+    await _sb_criarPendente({ nome: name, email, cargo, ct: ct || null, auth_id: authId, status: 'pendente' })
     document.getElementById('auth-screen').style.display = 'none'
     document.getElementById('pending-screen').style.display = 'flex'
   } catch(e) {
