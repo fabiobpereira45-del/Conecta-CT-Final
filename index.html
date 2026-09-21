@@ -294,27 +294,30 @@ tr:hover td{background:var(--sidebar-hover)}
       <button class="auth-tab" onclick="showAuthTab('register')">Cadastrar</button>
     </div>
     <div id="auth-login">
-      <div class="field-group"><label class="field-label">E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" value="fabio.bpereira45@gmail.com" /></div>
+      <div class="field-group"><label class="field-label">E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" /></div>
       <div class="field-group">
         <label class="field-label">Senha</label>
         <div style="position:relative;display:flex;align-items:center">
-          <input type="password" id="login-pass" placeholder="Sua senha" style="padding-right:44px;width:100%" />
+          <input type="password" id="login-pass" placeholder="Sua senha" style="padding-right:44px;width:100%" onkeydown="if(event.key==='Enter')doLogin()" />
           <button type="button" onclick="togglePassVis('login-pass',this)" style="position:absolute;right:10px;background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center" title="Mostrar/ocultar senha">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
       </div>
+      <div id="login-error" style="display:none;background:#fff0f0;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;color:#dc2626;margin-bottom:12px"></div>
       <div style="text-align:right;margin-top:-8px;margin-bottom:16px">
         <button type="button" onclick="showForgotPassword()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0">Esqueci minha senha</button>
       </div>
       <button class="auth-btn" onclick="doLogin()">Entrar</button>
-      <div style="margin-top:16px">
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600">Simular perfil:</div>
+      <!-- Acesso Demo rápido -->
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Acesso rápido (demonstração)</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="chip active" onclick="setDemoRole('master')" id="demo-master">Master</button>
-          <button class="chip" onclick="setDemoRole('conselheiro')" id="demo-conselheiro">Conselheiro</button>
-          <button class="chip" onclick="setDemoRole('atendente')" id="demo-atendente">Atendente</button>
+          <button class="chip" onclick="loginDemo('master')" style="background:var(--primary);color:#fff;border-color:var(--primary)">🔑 Master</button>
+          <button class="chip" onclick="loginDemo('conselheiro')">👤 Conselheiro</button>
+          <button class="chip" onclick="loginDemo('atendente')">🖥️ Atendente</button>
         </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">O acesso real requer credenciais cadastradas pelo administrador.</div>
       </div>
     </div>
     <div id="auth-register" style="display:none">
@@ -330,8 +333,7 @@ tr:hover td{background:var(--sidebar-hover)}
       <div class="field-group">
         <label class="field-label">Conselho Tutelar</label>
         <select id="reg-ct">
-          <option>Conselho I</option><option>Conselho II</option><option>Conselho III</option>
-          <option>Conselho IV</option><option>Conselho V</option><option>Conselho VI</option>
+          <option value="">Selecione o Conselho Tutelar…</option>
         </select>
       </div>
       <div class="field-group">
@@ -594,23 +596,87 @@ function showAuthTab(tab) {
   document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')))
   document.getElementById('auth-login').style.display = tab==='login' ? '' : 'none'
   document.getElementById('auth-register').style.display = tab==='register' ? '' : 'none'
+  if (tab === 'register') _populateRegCT()
 }
-function setDemoRole(role) {
-  demoRole = role
-  document.querySelectorAll('[id^="demo-"]').forEach(b => b.classList.remove('active'))
-  document.getElementById('demo-'+role).classList.add('active')
+function _populateRegCT() {
+  const sel = document.getElementById('reg-ct')
+  if (!sel || sel.options.length > 1) return // já populado
+  CONSELHOS_BAIRROS.forEach(c => {
+    const opt = document.createElement('option')
+    opt.value = 'CT' + c.num
+    opt.textContent = c.nome + ' – ' + c.regiao
+    sel.appendChild(opt)
+  })
 }
 function toggleAdminCode() {
   const el = document.getElementById('admin-code-input')
   el.style.display = el.style.display === 'none' ? '' : 'none'
 }
-function doLogin() {
-  const profiles = {
-    master: { name:'Fabio Pereira', role:'master', ct:'CT01', ctFull:'Conselho Tutelar I – CT01', initials:'FP' },
-    conselheiro: { name:'Ana Costa', role:'conselheiro', ct:'CT01', ctFull:'Conselho Tutelar I – CT01', initials:'AC' },
-    atendente: { name:'Carlos Mendes', role:'atendente', ct:'CT01', ctFull:'Conselho Tutelar I – CT01', initials:'CM' },
+
+// Credenciais em memória – senha: "senha123" para demo
+const CREDENTIALS = [
+  { email:'fabio.bpereira45@gmail.com', senha:'admin123', role:'master' },
+  { email:'ana.costa@ct.ba.gov.br',     senha:'senha123', role:'conselheiro' },
+  { email:'carlos.m@ct.ba.gov.br',      senha:'senha123', role:'atendente' },
+]
+
+function _findUserByEmail(email) {
+  return usersData.find(u => u.email.toLowerCase() === email.toLowerCase())
+}
+
+function _buildProfile(userData) {
+  if (!userData) return null
+  const initials = userData.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
+  if (userData.role === 'master') {
+    return { name: userData.name, role:'master', ct: null, ctFull:'Todos os 24 Conselhos', initials }
   }
-  currentUser = profiles[demoRole]
+  // ctCode pode ser 'CTI', 'CTII', 'CTIII'... – extrai o num romano após 'CT'
+  const ctNum = userData.ct ? userData.ct.replace(/^CT/,'') : ''
+  const ctMatch = CONSELHOS_BAIRROS.find(c => c.num === ctNum)
+  const ctFull = ctMatch ? ctMatch.nome : (userData.ct || '')
+  return { name: userData.name, role: userData.role, ct: userData.ct, ctFull, initials }
+}
+
+function doLogin() {
+  const email = (document.getElementById('login-email')?.value || '').trim()
+  const pass  = (document.getElementById('login-pass')?.value  || '').trim()
+  const errEl = document.getElementById('login-error')
+
+  if (!email || !pass) {
+    if (errEl) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.style.display='' }
+    return
+  }
+
+  const cred = CREDENTIALS.find(c => c.email.toLowerCase() === email.toLowerCase() && c.senha === pass)
+  if (!cred) {
+    if (errEl) { errEl.textContent = 'E-mail ou senha incorretos.'; errEl.style.display='' }
+    return
+  }
+
+  const userData = _findUserByEmail(email)
+  if (!userData || userData.status === 'Inativo') {
+    if (errEl) { errEl.textContent = 'Conta inativa ou não encontrada.'; errEl.style.display='' }
+    return
+  }
+
+  currentUser = _buildProfile(userData)
+  _enterApp()
+}
+
+function loginDemo(role) {
+  const demos = {
+    master:      'fabio.bpereira45@gmail.com',
+    conselheiro: 'ana.costa@ct.ba.gov.br',
+    atendente:   'carlos.m@ct.ba.gov.br',
+  }
+  const userData = _findUserByEmail(demos[role])
+  if (!userData) { showToast('Usuário demo não encontrado.'); return }
+  currentUser = _buildProfile(userData)
+  _enterApp()
+}
+
+function _enterApp() {
+  if (!currentUser) return
   document.getElementById('auth-screen').style.display = 'none'
   document.getElementById('app').style.display = 'flex'
   updateSidebarUser()
@@ -651,7 +717,9 @@ function updateSidebarUser() {
     avatarEl.style.overflow = ''
   }
   document.getElementById('user-name').textContent = currentUser.name
-  document.getElementById('council-label').textContent = currentUser.ctFull
+  document.getElementById('council-label').textContent = currentUser.role === 'master'
+    ? 'Administração · Todos os 24 Conselhos'
+    : (currentUser.ctFull || '')
   const roleLabels = { master:'Coordenador • Master', conselheiro:'Conselheiro(a)', atendente:'Atendente' }
   const roleClasses = { master:'role-master', conselheiro:'role-conselheiro', atendente:'role-atendente' }
   const roleNames = { master:'Master', conselheiro:'Conselheiro', atendente:'Atendente' }
@@ -2445,7 +2513,7 @@ function renderUsers() {
       const sc=u.status==='Ativo'?'ativo':'inativo'
       return `<tr>
       <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:30px;height:30px;font-size:11px">${initials}</div><div><strong>${u.name}</strong><div style="font-size:11px;color:var(--text-muted)">${u.email}</div></div></div></td>
-      <td style="color:var(--text-muted)">${u.ct}</td>
+      <td style="color:var(--text-muted)">${u.role==='master'?'Todos os 24':(u.ct||'–')}</td>
       <td><span class="role-badge ${roleClass[u.role]||'role-conselheiro'}">${roleLabel[u.role]||u.role}</span></td>
       <td><span class="status-chip st-${sc}">${u.status}</span></td>
       <td style="display:flex;gap:6px">
@@ -3249,9 +3317,9 @@ function saveEvento(){
 
 // ── MODAL USUÁRIO ──
 let usersData = [
-  {name:'Fabio Pereira',email:'fabio.bpereira45@gmail.com',cargo:'Coordenador',ct:'CT01',role:'master',status:'Ativo'},
-  {name:'Ana Costa',email:'ana.costa@ct.ba.gov.br',cargo:'Conselheiro(a)',ct:'CT01',role:'conselheiro',status:'Ativo'},
-  {name:'Carlos Mendes',email:'carlos.m@ct.ba.gov.br',cargo:'Atendente',ct:'CT01',role:'atendente',status:'Ativo'},
+  {name:'Fabio Pereira',email:'fabio.bpereira45@gmail.com',cargo:'Coordenador',ct:null,role:'master',status:'Ativo'},
+  {name:'Ana Costa',email:'ana.costa@ct.ba.gov.br',cargo:'Conselheiro(a)',ct:'CTI',role:'conselheiro',status:'Ativo'},
+  {name:'Carlos Mendes',email:'carlos.m@ct.ba.gov.br',cargo:'Atendente',ct:'CTI',role:'atendente',status:'Ativo'},
 ]
 function showUserModal(idx){
   const editing=idx!==undefined
@@ -3270,16 +3338,18 @@ function showUserModal(idx){
             ${['Conselheiro(a)','Atendente','Coordenador(a)'].map(c=>`<option ${u.cargo===c?'selected':''}>${c}</option>`).join('')}
           </select></div>
         <div class="field-group"><label class="field-label">Perfil</label>
-          <select id="m-urole">
+          <select id="m-urole" onchange="document.getElementById('m-uct-group').style.display=this.value==='master'?'none':''">
             <option value="conselheiro" ${u.role==='conselheiro'?'selected':''}>Conselheiro</option>
             <option value="atendente" ${u.role==='atendente'?'selected':''}>Atendente</option>
             <option value="master" ${u.role==='master'?'selected':''}>Master</option>
           </select></div>
       </div>
       <div class="field-row cols-2">
-        <div class="field-group"><label class="field-label">Conselho</label>
+        <div class="field-group" id="m-uct-group" ${u.role==='master'?'style="display:none"':''}>
+          <label class="field-label">Conselho</label>
           <select id="m-uct">
-            ${['CT01','CT02','CT03','CT04','CT05','CT06','CT07','CT08'].map(c=>`<option ${u.ct===c?'selected':''}>${c}</option>`).join('')}
+            <option value="">-- Nenhum (Master) --</option>
+            ${CONSELHOS_BAIRROS.map(c=>`<option value="CT${c.num}" ${u.ct==='CT'+c.num?'selected':''}>${c.nome}</option>`).join('')}
           </select></div>
         <div class="field-group"><label class="field-label">Status</label>
           <select id="m-ustatus">
@@ -3303,7 +3373,7 @@ function saveUser(idx){
   const ct=document.getElementById('m-uct').value
   const status=document.getElementById('m-ustatus').value
   if(!name||!email){showToast('Preencha nome e e-mail.');return}
-  const entry={name,email,cargo,ct,role,status}
+  const entry={name,email,cargo,ct:role==='master'?null:ct,role,status}
   if(idx===undefined||idx==='undefined') usersData.push(entry)
   else usersData[idx]=entry
   closeModal(); navigate('users')
