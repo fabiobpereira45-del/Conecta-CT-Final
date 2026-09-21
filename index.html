@@ -765,8 +765,10 @@ function buildNav() {
   const items = NAV_ALL.filter(n => n.roles.includes(role))
   nav.innerHTML = items.map(item => {
     if (item.id === '__sep__') return '<div class="nav-sep"></div>'
+    // Label dinâmico: "Estatísticas Gerais" só para master; conselheiro/atendente vê "Minhas Estatísticas"
+    const label = (item.id === 'general-stats' && role !== 'master') ? 'Minhas Estatísticas' : item.label
     return `<button class="nav-item${activeModule===item.id?' active':''}" onclick="navigate('${item.id}')">
-      ${I[item.icon]||''}<span>${item.label}</span>
+      ${I[item.icon]||''}<span>${label}</span>
     </button>`
   }).join('')
 }
@@ -2764,16 +2766,118 @@ function filterCouncils(v) {
 }
 
 // ── ESTATÍSTICAS GERAIS ──
+// Dados simulados por CT (índice = posição em CONSELHOS_BAIRROS)
+const _STATS_CT = [
+  {at:84,ab:6,enc:27,pl:12,req:18,data:[5,8,7,9,10,8,11,10,16,0,0,0]},
+  {at:71,ab:8,enc:21,pl:10,req:14,data:[4,7,6,8,8,7,9,9,13,0,0,0]},
+  {at:63,ab:4,enc:19,pl:8, req:11,data:[4,6,5,7,7,6,8,7,13,0,0,0]},
+  {at:58,ab:7,enc:18,pl:11,req:12,data:[3,5,5,6,6,6,7,7,13,0,0,0]},
+  {at:77,ab:9,enc:24,pl:13,req:16,data:[4,8,7,8,9,7,10,10,14,0,0,0]},
+  {at:68,ab:5,enc:20,pl:9, req:13,data:[4,7,6,8,8,6,9,9,11,0,0,0]},
+  {at:55,ab:3,enc:15,pl:7, req:9, data:[3,5,4,6,6,5,7,7,12,0,0,0]},
+  {at:49,ab:4,enc:14,pl:6, req:8, data:[3,4,4,5,5,5,6,6,11,0,0,0]},
+  {at:52,ab:5,enc:16,pl:7, req:10,data:[3,5,4,6,6,5,7,6,10,0,0,0]},
+  {at:60,ab:4,enc:18,pl:9, req:11,data:[4,6,5,7,7,6,8,7,10,0,0,0]},
+  {at:45,ab:3,enc:13,pl:6, req:7, data:[3,4,4,5,5,4,6,5,9,0,0,0]},
+  {at:58,ab:6,enc:17,pl:8, req:12,data:[3,6,5,7,7,5,8,7,10,0,0,0]},
+  {at:50,ab:4,enc:15,pl:7, req:9, data:[3,5,4,6,6,5,6,6,9,0,0,0]},
+  {at:43,ab:3,enc:12,pl:5, req:7, data:[2,4,4,5,5,4,5,5,9,0,0,0]},
+  {at:65,ab:5,enc:19,pl:9, req:13,data:[4,6,6,7,8,6,9,8,11,0,0,0]},
+  {at:47,ab:4,enc:14,pl:6, req:8, data:[3,4,4,5,5,4,6,6,10,0,0,0]},
+  {at:55,ab:5,enc:16,pl:7, req:10,data:[3,5,5,6,6,5,7,7,11,0,0,0]},
+  {at:40,ab:3,enc:11,pl:5, req:7, data:[2,4,3,4,5,4,5,5,8,0,0,0]},
+  {at:48,ab:4,enc:14,pl:6, req:8, data:[3,4,4,5,5,4,6,6,11,0,0,0]},
+  {at:44,ab:3,enc:13,pl:5, req:7, data:[3,4,4,5,5,4,5,5,9,0,0,0]},
+  {at:51,ab:4,enc:15,pl:7, req:9, data:[3,5,4,6,6,5,6,6,10,0,0,0]},
+  {at:46,ab:4,enc:13,pl:6, req:8, data:[3,4,4,5,5,4,6,5,10,0,0,0]},
+  {at:42,ab:3,enc:12,pl:5, req:7, data:[2,4,3,5,5,4,5,5,9,0,0,0]},
+  {at:39,ab:2,enc:11,pl:4, req:6, data:[2,3,3,4,4,4,5,5,9,0,0,0]},
+]
+
 function renderGeneralStats() {
-  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+  const isMaster = currentUser?.role === 'master'
+  const months   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
   const currentMonth = new Date().getMonth()
-  const data = [42,58,51,67,73,69,81,77,84,0,0,0].slice(0, currentMonth+1)
-  const maxVal = Math.max(...data)
+  const year = new Date().getFullYear()
+
+  // ── Visão do Conselheiro/Atendente: apenas seu CT ──
+  if (!isMaster) {
+    const ctNum = (currentUser?.ct || '').replace(/^CT/,'') // ex: 'CTI' → 'I'
+    const ctIdx = CONSELHOS_BAIRROS.findIndex(c => c.num === ctNum)
+    const s = ctIdx >= 0 ? _STATS_CT[ctIdx] : _STATS_CT[0]
+    const ctObj = ctIdx >= 0 ? CONSELHOS_BAIRROS[ctIdx] : CONSELHOS_BAIRROS[0]
+    const dataM = s.data.slice(0, currentMonth+1)
+    const maxVal = Math.max(...dataM, 1)
+
+    // Conselheiros do CT (do array real)
+    const consTotal = (ctObj.conselheiros || []).length
+
+    return `
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2>Minhas Estatísticas</h2>
+        <p>${ctObj.nome} – ${year}</p>
+      </div>
+      <button class="btn btn-outline" onclick="downloadEstatisticasPDF()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar PDF
+      </button>
+    </div>
+    <div class="grid-3" style="margin-bottom:20px">
+      ${[
+        {label:'Atendimentos no Ano',  value:s.at,       sub:'neste conselho',          color:'var(--primary)'},
+        {label:'Casos em Aberto',      value:s.ab,       sub:'aguardando resolução',    color:'var(--warning)'},
+        {label:'Requisições Enviadas', value:s.req,      sub:'certidões solicitadas',   color:'var(--accent)'},
+        {label:'Encaminhamentos',      value:s.enc,      sub:'para rede de proteção',   color:'var(--success)'},
+        {label:'Plantões Realizados',  value:s.pl,       sub:'fins de semana',          color:'#7c3aed'},
+        {label:'Conselheiros Ativos',  value:consTotal,  sub:'neste conselho',          color:'#0891b2'},
+      ].map(st=>`
+      <div class="card stat-card">
+        <div class="label">${st.label}</div>
+        <div class="value" style="color:${st.color}">${st.value}</div>
+        <div class="sub">${st.sub}</div>
+      </div>`).join('')}
+    </div>
+    <div class="card card-pad" style="margin-bottom:16px">
+      <strong style="font-size:14px;display:block;margin-bottom:16px">Atendimentos por Mês – ${year}</strong>
+      <div style="display:flex;align-items:flex-end;gap:8px;height:120px">
+        ${dataM.map((v,i)=>`
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:600">${v}</div>
+          <div style="width:100%;background:${i===currentMonth?'var(--primary)':'var(--primary-subtle)'};border-radius:4px 4px 0 0;height:${Math.round((v/maxVal)*90)+10}px;min-height:10px;transition:height .3s"></div>
+          <div style="font-size:10px;color:var(--text-muted)">${months[i]}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="card card-pad">
+      <strong style="font-size:14px;display:block;margin-bottom:12px">Conselheiros do ${ctObj.nome}</strong>
+      ${(ctObj.conselheiros||[]).map(nome=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${nome.split(' ').slice(0,2).map(w=>w[0]).join('')}</div>
+        <span style="font-size:13px">${nome}</span>
+      </div>`).join('')}
+    </div>`
+  }
+
+  // ── Visão Master: todos os 24 CTs ──
+  const totalAt  = _STATS_CT.reduce((s,c)=>s+c.at,  0)
+  const totalAb  = _STATS_CT.reduce((s,c)=>s+c.ab,  0)
+  const totalReq = _STATS_CT.reduce((s,c)=>s+c.req, 0)
+  const totalEnc = _STATS_CT.reduce((s,c)=>s+c.enc, 0)
+  const totalPl  = _STATS_CT.reduce((s,c)=>s+c.pl,  0)
+  const totalCons= CONSELHOS_BAIRROS.reduce((s,c)=>s+(c.conselheiros||[]).length, 0)
+
+  // Soma mensal de todos os CTs
+  const dataGlobal = Array.from({length: currentMonth+1}, (_,i) =>
+    _STATS_CT.reduce((s,c)=> s + (c.data[i]||0), 0)
+  )
+  const maxVal = Math.max(...dataGlobal, 1)
+
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Estatísticas Gerais</h2>
-      <p>Visão consolidada de todos os Conselhos Tutelares – ${new Date().getFullYear()}</p>
+      <p>Visão consolidada de todos os Conselhos Tutelares – ${year}</p>
     </div>
     <button class="btn btn-outline" onclick="downloadEstatisticasPDF()">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -2782,12 +2886,12 @@ function renderGeneralStats() {
   </div>
   <div class="grid-3" style="margin-bottom:20px">
     ${[
-      {label:'Atendimentos no Ano',value:'603',sub:'todos os conselhos',color:'var(--primary)'},
-      {label:'Casos em Aberto',value:'47',sub:'aguardando resolução',color:'var(--warning)'},
-      {label:'Requisições Enviadas',value:'128',sub:'certidões solicitadas',color:'var(--accent)'},
-      {label:'Encaminhamentos',value:'214',sub:'para rede de proteção',color:'var(--success)'},
-      {label:'Plantões Realizados',value:'96',sub:'fins de semana',color:'#7c3aed'},
-      {label:'Conselheiros Ativos',value:'40',sub:'em 8 conselhos',color:'#0891b2'},
+      {label:'Atendimentos no Ano',  value:totalAt,   sub:'todos os conselhos',       color:'var(--primary)'},
+      {label:'Casos em Aberto',      value:totalAb,   sub:'aguardando resolução',     color:'var(--warning)'},
+      {label:'Requisições Enviadas', value:totalReq,  sub:'certidões solicitadas',    color:'var(--accent)'},
+      {label:'Encaminhamentos',      value:totalEnc,  sub:'para rede de proteção',    color:'var(--success)'},
+      {label:'Plantões Realizados',  value:totalPl,   sub:'fins de semana',           color:'#7c3aed'},
+      {label:'Conselheiros Ativos',  value:totalCons, sub:'nos 24 conselhos',         color:'#0891b2'},
     ].map(s=>`
     <div class="card stat-card">
       <div class="label">${s.label}</div>
@@ -2796,9 +2900,9 @@ function renderGeneralStats() {
     </div>`).join('')}
   </div>
   <div class="card card-pad" style="margin-bottom:16px">
-    <strong style="font-size:14px;display:block;margin-bottom:16px">Atendimentos por Mês – ${new Date().getFullYear()}</strong>
+    <strong style="font-size:14px;display:block;margin-bottom:16px">Atendimentos por Mês – ${year} (todos os CTs)</strong>
     <div style="display:flex;align-items:flex-end;gap:8px;height:120px">
-      ${data.map((v,i)=>`
+      ${dataGlobal.map((v,i)=>`
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
         <div style="font-size:10px;color:var(--text-muted);font-weight:600">${v}</div>
         <div style="width:100%;background:${i===currentMonth?'var(--primary)':'var(--primary-subtle)'};border-radius:4px 4px 0 0;height:${Math.round((v/maxVal)*90)+10}px;min-height:10px;transition:height .3s"></div>
@@ -2809,14 +2913,14 @@ function renderGeneralStats() {
   <div class="card"><div class="table-wrap"><table>
     <thead><tr><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
     <tbody>
-      ${CONSELHOS_BAIRROS.slice(0,6).map((c,i)=>{
-        const at=[84,71,63,58,77,68][i], ab=[6,8,4,7,9,5][i], enc=[27,21,19,18,24,20][i], pl=[12,10,8,11,13,9][i]
+      ${CONSELHOS_BAIRROS.map((c,i)=>{
+        const s = _STATS_CT[i] || {at:0,ab:0,enc:0,pl:0}
         return `<tr>
-          <td><strong>CT ${c.num}</strong></td>
-          <td>${at}</td>
-          <td><span style="color:var(--warning);font-weight:600">${ab}</span></td>
-          <td>${enc}</td>
-          <td>${pl}</td>
+          <td><strong>CT ${c.num}</strong><div style="font-size:11px;color:var(--text-muted)">${c.nome}</div></td>
+          <td>${s.at}</td>
+          <td><span style="color:var(--warning);font-weight:600">${s.ab}</span></td>
+          <td>${s.enc}</td>
+          <td>${s.pl}</td>
         </tr>`
       }).join('')}
     </tbody>
