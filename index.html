@@ -803,6 +803,25 @@ async function _sb_rejeitarPendente(id) {
   if (!r.ok) throw new Error('Não foi possível recusar o pedido.')
 }
 
+async function _restoreSession() {
+  try { _sbSession = JSON.parse(localStorage.getItem('cct_session') || 'null') } catch(e) { _sbSession = null }
+  if (!_sbSession) return
+  if (!(await _authRefresh())) { _sessSave(null); return }
+  const r = await fetch(`${_SB_URL}/auth/v1/user`, { headers: _sbHeaders() })
+  if (!r.ok) { _sessSave(null); return }
+  const email = (await r.json()).email
+  const row = await _sb_buscarUsuario(email)
+  if (!row) { _sessSave(null); return }
+  const ctNum = row.ct ? row.ct.replace(/^CT/,'') : ''
+  const ctMatch = CONSELHOS_BAIRROS.find(c => c.num === ctNum)
+  currentUser = { id: row.id, name: row.nome, email: row.email, role: row.role, ct: row.ct || null,
+    ctFull: row.role === 'master' ? 'Todos os 24 Conselhos' : (ctMatch ? ctMatch.nome : (row.ct || '')),
+    initials: (row.nome || 'U').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase(),
+    senhaHash: row.senha_hash, viaAuth: true, telefone: row.telefone || '' }
+  _enterApp()
+}
+window.addEventListener('load', () => { _restoreSession() })
+
 async function doLogin() {
   const email = (document.getElementById('login-email')?.value || '').trim()
   const pass  = (document.getElementById('login-pass')?.value  || '').trim()
@@ -819,11 +838,18 @@ async function doLogin() {
   if (btn) { btn.disabled = true; btn.textContent = 'Verificando...' }
 
   try {
-    const hash = await _hashSenha(pass)
+    // 1) Supabase Auth; 2) legado (hash) enquanto a migração não termina
+    const sess = await _authToken('password', { email, password: pass })
+    if (sess) _sessSave(sess)
     const row  = await _sb_buscarUsuario(email)
+    let ok = false
+    if (sess) ok = !!row
+    else if (row && row.senha_hash) ok = row.senha_hash === await _hashSenha(pass)
 
-    if (!row || row.senha_hash !== hash) {
-      if (errEl) { errEl.textContent = 'E-mail ou senha incorretos.'; errEl.style.display = '' }
+    if (!ok) {
+      _sessSave(null)
+      const msg = sess ? 'Conta sem cadastro ativo. Fale com o administrador.' : 'E-mail ou senha incorretos.'
+      if (errEl) { errEl.textContent = msg; errEl.style.display = '' }
       return
     }
 
@@ -842,6 +868,7 @@ async function doLogin() {
       ctFull:    row.role === 'master' ? 'Todos os 24 Conselhos' : ctFull,
       initials,
       senhaHash: row.senha_hash,
+      viaAuth:   !!sess,
       telefone:  row.telefone || ''
     }
 
@@ -904,6 +931,10 @@ function showAuth() {
   document.getElementById('auth-screen').style.display = 'flex'
 }
 function doLogout() {
+  if (_sbSession) fetch(`${_SB_URL}/auth/v1/logout`, { method: 'POST', headers: _sbHeaders() }).catch(()=>{})
+  _sessSave(null)
+  try { localStorage.removeItem('cct_fichasEnviadas'); localStorage.removeItem('cct_fichasDB') } catch(e) {}
+  fichasEnviadas = []
   currentUser = null
   document.getElementById('app').style.display = 'none'
   document.getElementById('auth-screen').style.display = 'flex'
@@ -1336,10 +1367,41 @@ function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 }
 
+// ── Sessão Supabase Auth (REST, sem biblioteca) ──
+let _sbSession = null
+function _sessSave(s) {
+  _sbSession = s
+  try { s ? localStorage.setItem('cct_session', JSON.stringify(s)) : localStorage.removeItem('cct_session') } catch(e) {}
+}
+function _sessFrom(d) {
+  return { access_token: d.access_token, refresh_token: d.refresh_token,
+           expires_at: Date.now() + (d.expires_in || 3600) * 1000 }
+}
+async function _authToken(grant, body) {
+  try {
+    const r = await fetch(`${_SB_URL}/auth/v1/token?grant_type=${grant}`, {
+      method: 'POST',
+      headers: { 'apikey': _SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    if (!r.ok) return null
+    const d = await r.json()
+    return d.access_token ? _sessFrom(d) : null
+  } catch(e) { return null }
+}
+async function _authRefresh() {
+  if (!_sbSession?.refresh_token) return false
+  const s = await _authToken('refresh_token', { refresh_token: _sbSession.refresh_token })
+  if (!s) return false
+  _sessSave(s)
+  return true
+}
+setInterval(() => { if (_sbSession && Date.now() > _sbSession.expires_at - 10*60*1000) _authRefresh() }, 60*1000)
+
 function _sbHeaders() {
   return {
     'apikey': _SB_KEY,
-    'Authorization': 'Bearer ' + _SB_KEY,
+    'Authorization': 'Bearer ' + (_sbSession?.access_token || _SB_KEY),
     'Content-Type': 'application/json',
     'Prefer': 'return=minimal'
   }
@@ -5847,6 +5909,16 @@ async function alterarSenha() {
   if (!atual || !nova || !conf) { showToast('Preencha todos os campos de senha.'); return }
   if (nova !== conf) { showToast('Nova senha e confirmação não conferem.'); return }
   if (nova.length < 6) { showToast('A nova senha deve ter pelo menos 6 caracteres.'); return }
+  if (currentUser.viaAuth) {
+    const chk = await _authToken('password', { email: currentUser.email, password: atual })
+    if (!chk) { showToast('Senha atual incorreta.'); return }
+    _sessSave(chk)
+    const r = await fetch(`${_SB_URL}/auth/v1/user`, { method: 'PUT', headers: _sbHeaders(), body: JSON.stringify({ password: nova }) })
+    if (!r.ok) { showToast('Erro ao alterar senha.'); return }
+    ;['prof-senha-atual','prof-senha-nova','prof-senha-conf'].forEach(i => { const e = document.getElementById(i); if (e) e.value = '' })
+    showToast('Senha alterada com sucesso!')
+    return
+  }
   // Verifica senha atual
   const hashAtual = await sha256(atual)
   if (hashAtual !== currentUser.senhaHash) { showToast('Senha atual incorreta.'); return }
