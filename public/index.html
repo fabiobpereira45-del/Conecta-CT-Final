@@ -4842,7 +4842,13 @@ async function _carregarConselheirosSelect() {
       .join('')
 
     const sel1 = document.getElementById('ficha-conselheiro-destino')
-    if (sel1) sel1.innerHTML = '<option value="">-- Selecione o conselheiro --</option>' + opts
+    console.log('[DEBUG] sel1 element:', sel1, 'opts:', opts)
+    if (sel1) { 
+      sel1.innerHTML = '<option value="">-- Selecione o conselheiro --</option>' + opts
+      console.log('[DEBUG] sel1.innerHTML atualizado')
+    } else {
+      console.log('[DEBUG] ERRO: sel1 não encontrado!')
+    }
 
     const sel2 = document.getElementById('ficha-remeter-ct')
     if (sel2) {
