@@ -4813,6 +4813,7 @@ function attachFormsEvents() {
 async function _carregarConselheirosSelect() {
   const ct = currentUser?.ct || null
   const role = currentUser?.role
+  console.log('[DEBUG] _carregarConselheirosSelect:', {ct, role, currentUserName: currentUser?.name})
   try {
     const r = await fetch(
       `${_SB_URL}/rest/v1/usuarios?ativo=eq.true&select=id,nome,cargo,role,ct`,
@@ -4821,11 +4822,21 @@ async function _carregarConselheirosSelect() {
     if (!r.ok) return
     const norm = s => String(s||'').replace(/[\s\-–]/g,'').toUpperCase()
     const ehCons = u => /conselheiro|coordenador|master/i.test(u.role||'') || /conselheiro|coordenador/i.test(u.cargo||'')
-    let users = (await r.json()).filter(ehCons)
+    let allUsers = await r.json()
+    console.log('[DEBUG] allUsers:', allUsers)
+    let users = allUsers.filter(ehCons)
+    console.log('[DEBUG] após ehCons filter:', users)
     // Master vê todos; atendente/coordenador: apenas do próprio CT
     if (role !== 'master' && ct) {
-      users = users.filter(u => norm(u.ct) === norm(ct))
+      const normCt = norm(ct)
+      console.log('[DEBUG] filtrando por ct, normCt:', normCt)
+      users = users.filter(u => {
+        const normUserCt = norm(u.ct)
+        console.log('[DEBUG] user:', u.nome, 'normUserCt:', normUserCt, 'match:', normUserCt === normCt)
+        return normUserCt === normCt
+      })
     }
+    console.log('[DEBUG] users finais:', users)
     const opts = users
       .map(u => `<option value="${esc(u.nome)}">${esc(u.nome)} – ${esc(u.cargo||u.role)}</option>`)
       .join('')
