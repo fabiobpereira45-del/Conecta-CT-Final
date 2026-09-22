@@ -4863,6 +4863,7 @@ function renderUsers() {
         <td><span class="status-chip st-${ativo?'ativo':'inativo'}">${ativo?'Ativo':'Inativo'}</span></td>
         <td style="display:flex;gap:6px">
           <button class="btn btn-danger btn-sm" onclick="toggleUserStatus('${u.id}',${ativo})">${ativo?'Desativar':'Ativar'}</button>
+          ${u.id!==currentUser?.id?`<button class="btn btn-danger btn-sm" style="background:#7f1d1d;border-color:#7f1d1d" onclick="excluirUsuario('${esc(u.id)}','${esc(u.email)}','${esc(u.nome)}')">Excluir</button>`:''}
         </td>
       </tr>`}).join('')}</tbody>
     </table></div></div>`
@@ -4892,6 +4893,20 @@ async function toggleUserStatus(id, currentlyAtivo) {
     showToast(`Usuário ${!currentlyAtivo?'ativado':'desativado'}.`)
     navigate('users')
   } catch(e) { showToast('Erro ao alterar status.') }
+}
+
+async function excluirUsuario(id, email, nome) {
+  if (currentUser?.role !== 'master' || id === currentUser.id) return
+  if (!confirm(`Excluir "${nome}" (${email}) definitivamente?
+
+O cadastro e os pedidos desse e-mail serão apagados. Esta ação não pode ser desfeita.`)) return
+  try {
+    const r1 = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: _sbHeaders() })
+    if (!r1.ok) { showToast('Não foi possível excluir o usuário.'); return }
+    await fetch(`${_SB_URL}/rest/v1/usuarios_pendentes?email=eq.${encodeURIComponent(email)}`, { method: 'DELETE', headers: _sbHeaders() })
+    showToast('Usuário excluído.')
+    navigate('users')
+  } catch(e) { showToast('Erro ao excluir usuário.') }
 }
 
 // ── APPROVALS (master only) ──
