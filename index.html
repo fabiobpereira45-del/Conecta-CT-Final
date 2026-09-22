@@ -1292,7 +1292,7 @@ function pstat(l,v) {
 
 // ── NOTICES ──
 function renderNotices() {
-  const canCreate = currentUser.role === 'master'
+  const canCreate = _éAdmin()
   const notices = noticesData
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
