@@ -42,7 +42,7 @@ revoke all on usuarios, usuarios_pendentes, fichas from anon;
 --    (necessário para a lista "Direcionar"); master lê e altera tudo.
 create policy usuarios_select on usuarios for select to authenticated
   using ( auth_id = auth.uid()
-          or me_role() = 'master'
+          or me_role() in ('master','coordenador')   -- coordenador enxerga os 24 CTs
           or (ct is not null and ct = me_ct()) );
 create policy usuarios_master_write on usuarios for all to authenticated
   using (me_role() = 'master') with check (me_role() = 'master');
@@ -60,28 +60,32 @@ grant insert on usuarios_pendentes to anon;
 --    - atendente: cria/lê/edita fichas do próprio CT
 --    - conselheiro: lê/edita fichas do CT direcionadas a ele (ou sem destinatário)
 --    - master: tudo
+-- Leitura: master e coordenador veem os 24 conselhos.
 create policy fichas_select on fichas for select to authenticated
-  using ( me_role() = 'master'
+  using ( me_role() in ('master','coordenador')
        or ( ct_destino = me_ct()
             and ( me_role() = 'atendente'
                or conselheiro_dest is null
                or conselheiro_dest = me_nome() ) ) );
 
+-- Escrita: o coordenador só cria no próprio CT (diferente da leitura, que é global).
 create policy fichas_insert on fichas for insert to authenticated
   with check ( me_role() = 'master'
-            or (me_role() in ('atendente','conselheiro') and ct_destino = me_ct()) );
+            or (me_role() in ('atendente','conselheiro','coordenador') and ct_destino = me_ct()) );
 
 create policy fichas_update on fichas for update to authenticated
   using ( me_role() = 'master'
        or ( ct_destino = me_ct()
-            and ( me_role() = 'atendente'
+            and ( me_role() in ('atendente','coordenador')
                or conselheiro_dest is null
                or conselheiro_dest = me_nome() ) ) )
   with check ( me_role() = 'master' or ct_destino = me_ct() );
 
+-- Excluir: nunca fora do próprio CT (o coordenador apaga qualquer ficha do CT dele).
 create policy fichas_delete on fichas for delete to authenticated
   using ( me_role() = 'master'
-       or (ct_destino = me_ct() and conselheiro_dest = me_nome()) );
+       or ( ct_destino = me_ct()
+            and ( me_role() = 'coordenador' or conselheiro_dest = me_nome() ) ) );
 
 grant select, insert, update, delete on usuarios, fichas to authenticated;
 grant select, update on usuarios_pendentes to authenticated;

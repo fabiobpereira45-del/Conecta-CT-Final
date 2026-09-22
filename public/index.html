@@ -537,22 +537,22 @@ const I = {
 
 // ── ROLE PERMISSIONS ──
 const NAV_ALL = [
-  { id:'home', label:'Início', icon:'home', roles:['master','conselheiro','atendente'] },
-  { id:'fichas-inbox', label:'Fichas Recebidas', icon:'inbox', roles:['conselheiro','master'] },
-  { id:'profile', label:'Meu Perfil', icon:'user', roles:['master','conselheiro','atendente'] },
-  { id:'notices', label:'Convocatórias e Avisos', icon:'megaphone', roles:['master','conselheiro','atendente'] },
-  { id:'councils', label:'Conselhos e Bairros', icon:'building', roles:['master','conselheiro','atendente'] },
-  { id:'statistics', label:'Minhas Estatísticas', icon:'chart', roles:['master','conselheiro'] },
-  { id:'daily', label:'Lançamentos Diários', icon:'clipboard', roles:['master','conselheiro'] },
-  { id:'agenda', label:'Agenda', icon:'calendar', roles:['master','conselheiro','atendente'] },
-  { id:'reports', label:'Meus Relatórios', icon:'report', roles:['master','conselheiro'] },
-  { id:'general-stats', label:'Estatísticas Gerais', icon:'pie', roles:['master','conselheiro'] },
-  { id:'duty-roster', label:'Escala de Plantões', icon:'clock', roles:['master','conselheiro'] },
-  { id:'photos', label:'Álbum de Fotos', icon:'image', roles:['master','conselheiro'] },
-  { id:'forms', label:'Formulários', icon:'filetext', roles:['master','conselheiro','atendente'] },
-  { id:'requisicoes', label:'Minhas Requisições', icon:'report', roles:['master','conselheiro','atendente'] },
-  { id:'eca', label:'Pesquisa ECA', icon:'book', roles:['master','conselheiro','atendente'] },
-  { id:'rules', label:'Regimento Interno', icon:'scale', roles:['master','conselheiro','atendente'] },
+  { id:'home', label:'Início', icon:'home', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'fichas-inbox', label:'Fichas Recebidas', icon:'inbox', roles:['conselheiro','coordenador','master'] },
+  { id:'profile', label:'Meu Perfil', icon:'user', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'notices', label:'Convocatórias e Avisos', icon:'megaphone', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'councils', label:'Conselhos e Bairros', icon:'building', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'statistics', label:'Minhas Estatísticas', icon:'chart', roles:['master','coordenador','conselheiro'] },
+  { id:'daily', label:'Lançamentos Diários', icon:'clipboard', roles:['master','coordenador','conselheiro'] },
+  { id:'agenda', label:'Agenda', icon:'calendar', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'reports', label:'Meus Relatórios', icon:'report', roles:['master','coordenador','conselheiro'] },
+  { id:'general-stats', label:'Estatísticas Gerais', icon:'pie', roles:['master','coordenador','conselheiro'] },
+  { id:'duty-roster', label:'Escala de Plantões', icon:'clock', roles:['master','coordenador','conselheiro'] },
+  { id:'photos', label:'Álbum de Fotos', icon:'image', roles:['master','coordenador','conselheiro'] },
+  { id:'forms', label:'Formulários', icon:'filetext', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'requisicoes', label:'Minhas Requisições', icon:'report', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'eca', label:'Pesquisa ECA', icon:'book', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'rules', label:'Regimento Interno', icon:'scale', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'__sep__', label:'', icon:'', roles:['master'] },
   { id:'admin-stats', label:'Admin: Todas Estatísticas', icon:'shield', roles:['master'] },
   { id:'users', label:'Gerenciar Usuários', icon:'users', roles:['master'] },
@@ -965,7 +965,7 @@ function updateSidebarUser() {
   document.getElementById('council-label').textContent = currentUser.role === 'master'
     ? 'Administração · Todos os 24 Conselhos'
     : (currentUser.ctFull || '')
-  const roleLabels = { master:'Coordenador • Master', conselheiro:'Conselheiro(a)', atendente:'Atendente' }
+  const roleLabels = { master:'Administrador • Master', coordenador:'Coordenador(a)', conselheiro:'Conselheiro(a)', atendente:'Atendente' }
   const roleClasses = { master:'role-master', conselheiro:'role-conselheiro', atendente:'role-atendente' }
   const roleNames = { master:'Master', conselheiro:'Conselheiro', atendente:'Atendente' }
   document.getElementById('user-role-label').textContent = roleLabels[currentUser.role]
@@ -981,7 +981,7 @@ function buildNav() {
   const items = NAV_ALL.filter(n => n.roles.includes(role))
   // Count unread fichas for badge
   const unreadFichas = fichasEnviadas
-    ? fichasEnviadas.filter(f => !f.lida && (role==='master' || f.ctDestino===currentUser.ct)).length
+    ? fichasEnviadas.filter(f => !f.lida && (_vêTudo() || f.ctDestino===currentUser.ct)).length
     : 0
   nav.innerHTML = items.map(item => {
     if (item.id === '__sep__') return '<div class="nav-sep"></div>'
@@ -1005,6 +1005,19 @@ function navigate(id) {
   renderContent()
   closeSidebar()
 }
+
+// ── PAPÉIS ──
+// master      → administra o sistema inteiro
+// coordenador → LÊ os 24 conselhos, mas só altera/exclui o próprio CT e seus itens
+// conselheiro/atendente → apenas o próprio CT
+function _vêTudo(u) { const r = (u||currentUser)?.role; return r === 'master' || r === 'coordenador' }
+function _éAdmin(u) { return ((u||currentUser)?.role) === 'master' }
+function _mesmoCT(ct) {
+  const norm = v => String(v||'').replace(/[\s\-–]/g,'').toUpperCase()
+  return !!ct && norm(ct) === norm(currentUser?.ct)
+}
+// Pode alterar/excluir: master em tudo; demais só no próprio CT
+function _podeEditar(ct) { return _éAdmin() || _mesmoCT(ct) }
 
 // ── TOAST ──
 function showToast(msg) {
@@ -1208,7 +1221,7 @@ function arow(time,title,sub,cls) {
 // ── PROFILE ──
 function renderProfile() {
   const u = currentUser
-  const roleLabel = {master:'Coordenador • Master',conselheiro:'Conselheiro(a)',atendente:'Atendente'}[u.role]
+  const roleLabel = {master:'Administrador • Master',coordenador:'Coordenador(a)',conselheiro:'Conselheiro(a)',atendente:'Atendente'}[u.role]
   const hasPhoto = u.photoUrl
   const avatarBig = hasPhoto
     ? `<img src="${u.photoUrl}" class="avatar-photo-big" alt="Foto de perfil" />`
@@ -1565,7 +1578,7 @@ function _db_marcarLidaLocal(protocolo) {
 // ── FICHAS INBOX ──
 function renderFichasInbox() {
   // Renderiza esqueleto imediatamente, carrega dados async
-  const ct = currentUser.role === 'master' ? null : currentUser.ct
+  const ct = _vêTudo() ? null : currentUser.ct
   setTimeout(() => _carregarInbox(ct), 0)
 
   return `
@@ -1654,10 +1667,10 @@ async function _carregarInbox(ct) {
       <td>
         <div style="display:flex;gap:6px;align-items:center">
           <button class="btn btn-primary btn-sm" onclick="abrirFichaInboxDireto('${esc(f.protocolo)}')">Abrir</button>
-          <button title="Excluir ficha" onclick="confirmarExcluirFicha('${esc(f.protocolo)}','${esc(f.nomeCrianca||'')}')"
+          ${_podeEditar(f.ctDestino)?`<button title="Excluir ficha" onclick="confirmarExcluirFicha('${esc(f.protocolo)}','${esc(f.nomeCrianca||'')}')"
             style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:#dc2626;font-weight:600;white-space:nowrap">
             🗑️
-          </button>
+          </button>`:''}
         </div>
       </td>
     </tr>`).join('')}</tbody>
@@ -1926,8 +1939,8 @@ function renderStatistics() {
   const barData = Object.entries(tiposCount).sort((a,b)=>b[1]-a[1]).slice(0,6)
     .map(([t,v],i)=>[t,v,['#1e3a5f','#2d5a9e','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'][i]])
 
-  const title = role === 'master' ? 'Estatísticas Gerais' : (role === 'conselheiro' ? 'Minhas Estatísticas' : `Estatísticas – ${currentUser.ctFull||'CT'}`)
-  const sub = `${nomeMes} · ${role === 'master' ? 'Todos os Conselhos' : currentUser.name}`
+  const title = _vêTudo() ? 'Estatísticas Gerais' : (role === 'conselheiro' ? 'Minhas Estatísticas' : `Estatísticas – ${currentUser.ctFull||'CT'}`)
+  const sub = `${nomeMes} · ${_vêTudo() ? 'Todos os Conselhos' : currentUser.name}`
 
   const emptyMsg = total === 0 ? `<div style="text-align:center;padding:40px;color:var(--text-muted)">
     <div style="font-size:32px;margin-bottom:12px">📊</div>
@@ -2052,8 +2065,8 @@ function rrow(n,p,t,s) {
 function downloadRelatorioPDF(nome, periodo, tipo) {
   const now = new Date()
   const user = currentUser || {}
-  const isMaster = user.role === 'master'
-  const ctInfo = isMaster ? 'Todos os 24 Conselhos' : (user.ctFull || user.ct || '')
+  const isMaster = _vêTudo(user)
+  const ctInfo = user.role === 'master' ? 'Todos os 24 Conselhos' : (user.ctFull || user.ct || '')
 
   // Dados do período para o relatório
   const monthMap = {'Janeiro':0,'Fevereiro':1,'Março':2,'Abril':3,'Maio':4,'Junho':5,
@@ -3015,7 +3028,7 @@ function renderFormFill(id) {
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div class="field-row cols-2">
           <div><label class="field-label">Conselheiro(a) Responsável</label><input value="${currentUser.name}" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
-          <div><label class="field-label">Cargo</label><input value="${{master:'Coordenador',conselheiro:'Conselheiro Tutelar',atendente:'Atendente'}[currentUser.role]}" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
+          <div><label class="field-label">Cargo</label><input value="${{master:'Administrador',coordenador:'Coordenador',conselheiro:'Conselheiro Tutelar',atendente:'Atendente'}[currentUser.role]}" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
         </div>
       </div>
     </div>
@@ -4041,7 +4054,7 @@ function renderForm40(form) {
 function renderFormGenerico(form) {
   setTimeout(setFormDataHoraAtual, 50)
   const conselheiro = currentUser.name
-  const cargo = {master:'Coordenador',conselheiro:'Conselheiro Tutelar',atendente:'Atendente'}[currentUser.role]
+  const cargo = {master:'Administrador',coordenador:'Coordenador',conselheiro:'Conselheiro Tutelar',atendente:'Atendente'}[currentUser.role]
 
   // Campos por categoria
   const camposPorCategoria = {
@@ -4685,7 +4698,7 @@ function renderRequisicoes() {
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Requisições de Certidão</h2>
-      <p>${list.length} registro(s)${role==='master'?' · todos os conselhos':' · suas requisições'}</p>
+      <p>${list.length} registro(s)${_vêTudo()?' · todos os conselhos':' · suas requisições'}</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-outline" onclick="downloadRequisicoesPDF()">
@@ -4806,7 +4819,7 @@ async function _carregarConselheirosSelect() {
     )
     if (!r.ok) return
     const norm = s => String(s||'').replace(/[\s\-–]/g,'').toUpperCase()
-    const ehCons = u => /conselheiro|master/i.test(u.role||'') || /conselheiro/i.test(u.cargo||'')
+    const ehCons = u => /conselheiro|coordenador|master/i.test(u.role||'') || /conselheiro|coordenador/i.test(u.cargo||'')
     let users = (await r.json()).filter(ehCons)
     // prioriza o mesmo CT; se nenhum encontrado, mostra todos os conselheiros
     const mesmoCt = ct ? users.filter(u => u.role === 'master' || norm(u.ct) === norm(ct)) : users
@@ -4842,8 +4855,8 @@ function renderUsers() {
   const el = document.getElementById('content')
   el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando usuários…</div>'
   _sb_listarUsuarios().then(({ users, pendingCount }) => {
-    const roleLabel = {master:'Master',conselheiro:'Conselheiro',atendente:'Atendente'}
-    const roleClass = {master:'role-master',conselheiro:'role-conselheiro',atendente:'role-atendente'}
+    const roleLabel = {master:'Master',coordenador:'Coordenador',conselheiro:'Conselheiro',atendente:'Atendente'}
+    const roleClass = {master:'role-master',coordenador:'role-master',conselheiro:'role-conselheiro',atendente:'role-atendente'}
     el.innerHTML = `
     <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
       <div><h2>Gerenciar Usuários</h2><p>${users.length} usuários cadastrados${pendingCount?` · ${pendingCount} aguardando aprovação`:''}</p></div>
@@ -4896,7 +4909,7 @@ async function toggleUserStatus(id, currentlyAtivo) {
 }
 
 async function excluirUsuario(id, email, nome) {
-  if (currentUser?.role !== 'master' || id === currentUser.id) return
+  if (!_éAdmin() || id === currentUser.id) return
   if (!confirm(`Excluir "${nome}" (${email}) definitivamente?
 
 O cadastro e os pedidos desse e-mail serão apagados. Esta ação não pode ser desfeita.`)) return
@@ -4936,7 +4949,7 @@ async function renderApprovals() {
   </div>`
 }
 async function approveUser(id) {
-  const roleMap = { 'Conselheiro(a)':'conselheiro', 'Atendente':'atendente', 'Coordenador(a)':'master', 'Coordenador':'master' }
+  const roleMap = { 'Conselheiro(a)':'conselheiro', 'Atendente':'atendente', 'Coordenador(a)':'coordenador', 'Coordenador':'coordenador' }
   try {
     // busca pendente para saber o cargo
     const r = await fetch(`${_SB_URL}/rest/v1/usuarios_pendentes?id=eq.${id}&select=*`, { headers: _sbHeaders() })
