@@ -4878,7 +4878,7 @@ function renderUsers() {
         <td><span class="status-chip st-${ativo?'ativo':'inativo'}">${ativo?'Ativo':'Inativo'}</span></td>
         <td style="display:flex;gap:6px">
           <button class="btn btn-danger btn-sm" onclick="toggleUserStatus('${u.id}',${ativo})">${ativo?'Desativar':'Ativar'}</button>
-          <button class="btn btn-outline btn-sm" onclick="editarRoleUsuario('${esc(u.id)}','${esc(u.nome)}','${esc(u.role)}')" style="border-color:var(--primary);color:var(--primary)">✎ Perfil</button>
+          <button class="btn btn-outline btn-sm" onclick="editarRoleUsuario('${esc(u.id)}','${esc(u.nome)}','${esc(u.role)}','${esc(u.ct||'')}')" style="border-color:var(--primary);color:var(--primary)">✎ Perfil</button>
           ${u.id!==currentUser?.id?`<button class="btn btn-danger btn-sm" style="background:#7f1d1d;border-color:#7f1d1d" onclick="excluirUsuario('${esc(u.id)}','${esc(u.email)}','${esc(u.nome)}')">Excluir</button>`:''}
         </td>
       </tr>`}).join('')}</tbody>
@@ -4911,29 +4911,54 @@ async function toggleUserStatus(id, currentlyAtivo) {
   } catch(e) { showToast('Erro ao alterar status.') }
 }
 
-async function editarRoleUsuario(id, nome, roleAtual) {
-  const novoRole = prompt(`Alterar perfil de "${nome}"
-
-Perfis disponíveis:
-- master
-- coordenador
-- conselheiro
-- atendente
-
-Novo perfil:`, roleAtual)
-  if (!novoRole || novoRole === roleAtual) return
+async function editarRoleUsuario(id, nome, roleAtual, ctAtual) {
   const roles = ['master','coordenador','conselheiro','atendente']
-  if (!roles.includes(novoRole)) { showToast('Perfil inválido.'); return }
+  const conselhos = CONSELHOS_BAIRROS.map(c => 'CT'+c.num).sort()
+  
+  const html = `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="display:block;font-weight:600;margin-bottom:4px">Perfil:</label>
+        <select id="modal-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px">
+          ${roles.map(r => `<option value="${r}" ${r===roleAtual?'selected':''}>${{master:'Administrador',coordenador:'Coordenador',conselheiro:'Conselheiro',atendente:'Atendente'}[r]}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-weight:600;margin-bottom:4px">Conselho (opcional):</label>
+        <select id="modal-ct" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px">
+          <option value="">-- Sem conselho --</option>
+          ${conselhos.map(c => `<option value="${c}" ${c===ctAtual?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  `
+  
+  const modalBg = document.createElement('div')
+  modalBg.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999'
+  const modal = document.createElement('div')
+  modal.style.cssText='background:white;padding:24px;border-radius:8px;max-width:400px;width:90%'
+  modal.innerHTML = `<h3 style="margin-top:0">Editar ${nome}</h3>${html}
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn btn-primary" onclick="salvarEdicaoUsuario('${id}','${nome}',document.getElementById('modal-role').value,document.getElementById('modal-ct').value); this.closest('[style*=position]').remove()">Salvar</button>
+      <button class="btn btn-outline" onclick="this.closest('[style*=position]').remove()">Cancelar</button>
+    </div>`
+  modalBg.appendChild(modal)
+  document.body.appendChild(modalBg)
+}
+
+async function salvarEdicaoUsuario(id, nome, novoRole, novoCt) {
+  const data = { role: novoRole }
+  if (novoCt) data.ct = novoCt
   try {
     const r = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: _sbHeaders(),
-      body: JSON.stringify({ role: novoRole })
+      body: JSON.stringify(data)
     })
-    if (!r.ok) { showToast('Erro ao alterar perfil.'); return }
-    showToast(`Perfil de ${nome} alterado para ${novoRole}.`)
+    if (!r.ok) { showToast('Erro ao alterar.'); return }
+    showToast(`${nome} atualizado!`)
     navigate('users')
-  } catch(e) { showToast('Erro ao alterar perfil.') }
+  } catch(e) { showToast('Erro ao alterar.') }
 }
 
 async function excluirUsuario(id, email, nome) {
