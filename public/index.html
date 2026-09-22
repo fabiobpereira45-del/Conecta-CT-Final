@@ -4811,9 +4811,15 @@ function attachFormsEvents() {
 }
 
 async function _carregarConselheirosSelect() {
+  // Aguarda o elemento ser renderizado (pode levar alguns ms)
+  const sel1 = document.getElementById('ficha-conselheiro-destino')
+  if (!sel1) {
+    setTimeout(() => _carregarConselheirosSelect(), 50)
+    return
+  }
+
   const ct = currentUser?.ct || null
   const role = currentUser?.role
-  console.log('[DEBUG] _carregarConselheirosSelect:', {ct, role, currentUserName: currentUser?.name})
   try {
     const r = await fetch(
       `${_SB_URL}/rest/v1/usuarios?ativo=eq.true&select=id,nome,cargo,role,ct`,
@@ -4822,32 +4828,18 @@ async function _carregarConselheirosSelect() {
     if (!r.ok) return
     const norm = s => String(s||'').replace(/[\s\-–]/g,'').toUpperCase()
     const ehCons = u => /conselheiro|coordenador|master/i.test(u.role||'') || /conselheiro|coordenador/i.test(u.cargo||'')
-    let allUsers = await r.json()
-    console.log('[DEBUG] allUsers:', allUsers)
-    let users = allUsers.filter(ehCons)
-    console.log('[DEBUG] após ehCons filter:', users)
+    let users = (await r.json()).filter(ehCons)
     // Master vê todos; atendente/coordenador: apenas do próprio CT
     if (role !== 'master' && ct) {
-      const normCt = norm(ct)
-      console.log('[DEBUG] filtrando por ct, normCt:', normCt)
-      users = users.filter(u => {
-        const normUserCt = norm(u.ct)
-        console.log('[DEBUG] user:', u.nome, 'normUserCt:', normUserCt, 'match:', normUserCt === normCt)
-        return normUserCt === normCt
-      })
+      users = users.filter(u => norm(u.ct) === norm(ct))
     }
-    console.log('[DEBUG] users finais:', users)
     const opts = users
       .map(u => `<option value="${esc(u.nome)}">${esc(u.nome)} – ${esc(u.cargo||u.role)}</option>`)
       .join('')
 
     const sel1 = document.getElementById('ficha-conselheiro-destino')
-    console.log('[DEBUG] sel1 element:', sel1, 'opts:', opts)
-    if (sel1) { 
+    if (sel1) {
       sel1.innerHTML = '<option value="">-- Selecione o conselheiro --</option>' + opts
-      console.log('[DEBUG] sel1.innerHTML atualizado')
-    } else {
-      console.log('[DEBUG] ERRO: sel1 não encontrado!')
     }
 
     const sel2 = document.getElementById('ficha-remeter-ct')
