@@ -4878,6 +4878,7 @@ function renderUsers() {
         <td><span class="status-chip st-${ativo?'ativo':'inativo'}">${ativo?'Ativo':'Inativo'}</span></td>
         <td style="display:flex;gap:6px">
           <button class="btn btn-danger btn-sm" onclick="toggleUserStatus('${u.id}',${ativo})">${ativo?'Desativar':'Ativar'}</button>
+          <button class="btn btn-outline btn-sm" onclick="editarRoleUsuario('${esc(u.id)}','${esc(u.nome)}','${esc(u.role)}')" style="border-color:var(--primary);color:var(--primary)">✎ Perfil</button>
           ${u.id!==currentUser?.id?`<button class="btn btn-danger btn-sm" style="background:#7f1d1d;border-color:#7f1d1d" onclick="excluirUsuario('${esc(u.id)}','${esc(u.email)}','${esc(u.nome)}')">Excluir</button>`:''}
         </td>
       </tr>`}).join('')}</tbody>
@@ -4908,6 +4909,31 @@ async function toggleUserStatus(id, currentlyAtivo) {
     showToast(`Usuário ${!currentlyAtivo?'ativado':'desativado'}.`)
     navigate('users')
   } catch(e) { showToast('Erro ao alterar status.') }
+}
+
+async function editarRoleUsuario(id, nome, roleAtual) {
+  const novoRole = prompt(`Alterar perfil de "${nome}"
+
+Perfis disponíveis:
+- master
+- coordenador
+- conselheiro
+- atendente
+
+Novo perfil:`, roleAtual)
+  if (!novoRole || novoRole === roleAtual) return
+  const roles = ['master','coordenador','conselheiro','atendente']
+  if (!roles.includes(novoRole)) { showToast('Perfil inválido.'); return }
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: _sbHeaders(),
+      body: JSON.stringify({ role: novoRole })
+    })
+    if (!r.ok) { showToast('Erro ao alterar perfil.'); return }
+    showToast(`Perfil de ${nome} alterado para ${novoRole}.`)
+    navigate('users')
+  } catch(e) { showToast('Erro ao alterar perfil.') }
 }
 
 async function excluirUsuario(id, email, nome) {
