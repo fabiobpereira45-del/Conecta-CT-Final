@@ -4812,6 +4812,7 @@ function attachFormsEvents() {
 
 async function _carregarConselheirosSelect() {
   const ct = currentUser?.ct || null
+  const role = currentUser?.role
   try {
     const r = await fetch(
       `${_SB_URL}/rest/v1/usuarios?ativo=eq.true&select=id,nome,cargo,role,ct`,
@@ -4821,9 +4822,10 @@ async function _carregarConselheirosSelect() {
     const norm = s => String(s||'').replace(/[\s\-–]/g,'').toUpperCase()
     const ehCons = u => /conselheiro|coordenador|master/i.test(u.role||'') || /conselheiro|coordenador/i.test(u.cargo||'')
     let users = (await r.json()).filter(ehCons)
-    // prioriza o mesmo CT; se nenhum encontrado, mostra todos os conselheiros
-    const mesmoCt = ct ? users.filter(u => u.role === 'master' || norm(u.ct) === norm(ct)) : users
-    users = mesmoCt.some(u => u.role !== 'master') ? mesmoCt : users
+    // Master vê todos; atendente/coordenador: apenas do próprio CT
+    if (role !== 'master' && ct) {
+      users = users.filter(u => norm(u.ct) === norm(ct))
+    }
     const opts = users
       .map(u => `<option value="${esc(u.nome)}">${esc(u.nome)} – ${esc(u.cargo||u.role)}</option>`)
       .join('')
