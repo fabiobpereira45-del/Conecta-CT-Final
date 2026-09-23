@@ -6698,11 +6698,11 @@ async function direcionarFichaConselheiro() {
   _saveState()
   buildNav() // Atualiza badge
 
-  // Mostrar seção do conselheiro se o usuário atual for o selecionado ou master
+  // Desbloqueia a seção do conselheiro para quem direcionou (e para o conselheiro/master)
   const secCons = document.getElementById('ficha-secao-conselheiro')
   const lbl = document.getElementById('ficha-conselheiro-label')
   if (secCons) {
-    secCons.style.display = (currentUser.name === nome || currentUser.role === 'master') ? 'block' : 'none'
+    secCons.style.display = 'block'
     if (lbl) lbl.textContent = `Responsável: ${nome}`
   }
   // Bloquear edição da seção do atendente
