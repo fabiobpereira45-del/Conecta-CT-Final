@@ -1097,7 +1097,7 @@ async function _restoreSession() {
     senhaHash: row.senha_hash, viaAuth: true, telefone: row.telefone || '', photoUrl: row.foto_url || null }
   _enterApp()
 }
-window.addEventListener('load', () => { _restoreSession() })
+window.addEventListener('load', () => { _restoreSession(); _carregarConselhosOverrides() })
 
 async function doLogin() {
   const email = (document.getElementById('login-email')?.value || '').trim()
@@ -6097,10 +6097,43 @@ function showCouncilModal(idx) {
 }
 function showAddCouncilModal() { showCouncilModal(undefined) }
 function showEditCouncilModal(idx) { showCouncilModal(idx) }
-function saveCouncil(idx) {
+
+// Carrega as edições salvas no Supabase e aplica por cima da lista fixa CONSELHOS_BAIRROS.
+// Sem isso, editar um conselho só muda a variável na memória do navegador: ao recarregar a
+// página, o JS recomeça do zero com os dados originais e a edição "some".
+async function _carregarConselhosOverrides() {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/conselhos_overrides?select=*`, { headers: _sbHeaders() })
+    if (!r.ok) return
+    const overrides = await r.json()
+    overrides.forEach(o => {
+      const idx = CONSELHOS_BAIRROS.findIndex(c => c.num === o.num)
+      if (o.excluido) {
+        if (idx >= 0) CONSELHOS_BAIRROS.splice(idx, 1)
+      } else if (o.dados) {
+        if (idx >= 0) Object.assign(CONSELHOS_BAIRROS[idx], o.dados)
+        else CONSELHOS_BAIRROS.push(o.dados)
+      }
+    })
+    if (activeModule === 'councils') renderContent()
+  } catch (e) { console.warn('_carregarConselhosOverrides', e) }
+}
+async function _salvarConselhoOverride(num, dados, excluido) {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/conselhos_overrides`, {
+      method: 'POST',
+      headers: { ..._sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ num, dados: dados || null, excluido: !!excluido })
+    })
+    return r.ok
+  } catch (e) { return false }
+}
+
+async function saveCouncil(idx) {
   const num = document.getElementById('mc-num').value.trim()
   const nome = document.getElementById('mc-nome').value.trim()
   if (!nome) { showToast('Informe o nome do conselho.'); return }
+  if (!num) { showToast('Informe o número do conselho.'); return }
   const entry = {
     num, nome,
     regiao: document.getElementById('mc-regiao').value.trim(),
@@ -6112,16 +6145,22 @@ function saveCouncil(idx) {
     bairros: (idx !== undefined && idx !== 'undefined' && CONSELHOS_BAIRROS[idx]) ? CONSELHOS_BAIRROS[idx].bairros : [],
     conselheiros: (idx !== undefined && idx !== 'undefined' && CONSELHOS_BAIRROS[idx]) ? (CONSELHOS_BAIRROS[idx].conselheiros || []) : []
   }
-  if (idx === undefined || idx === 'undefined') CONSELHOS_BAIRROS.push(entry)
+  const criando = idx === undefined || idx === 'undefined'
+  if (criando) CONSELHOS_BAIRROS.push(entry)
   else CONSELHOS_BAIRROS[idx] = entry
   closeModal(); navigate('councils')
-  showToast(idx === undefined || idx === 'undefined' ? 'Conselho criado!' : 'Conselho atualizado!')
+  const salvou = await _salvarConselhoOverride(num, entry, false)
+  showToast(salvou
+    ? (criando ? 'Conselho criado!' : 'Conselho atualizado!')
+    : '⚠️ Salvo só nesta tela — não foi possível gravar no banco. A edição some ao recarregar.')
 }
-function deleteCouncil(idx) {
+async function deleteCouncil(idx) {
   if (!confirm('Excluir este conselho?')) return
+  const num = CONSELHOS_BAIRROS[idx]?.num
   CONSELHOS_BAIRROS.splice(idx, 1)
   navigate('councils')
-  showToast('Conselho excluído.')
+  const salvou = num ? await _salvarConselhoOverride(num, null, true) : false
+  showToast(salvou ? 'Conselho excluído.' : '⚠️ Excluído só nesta tela — pode voltar ao recarregar.')
 }
 
 function filterCouncils(v) {
