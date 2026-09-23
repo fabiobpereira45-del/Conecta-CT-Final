@@ -537,14 +537,23 @@ function exportarWord() {
   const bannerHtml = _bannerParaWord(banner)
   const bodyHtml   = [...formDocs].map(d => _paraWord(d)).join('<br>')
 
-  // Monta HTML completo compatível com Word
+  // Monta HTML completo compatível com Word.
+  // O cabeçalho vai no `mso-element:header` — é a convenção antiga do próprio Word para
+  // "Salvar como Página da Web": ao reabrir esse HTML, o Word reconhece o `div#header` como
+  // cabeçalho de página de verdade (repete no topo de cada página, fora da margem do texto),
+  // em vez de ficar como conteúdo comum no topo do corpo.
   const html = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
       xmlns:w="urn:schemas-microsoft-com:office:word"
       xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8">
 <style>
+  @page Section1 { size: 21cm 29.7cm; margin: 2cm 2cm 2cm 2cm; mso-header-margin: 1cm; mso-footer-margin: 1cm; }
+  div.Section1 { page: Section1; }
   body { font-family: "Times New Roman", serif; font-size: 12pt; color: #1a2332; margin: 2cm; }
+  /* Sem essas regras diretas em <p>, o espaçamento herdado do line-height:2 usado na tela
+     (bom para leitura em tela, exagerado no papel) faz o texto "saltar" entre parágrafos. */
+  p { margin: 0 0 8pt 0; line-height: 1.5; text-align: justify; }
   table { border-collapse: collapse; width: 100%; }
   td, th { border: 1px solid #999; padding: 4pt 6pt; font-size: 10.5pt; vertical-align: top; }
   label { font-size: 10.5pt; }
@@ -555,8 +564,10 @@ function exportarWord() {
 </style>
 </head>
 <body>
-${bannerHtml}
+<div style="mso-element:header" id="header"><p class="MsoHeader" style="margin:0;text-align:left">${bannerHtml}</p></div>
+<div class="Section1">
 <div style="margin-top:16pt">${bodyHtml}</div>
+</div>
 </body></html>`
 
   try {
