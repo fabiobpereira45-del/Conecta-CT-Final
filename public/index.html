@@ -160,6 +160,8 @@ nav{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:2px;overflow
 .form-card.fc-featured{border-color:var(--primary);background:var(--primary-subtle)}
 .form-card.fc-featured:hover{box-shadow:0 0 0 3px rgba(30,58,95,.12)}
 .form-card.fc-featured .fc-num{color:var(--primary)}
+.f03-opcao{cursor:pointer}
+.f03-assinaturas{break-inside:avoid;page-break-inside:avoid}
 .forms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .fill-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
 .fill-header button{display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:13px;transition:color .15s}
@@ -3530,7 +3532,7 @@ function renderForm03(form) {
         ${td(`Nº: ${L(p+'-numero', titulo+': número', '60px', 'placeholder="___"')}`)}
       </tr>
       <tr>${td(`Ponto de referência: ${L(p+'-ref', titulo+': referência', 'calc(100% - 130px)', 'placeholder="_______________"')}`, 4)}</tr>`
-  const box = (inner) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">${inner}</label>`
+  const box = (inner) => `<label class="f03-opcao" style="display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px">${inner}</label>`
 
   setTimeout(_f03Inicializar, 60)
 
@@ -3640,6 +3642,19 @@ function renderForm03(form) {
           <div><label class="field-label">Cargo</label><input value="Conselheiro Tutelar" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
         </div>
       </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div class="field-row cols-2">
+          <div><label class="field-label">Demandante (quem trouxe a demanda)</label>
+            <input id="f03c-demandante" data-label="Demandante: nome" placeholder="Nome completo do demandante" /></div>
+          <div><label class="field-label">Vínculo com a criança/adolescente</label>
+            <input id="f03c-demandante-vinculo" data-label="Demandante: vínculo" placeholder="Ex.: mãe, avó, escola, vizinho…" /></div>
+        </div>
+      </div>
+      <div class="f03-assinaturas" style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:56px;font-size:12px;text-align:center">
+        <div><div style="border-top:1px solid #333;padding-top:6px"><strong id="f03-ass-conselheiro">Conselheiro(a) Tutelar</strong><br>Conselheiro(a) Tutelar</div></div>
+        <div><div style="border-top:1px solid #333;padding-top:6px"><strong id="f03-ass-demandante">&nbsp;</strong><br>Demandante</div></div>
+      </div>
+      <div style="text-align:center;font-size:12px;margin-top:18px">Salvador, ____ de ______________ de ______.</div>
     </div>
     </div>
 
@@ -3690,6 +3705,13 @@ function _f03MascaraCpf(el) {
   const d = _f03Digitos(el.value).slice(0, 11)
   el.value = d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2')
 }
+function _f03AtualizarAssinaturas() {
+  const c = document.getElementById('f03-ass-conselheiro'), d = document.getElementById('f03-ass-demandante')
+  if (c) c.textContent = _f03Ficha?.conselheiro_dest || 'Conselheiro(a) Tutelar'
+  if (d) d.innerHTML = esc(document.getElementById('f03c-demandante')?.value.trim() || '') || '&nbsp;'
+}
+document.addEventListener('input', e => { if (e.target?.id === 'f03c-demandante') _f03AtualizarAssinaturas() })
+
 // Copia CEP/endereço/telefone da mãe para o pai (e trava os campos enquanto marcado)
 function _f03CopiarEnderecoMae(chk) {
   const campos = ['cep', 'end', 'bairro', 'numero', 'ref', 'tel']
@@ -3872,6 +3894,7 @@ function _f03Render() {
   if (!podeVerComplemento) return
   _f03Aplicar(f.dados_conselheiro)
   document.getElementById('f03-resp-nome').value = f.conselheiro_dest || ''
+  _f03AtualizarAssinaturas()
   document.getElementById('f03-label-resp').textContent = `Responsável: ${f.conselheiro_dest || '—'}${dest ? '' : ' · somente leitura'}`
   _f03Travar('f03c-', !dest)
   document.getElementById('f03-acoes-conselheiro').style.display = dest ? 'grid' : 'none'
