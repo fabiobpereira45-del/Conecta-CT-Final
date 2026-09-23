@@ -297,6 +297,7 @@ tr:hover td{background:var(--sidebar-hover)}
   .fill-header,
   #toast,
   #modal-root,
+  .no-print,
   button,
   .btn,
   .dark-toggle,
@@ -469,12 +470,15 @@ tr:hover td{background:var(--sidebar-hover)}
 function exportarWord() {
   const formName = (document.querySelector('.fill-header h2')?.textContent || 'Formulario').replace(/[^a-zA-Z0-9À-ÿ\s]/g,'').trim()
   const banner   = document.querySelector('[style*="border:2px solid #1a3a6b"]')
-  const formDoc  = document.querySelector('.form-document')
+  // Só o que está em .form-document é impresso — botões, selects e avisos de tela ficam de fora.
+  // Um formulário pode ter mais de um bloco .form-document (ex.: Ficha de Atendimento com
+  // seção do atendente + complemento do conselheiro): todos entram, na ordem em que aparecem.
+  const formDocs = document.querySelectorAll('.form-document')
 
-  if (!formDoc) { showToast('Nenhum formulário aberto.'); return }
+  if (!formDocs.length) { showToast('Nenhum formulário aberto.'); return }
 
   const bannerHtml = banner ? banner.outerHTML : ''
-  const bodyHtml   = formDoc.innerHTML
+  const bodyHtml   = [...formDocs].map(d => d.innerHTML).join('<div style="page-break-before:always"></div>')
 
   // Monta HTML completo compatível com Word
   const html = `<!DOCTYPE html>
@@ -3514,11 +3518,16 @@ function renderForm03(form) {
         ${td(`RG: ${L(p+'-rg', titulo+': RG', '130px', 'placeholder="___________"')}`)}
         ${td(`CPF: ${L(p+'-cpf', titulo+': CPF', '130px', 'placeholder="000.000.000-00" inputmode="numeric" oninput="_f03MascaraCpf(this)"')}`)}
       </tr>
+      ${p==='pai' ? `<tr>${td(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="f03a-pai-mesmo-end" onchange="_f03CopiarEnderecoMae(this)" style="width:auto"> Endereço igual ao da mãe</label>`, 4)}</tr>` : ''}
       <tr>
         ${td(`CEP: ${L(p+'-cep', titulo+': CEP', '100px', 'placeholder="00000-000" inputmode="numeric"')} <span style="font-size:11px;color:var(--text-muted)">↳ preenche o endereço</span>`, 2)}
         ${td(`Tel.: ${L(p+'-tel', titulo+': telefone', '130px', 'placeholder="(71) 99999-9999"')}`, 2)}
       </tr>
       <tr>${td(`Endereço: ${L(p+'-end', titulo+': endereço', 'calc(100% - 60px)', 'placeholder="Preenchido automaticamente pelo CEP"')}`, 4)}</tr>
+      <tr>
+        ${td(`Bairro: ${L(p+'-bairro', titulo+': bairro', 'calc(100% - 60px)', 'placeholder="Preenchido automaticamente pelo CEP"')}`, 3)}
+        ${td(`Nº: ${L(p+'-numero', titulo+': número', '60px', 'placeholder="___"')}`)}
+      </tr>
       <tr>${td(`Ponto de referência: ${L(p+'-ref', titulo+': referência', 'calc(100% - 130px)', 'placeholder="_______________"')}`, 4)}</tr>`
   const box = (inner) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">${inner}</label>`
 
@@ -3526,7 +3535,7 @@ function renderForm03(form) {
 
   return _formHeader(form) + `
   <div id="f03-form">
-  <div class="card card-pad form-document" id="f03-secao-atendente"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
+  <div class="card card-pad" id="f03-secao-atendente"><div class="form-document" style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
     <p style="text-align:center;font-size:15px;font-weight:700">FICHA DE ATENDIMENTO</p>
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px">
       <tr>
@@ -3563,7 +3572,8 @@ function renderForm03(form) {
       </tr>
     </table>
   </div>
-
+  <!-- Tudo abaixo é interface de tela — fica fora de .form-document, não entra no Word nem na impressão -->
+  <div class="no-print">
     <!-- Direcionar (atendente) -->
     <div id="f03-bloco-direcionar" style="margin-top:20px;padding:16px;background:var(--primary-subtle);border-radius:12px;border:1px solid var(--primary)">
       <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:12px">📨 Direcionar para Conselheiro do CT</div>
@@ -3580,9 +3590,11 @@ function renderForm03(form) {
     <!-- Situação da ficha (depois de direcionada) -->
     <div id="f03-status" style="display:none;margin-top:20px;padding:14px 16px;border-radius:12px;border:1px solid #a5d6a7;background:#e8f5e9;font-size:13px"></div>
   </div>
+  </div>
 
   <!-- ══ COMPLEMENTO: SEÇÃO DO CONSELHEIRO TUTELAR ══ -->
-  <div class="card card-pad form-document" id="f03-secao-conselheiro" style="display:none;margin-top:16px">
+  <div class="card card-pad" id="f03-secao-conselheiro" style="display:none;margin-top:16px">
+    <div class="form-document">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2ecc71">
       <div style="width:32px;height:32px;background:#2ecc71;border-radius:8px;display:flex;align-items:center;justify-content:center">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -3623,8 +3635,9 @@ function renderForm03(form) {
         </div>
       </div>
     </div>
+    </div>
 
-    <div id="f03-acoes-conselheiro" style="margin-top:24px;display:grid;gap:12px">
+    <div id="f03-acoes-conselheiro" class="no-print" style="margin-top:24px;display:grid;gap:12px">
       <div style="padding:14px;background:var(--bg-subtle,#f8f9fb);border-radius:10px;border:1px solid var(--border)">
         <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">🔄 Remeter para outro conselheiro do meu CT</div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
@@ -3669,6 +3682,17 @@ const _f03Digitos = s => String(s || '').replace(/\D/g, '')
 function _f03MascaraCpf(el) {
   const d = _f03Digitos(el.value).slice(0, 11)
   el.value = d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+// Copia CEP/endereço/telefone da mãe para o pai (e trava os campos enquanto marcado)
+function _f03CopiarEnderecoMae(chk) {
+  const campos = ['cep', 'end', 'bairro', 'numero', 'ref', 'tel']
+  campos.forEach(c => {
+    const origem = document.getElementById('f03a-mae-' + c)
+    const alvo   = document.getElementById('f03a-pai-' + c)
+    if (!origem || !alvo) return
+    if (chk.checked) { alvo.value = origem.value; alvo.disabled = true }
+    else alvo.disabled = false
+  })
 }
 
 function _f03Coletar(prefixo) {
@@ -5484,6 +5508,10 @@ async function editarRoleUsuario(id, nome, roleAtual, ctAtual) {
   const html = `
     <div style="display:flex;flex-direction:column;gap:12px">
       <div>
+        <label style="display:block;font-weight:600;margin-bottom:4px">Nome completo:</label>
+        <input id="modal-nome" value="${esc(nome)}" placeholder="Nome que aparece nas fichas" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px" />
+      </div>
+      <div>
         <label style="display:block;font-weight:600;margin-bottom:4px">Perfil:</label>
         <select id="modal-role" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px">
           ${roles.map(r => `<option value="${r}" ${r===roleAtual?'selected':''}>${{master:'Administrador',coordenador:'Coordenador',conselheiro:'Conselheiro',atendente:'Atendente'}[r]}</option>`).join('')}
@@ -5503,9 +5531,9 @@ async function editarRoleUsuario(id, nome, roleAtual, ctAtual) {
   modalBg.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999'
   const modal = document.createElement('div')
   modal.style.cssText='background:white;padding:24px;border-radius:8px;max-width:400px;width:90%'
-  modal.innerHTML = `<h3 style="margin-top:0">Editar ${nome}</h3>${html}
+  modal.innerHTML = `<h3 style="margin-top:0">Editar ${esc(nome)}</h3>${html}
     <div style="display:flex;gap:8px;margin-top:20px">
-      <button class="btn btn-primary" onclick="salvarEdicaoUsuario('${id}','${nome}',document.getElementById('modal-role').value,document.getElementById('modal-ct').value); this.closest('[style*=position]').remove()">Salvar</button>
+      <button class="btn btn-primary" onclick="salvarEdicaoUsuario('${esc(id)}',document.getElementById('modal-nome').value,document.getElementById('modal-role').value,document.getElementById('modal-ct').value); this.closest('[style*=position]').remove()">Salvar</button>
       <button class="btn btn-outline" onclick="this.closest('[style*=position]').remove()">Cancelar</button>
     </div>`
   modalBg.appendChild(modal)
@@ -5513,7 +5541,9 @@ async function editarRoleUsuario(id, nome, roleAtual, ctAtual) {
 }
 
 async function salvarEdicaoUsuario(id, nome, novoRole, novoCt) {
-  const data = { role: novoRole }
+  nome = String(nome || '').trim()
+  if (!nome) { showToast('Informe o nome completo.'); return }
+  const data = { nome, role: novoRole }
   if (novoCt) data.ct = novoCt
   try {
     const r = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${encodeURIComponent(id)}`, {
@@ -6616,22 +6646,28 @@ function _autoIdade(inputNasc) {
   }
 }
 // Convenção: campo de CEP com id "*-cep" preenche o campo irmão "*-end"
-// (endereço em uma linha só) ao completar 8 dígitos.
+// (endereço/logradouro) e, se existir, também "*-bairro" — ao completar 8 dígitos.
 async function _autoCep(inputCep) {
   const idEnd = inputCep.id.replace(/-cep$/, '-end')
   if (idEnd === inputCep.id) return
-  const alvo = document.getElementById(idEnd)
+  const alvo   = document.getElementById(idEnd)
+  const bairro = document.getElementById(inputCep.id.replace(/-cep$/, '-bairro'))
   const digitos = inputCep.value.replace(/\D/g, '').slice(0, 8)
   inputCep.value = digitos.length > 5 ? digitos.slice(0, 5) + '-' + digitos.slice(5) : digitos
   if (digitos.length !== 8 || !alvo) return
-  const original = alvo.value
+  const original = alvo.value, originalBairro = bairro?.value
   alvo.value = 'Buscando endereço…'
   try {
     const r = await fetch(`https://viacep.com.br/ws/${digitos}/json/`)
     const d = await r.json()
     if (d.erro) { alvo.value = original; showToast('CEP não encontrado.'); return }
-    alvo.value = [d.logradouro, d.bairro].filter(Boolean).join(', ') + (d.localidade ? ` – ${d.localidade}/${d.uf}` : '')
-  } catch (e) { alvo.value = original; showToast('Não foi possível buscar o CEP agora.') }
+    if (bairro) {
+      alvo.value = d.logradouro || ''
+      bairro.value = d.localidade ? `${d.bairro || ''}${d.bairro ? ' – ' : ''}${d.localidade}/${d.uf}` : (d.bairro || '')
+    } else {
+      alvo.value = [d.logradouro, d.bairro].filter(Boolean).join(', ') + (d.localidade ? ` – ${d.localidade}/${d.uf}` : '')
+    }
+  } catch (e) { alvo.value = original; if (bairro) bairro.value = originalBairro; showToast('Não foi possível buscar o CEP agora.') }
 }
 document.addEventListener('input', e => {
   const el = e.target
