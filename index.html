@@ -317,6 +317,9 @@ tr:hover td{background:var(--sidebar-hover)}
   #app { display: block !important; height: auto !important; overflow: visible !important; }
   #main { margin: 0 !important; padding: 0 !important; width: 100% !important; overflow: visible !important; }
   #content { padding: 8px 16px !important; }
+  /* Ficha de Atendimento: na impressão, mostra só as caixas marcadas */
+  .f03-opcao:has(input:not(:checked)),
+  .f03-check:has(input:not(:checked)) { display: none !important; }
   /* Cards sem sombra na impressão */
   .card { box-shadow: none !important; border: 1px solid #ddd !important; }
   /* Inputs e textareas visíveis na impressão */
@@ -490,6 +493,8 @@ function _paraWord(el) {
     x.replaceWith(span)
   })
   c.querySelectorAll('.so-tela, .no-print, svg, button').forEach(x => x.remove())
+  // Igual à impressão: mostra só as caixas marcadas (☒), some com as desmarcadas (☐)
+  c.querySelectorAll('.f03-opcao, .f03-check').forEach(l => { if (l.textContent.trim().startsWith('☐')) l.remove() })
   // Assinaturas lado a lado → tabela
   c.querySelectorAll('.f03-assinaturas').forEach(g => {
     const cols = [...g.children].map(ch => `<td style="border:none;text-align:center;padding:40pt 12pt 0;width:50%">${ch.innerHTML}</td>`).join('')
@@ -3554,7 +3559,7 @@ function renderForm01(form) {
 function renderForm03(form) {
   // Campo de linha (mesmo visual da ficha original), com id e rótulo para snapshot/histórico
   const L = (id, label, w, extra='') => `<input id="f03a-${id}" data-label="${label}" style="width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" ${extra}/>`
-  const C = (id, label, txt) => `<label><input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"> ${txt}</label>`
+  const C = (id, label, txt) => `<label class="f03-check"><input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"> ${txt}</label>`
   const td = (html, span=1, extra='') => `<td style="padding:6px 8px;border:1px solid #ccc${extra}"${span>1?` colspan="${span}"`:''}>${html}</td>`
   const th = (txt) => `<tr style="background:#f0f4f8"><td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">${txt}</td></tr>`
   const genitor = (p, titulo) => `
