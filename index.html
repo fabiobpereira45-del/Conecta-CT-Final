@@ -469,6 +469,51 @@ tr:hover td{background:var(--sidebar-hover)}
 
 <script>
 // ── EXPORTAR WORD ──
+// Converte um trecho da tela em HTML "de papel" que o Word entende:
+// campos viram o texto digitado, caixas viram ☒/☐, listas viram a opção escolhida,
+// layouts lado a lado (flex/grid) viram tabelas, dicas de tela saem.
+function _paraWord(el) {
+  const c = el.cloneNode(true)
+  const orig = el.querySelectorAll('input, select, textarea')
+  const copia = c.querySelectorAll('input, select, textarea')
+  const linha = '<span style="color:#999">______________</span>'
+  copia.forEach((x, i) => {
+    const o = orig[i]
+    let html
+    if (o.type === 'checkbox' || o.type === 'radio') html = o.checked ? '☒' : '☐'
+    else if (o.tagName === 'SELECT') html = o.value ? esc(o.selectedOptions[0]?.text || o.value) : linha
+    else if (o.tagName === 'TEXTAREA') html = o.value ? esc(o.value).replace(/\n/g, '<br>') : linha
+    else if (o.type === 'date') html = o.value ? o.value.split('-').reverse().join('/') : '____/____/______'
+    else html = o.value ? '<strong>' + esc(o.value) + '</strong>' : linha
+    const span = document.createElement('span')
+    span.innerHTML = html
+    x.replaceWith(span)
+  })
+  c.querySelectorAll('.so-tela, .no-print, svg, button').forEach(x => x.remove())
+  // Assinaturas lado a lado → tabela
+  c.querySelectorAll('.f03-assinaturas').forEach(g => {
+    const cols = [...g.children].map(ch => `<td style="border:none;text-align:center;padding:40pt 12pt 0;width:50%">${ch.innerHTML}</td>`).join('')
+    g.outerHTML = `<table style="width:100%;border:none;margin-top:30pt"><tr>${cols}</tr></table>`
+  })
+  // Opções (caixas) em sequência, separadas
+  c.querySelectorAll('.f03-opcao').forEach(l => { l.removeAttribute('style'); l.insertAdjacentHTML('afterend', '&nbsp;&nbsp;&nbsp; ') })
+  // Blocos em grade/flex → sem layout de tela
+  c.querySelectorAll('[style*="display:grid"], [style*="display:flex"]').forEach(d => {
+    d.style.display = 'block'; d.style.gridTemplateColumns = ''; d.style.gap = ''
+  })
+  return c.innerHTML
+}
+function _bannerParaWord(banner) {
+  if (!banner) return ''
+  const img = banner.querySelector('img')
+  const txt = banner.querySelector('div[style*="text-align:center"]')
+  if (!img || !txt) return banner.outerHTML
+  return `<table style="width:100%;border:2px solid #1a3a6b;border-collapse:collapse;margin-bottom:12pt"><tr>
+    <td style="width:90pt;border:none;padding:6pt;vertical-align:middle"><img src="${img.src}" width="80" height="74" alt="Conselho Tutelar"></td>
+    <td style="border:none;border-left:2px solid #1a3a6b;padding:6pt 10pt;text-align:center;vertical-align:middle;font-family:Arial,sans-serif">${txt.innerHTML}</td>
+  </tr></table>`
+}
+
 function exportarWord() {
   const formName = (document.querySelector('.fill-header h2')?.textContent || 'Formulario').replace(/[^a-zA-Z0-9À-ÿ\s]/g,'').trim()
   const banner   = document.querySelector('[style*="border:2px solid #1a3a6b"]')
@@ -479,8 +524,8 @@ function exportarWord() {
 
   if (!formDocs.length) { showToast('Nenhum formulário aberto.'); return }
 
-  const bannerHtml = banner ? banner.outerHTML : ''
-  const bodyHtml   = [...formDocs].map(d => d.innerHTML).join('<div style="page-break-before:always"></div>')
+  const bannerHtml = _bannerParaWord(banner)
+  const bodyHtml   = [...formDocs].map(d => _paraWord(d)).join('<br>')
 
   // Monta HTML completo compatível com Word
   const html = `<!DOCTYPE html>
@@ -491,8 +536,9 @@ function exportarWord() {
 <style>
   body { font-family: "Times New Roman", serif; font-size: 12pt; color: #1a2332; margin: 2cm; }
   table { border-collapse: collapse; width: 100%; }
-  td, th { border: 1px solid #999; padding: 4pt 6pt; font-size: 11pt; }
-  input, select, textarea { border-bottom: 1px solid #333; min-width: 80pt; display: inline-block; }
+  td, th { border: 1px solid #999; padding: 4pt 6pt; font-size: 10.5pt; vertical-align: top; }
+  label { font-size: 10.5pt; }
+  .field-label { display: block; font-weight: bold; font-size: 9pt; text-transform: uppercase; margin-top: 6pt; }
   h2, h3 { color: #1a3a6b; }
   .section-header { background: #e8edf5; font-weight: bold; padding: 4pt; margin-top: 8pt; }
   button { display: none; }
@@ -3523,7 +3569,7 @@ function renderForm03(form) {
       </tr>
       ${p==='pai' ? `<tr>${td(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="f03a-pai-mesmo-end" onchange="_f03CopiarEnderecoMae(this)" style="width:auto"> Endereço igual ao da mãe</label>`, 4)}</tr>` : ''}
       <tr>
-        ${td(`CEP: ${L(p+'-cep', titulo+': CEP', '100px', 'placeholder="00000-000" inputmode="numeric"')} <span style="font-size:11px;color:var(--text-muted)">↳ preenche o endereço</span>`, 2)}
+        ${td(`CEP: ${L(p+'-cep', titulo+': CEP', '100px', 'placeholder="00000-000" inputmode="numeric"')} <span class="so-tela" style="font-size:11px;color:var(--text-muted)">↳ preenche o endereço</span>`, 2)}
         ${td(`Tel.: ${L(p+'-tel', titulo+': telefone', '130px', 'placeholder="(71) 99999-9999"')}`, 2)}
       </tr>
       <tr>${td(`Endereço: ${L(p+'-end', titulo+': endereço', 'calc(100% - 60px)', 'placeholder="Preenchido automaticamente pelo CEP"')}`, 4)}</tr>
