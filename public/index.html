@@ -6587,7 +6587,56 @@ async function alterarSenha() {
   }
 }
 
-// ── CEP AUTOMÁTICO ──
+// ── IDADE E CEP AUTOMÁTICOS (genérico, para qualquer formulário) ──
+// Convenção: campo de nascimento com id "*nasc*" (tipo date) preenche o campo
+// irmão cujo id troca "nasc" por "idade" (ex.: crianca-nasc → crianca-idade).
+function _autoIdade(inputNasc) {
+  const idIdade = inputNasc.id.replace('nasc', 'idade')
+  if (idIdade === inputNasc.id) return
+  const alvo = document.getElementById(idIdade)
+  if (!alvo) return
+  const nasc = new Date(inputNasc.value + 'T00:00:00')
+  if (!inputNasc.value || isNaN(nasc.getTime())) { alvo.value = ''; return }
+  const hoje = new Date()
+  let anos = hoje.getFullYear() - nasc.getFullYear()
+  const aindaNaoFezAniversario = (hoje.getMonth() < nasc.getMonth()) ||
+    (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())
+  if (aindaNaoFezAniversario) anos--
+  if (nasc > hoje) { alvo.value = ''; return }
+  if (anos < 1) {
+    let meses = (hoje.getFullYear() - nasc.getFullYear()) * 12 + (hoje.getMonth() - nasc.getMonth())
+    if (hoje.getDate() < nasc.getDate()) meses--
+    alvo.value = meses <= 0 ? 'Recém-nascido' : `${meses} ${meses === 1 ? 'mês' : 'meses'}`
+  } else {
+    alvo.value = String(anos)
+  }
+}
+// Convenção: campo de CEP com id "*-cep" preenche o campo irmão "*-end"
+// (endereço em uma linha só) ao completar 8 dígitos.
+async function _autoCep(inputCep) {
+  const idEnd = inputCep.id.replace(/-cep$/, '-end')
+  if (idEnd === inputCep.id) return
+  const alvo = document.getElementById(idEnd)
+  const digitos = inputCep.value.replace(/\D/g, '').slice(0, 8)
+  inputCep.value = digitos.length > 5 ? digitos.slice(0, 5) + '-' + digitos.slice(5) : digitos
+  if (digitos.length !== 8 || !alvo) return
+  const original = alvo.value
+  alvo.value = 'Buscando endereço…'
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${digitos}/json/`)
+    const d = await r.json()
+    if (d.erro) { alvo.value = original; showToast('CEP não encontrado.'); return }
+    alvo.value = [d.logradouro, d.bairro].filter(Boolean).join(', ') + (d.localidade ? ` – ${d.localidade}/${d.uf}` : '')
+  } catch (e) { alvo.value = original; showToast('Não foi possível buscar o CEP agora.') }
+}
+document.addEventListener('input', e => {
+  const el = e.target
+  if (!el?.id) return
+  if (el.type === 'date' && el.id.includes('nasc')) _autoIdade(el)
+  else if (/-cep$/.test(el.id) && el.id !== 'cep-input') _autoCep(el)
+})
+
+// ── CEP AUTOMÁTICO (formulário legado) ──
 function formatCep(input) {
   let v = input.value.replace(/\D/g,'').slice(0,8)
   if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5)
