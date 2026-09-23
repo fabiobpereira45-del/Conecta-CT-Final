@@ -1001,12 +1001,12 @@ function buildNav() {
     </button>`
   }).join('')
 }
-function navigate(id) {
+function navigate(id, formId = null) {
   const role = currentUser?.role || 'conselheiro'
   const item = NAV_ALL.find(n => n.id === id)
   if (item && !item.roles.includes(role)) { showToast('Acesso não permitido para seu perfil.'); return }
   activeModule = id
-  formsFillActive = null
+  formsFillActive = formId
   document.getElementById('page-title').textContent = item ? item.label : id
   buildNav()
   renderContent()
@@ -1802,8 +1802,7 @@ async function abrirFichaPorProtocolo(protoArg) {
 
   // Abre formulário com dados pré-preenchidos
   const formId = typeof f.formId === 'number' ? f.formId : 0
-  formsFillActive = formId
-  navigate('forms')
+  navigate('forms', formId)
 
   setTimeout(() => {
     // Restaura campos do snapshot
@@ -3562,6 +3561,11 @@ function renderForm03(form) {
         </select>`, 2)}
       </tr>
       <tr>${td(`Escola: ${L('escola', 'Escola', 'calc(100% - 60px)', 'placeholder="Nome da escola"')}`, 4)}</tr>
+      <tr>
+        ${td(`NEURODIVERGENTE? ${C('neuro-sim','Neurodivergente: sim','SIM')} ${C('neuro-nao','Neurodivergente: não','NÃO')} ${C('neuro-investigacao','Neurodivergente: em investigação','EM INVESTIGAÇÃO')}`, 2)}
+        ${td(`POSSUI LAUDO? ${C('laudo-sim','Laudo: sim','SIM')} ${C('laudo-nao','Laudo: não','NÃO')}`, 2)}
+      </tr>
+      <tr>${td(`Condição: ${F03_NEURO.map((n, i) => C('neuro-' + i, 'Condição: ' + n, n)).join(' ')} &nbsp; Outra: ${L('neuro-outra', 'Condição: outra', '160px', 'placeholder="______"')}`, 4)}</tr>
       ${genitor('mae', 'MÃE')}
       ${genitor('pai', 'PAI')}
       ${th('RESPONSÁVEL LEGAL (se não for a mãe ou o pai)')}
@@ -3669,6 +3673,7 @@ function renderForm03(form) {
 // ════════════════════════════════════════════════════════════════════════════
 //  FICHA DE ATENDIMENTO (03) — fluxo atendente → conselheiro, histórico e busca
 // ════════════════════════════════════════════════════════════════════════════
+const F03_NEURO = ['TEA','TDAH','TOD','Dislexia','Discalculia','Deficiência Intelectual','Altas Habilidades/Superdotação','Síndrome de Down']
 const F03_SERIES = ['Creche','Pré-escola','1º ano','2º ano','3º ano','4º ano','5º ano','6º ano','7º ano','8º ano','9º ano','1º ano EM','2º ano EM','3º ano EM','EJA','Não se aplica']
 const F03_VIOLACOES = ['Negligência','Abandono','Violência Física','Violência Psicológica','Violência Sexual','Trabalho Infantil','Exploração Sexual','Evasão Escolar','Uso de Drogas','Conflito Familiar','Violência Doméstica','Outro']
 const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro']
@@ -3970,8 +3975,7 @@ async function _f03Assumir() {
 // Abre uma ficha do formulário 03 (caixa de entrada, consulta ou link)
 function _f03Abrir(protocolo) {
   _f03ProtocoloPendente = protocolo
-  formsFillActive = 3
-  navigate('forms')
+  navigate('forms', 3)
 }
 
 // ── Histórico (linha do tempo) ──
