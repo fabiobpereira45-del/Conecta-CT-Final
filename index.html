@@ -3589,14 +3589,19 @@ function renderForm03(form) {
   <div id="f03-form">
   <div class="card card-pad" id="f03-secao-atendente"><div class="form-document" style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
     <p style="text-align:center;font-size:15px;font-weight:700">FICHA DE ATENDIMENTO</p>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px;table-layout:fixed">
+      <colgroup><col style="width:25%"><col style="width:25%"><col style="width:25%"><col style="width:25%"></colgroup>
       <tr>
         ${td(`Data: <input id="f03a-data" data-label="Data do atendimento" type="date" style="width:140px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit"/>`)}
         ${td(`Hora: <input id="f03a-hora" data-label="Hora do atendimento" type="time" style="width:100px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit"/>`)}
         ${td(`Protocolo: <strong id="f03-protocolo" style="font-family:monospace;color:var(--primary)">gerado ao direcionar</strong>`, 2)}
       </tr>
     </table>
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <!-- Grid de 4 colunas fixas: mantém todas as linhas (Nome, CEP, Bairro/Nº…) alinhadas na
+         mesma grade vertical, tanto na tela quanto no Word/impressão. Sem isso, cada linha
+         calcula sua própria largura e as colunas ficam desalinhadas entre uma linha e outra. -->
+    <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
+      <colgroup><col style="width:25%"><col style="width:25%"><col style="width:25%"><col style="width:25%"></colgroup>
       ${th('1. CRI/AD.')}
       <tr>${td(`<label>Nome: ${L('crianca-nome', 'Criança/adolescente: nome', 'calc(100% - 60px)', 'placeholder="Nome completo"')}</label>`, 4)}</tr>
       <tr>
