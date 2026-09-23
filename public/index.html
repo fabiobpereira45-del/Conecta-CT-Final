@@ -3514,12 +3514,12 @@ function renderForm03(form) {
         ${td(`RG: ${L(p+'-rg', titulo+': RG', '130px', 'placeholder="___________"')}`)}
         ${td(`CPF: ${L(p+'-cpf', titulo+': CPF', '130px', 'placeholder="000.000.000-00" inputmode="numeric" oninput="_f03MascaraCpf(this)"')}`)}
       </tr>
-      <tr>${td(`Endereço: ${L(p+'-end', titulo+': endereço', 'calc(100% - 80px)', 'placeholder="Endereço completo"')}`, 4)}</tr>
       <tr>
-        ${td(`Ponto de referência: ${L(p+'-ref', titulo+': referência', 'calc(100% - 130px)', 'placeholder="_______________"')}`, 2)}
-        ${td(`CEP: ${L(p+'-cep', titulo+': CEP', '100px', 'placeholder="00000-000"')}`)}
-        ${td(`Tel.: ${L(p+'-tel', titulo+': telefone', '130px', 'placeholder="(71) 99999-9999"')}`)}
-      </tr>`
+        ${td(`CEP: ${L(p+'-cep', titulo+': CEP', '100px', 'placeholder="00000-000" inputmode="numeric"')} <span style="font-size:11px;color:var(--text-muted)">↳ preenche o endereço</span>`, 2)}
+        ${td(`Tel.: ${L(p+'-tel', titulo+': telefone', '130px', 'placeholder="(71) 99999-9999"')}`, 2)}
+      </tr>
+      <tr>${td(`Endereço: ${L(p+'-end', titulo+': endereço', 'calc(100% - 60px)', 'placeholder="Preenchido automaticamente pelo CEP"')}`, 4)}</tr>
+      <tr>${td(`Ponto de referência: ${L(p+'-ref', titulo+': referência', 'calc(100% - 130px)', 'placeholder="_______________"')}`, 4)}</tr>`
   const box = (inner) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">${inner}</label>`
 
   setTimeout(_f03Inicializar, 60)
@@ -3547,7 +3547,10 @@ function renderForm03(form) {
       <tr>
         ${td(`PCD? ${C('pcd-sim','PCD: sim','SIM')} ${C('pcd-nao','PCD: não','NÃO')}`)}
         ${td(`${C('raca-preta','Raça: preta','Preta')} ${C('raca-branca','Raça: branca','Branca')} ${C('raca-indigena','Raça: indígena','Indígena')} ${C('raca-parda','Raça: parda','Pardo')} ${C('raca-amarela','Raça: amarela','Amarelo')}`)}
-        ${td(`ESTUDA? ${C('estuda-sim','Estuda: sim','SIM')} ${C('estuda-nao','Estuda: não','NÃO')} &nbsp; Série: ${L('serie','Série','80px','placeholder="___"')}`, 2)}
+        ${td(`ESTUDA? ${C('estuda-sim','Estuda: sim','SIM')} ${C('estuda-nao','Estuda: não','NÃO')} &nbsp; Série: <select id="f03a-serie" data-label="Série" style="width:150px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit;font-size:inherit">
+          <option value="">-- Selecione --</option>
+          ${F03_SERIES.map(s => `<option>${s}</option>`).join('')}
+        </select>`, 2)}
       </tr>
       <tr>${td(`Escola: ${L('escola', 'Escola', 'calc(100% - 60px)', 'placeholder="Nome da escola"')}`, 4)}</tr>
       ${genitor('mae', 'MÃE')}
@@ -3653,6 +3656,7 @@ function renderForm03(form) {
 // ════════════════════════════════════════════════════════════════════════════
 //  FICHA DE ATENDIMENTO (03) — fluxo atendente → conselheiro, histórico e busca
 // ════════════════════════════════════════════════════════════════════════════
+const F03_SERIES = ['Creche','Pré-escola','1º ano','2º ano','3º ano','4º ano','5º ano','6º ano','7º ano','8º ano','9º ano','1º ano EM','2º ano EM','3º ano EM','EJA','Não se aplica']
 const F03_VIOLACOES = ['Negligência','Abandono','Violência Física','Violência Psicológica','Violência Sexual','Trabalho Infantil','Exploração Sexual','Evasão Escolar','Uso de Drogas','Conflito Familiar','Violência Doméstica','Outro']
 const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro']
 
