@@ -511,17 +511,22 @@ function _paraWord(el) {
 function _bannerParaWord(banner) {
   if (!banner) return ''
   const img = banner.querySelector('img')
-  const txt = banner.querySelector('div[style*="text-align:center"]')
-  if (!img || !txt) return banner.outerHTML
+  // O texto do cabeçalho é o segundo <div> direto (o primeiro é o wrapper flex) — buscar por
+  // um trecho de `style` é frágil (pode casar com outro elemento da página); pela estrutura é seguro.
+  const txt = banner.querySelector(':scope > div > div:last-child') || banner.querySelector('div[style*="text-align:center"]')
+  if (!img) return banner.outerHTML
+  // width/height como atributo E como style: o motor HTML do Word (o .docx aqui é HTML
+  // disfarçado, não OOXML real) às vezes ignora um dos dois — declarar os dois evita a logo
+  // saindo em tamanho natural (podem ser vários cm de largura na imagem original).
   return `<table style="width:100%;border:2px solid #1a3a6b;border-collapse:collapse;margin-bottom:12pt"><tr>
-    <td style="width:90pt;border:none;padding:6pt;vertical-align:middle"><img src="${img.src}" width="80" height="74" alt="Conselho Tutelar"></td>
-    <td style="border:none;border-left:2px solid #1a3a6b;padding:6pt 10pt;text-align:center;vertical-align:middle;font-family:Arial,sans-serif">${txt.innerHTML}</td>
+    <td style="width:90pt;border:none;padding:6pt;vertical-align:middle"><img src="${img.src}" width="80" height="74" style="width:80px;height:74px;max-width:80px;max-height:74px" alt="Conselho Tutelar"></td>
+    <td style="border:none;border-left:2px solid #1a3a6b;padding:6pt 10pt;text-align:center;vertical-align:middle;font-family:Arial,sans-serif">${txt ? txt.innerHTML : ''}</td>
   </tr></table>`
 }
 
 function exportarWord() {
   const formName = (document.querySelector('.fill-header h2')?.textContent || 'Formulario').replace(/[^a-zA-Z0-9À-ÿ\s]/g,'').trim()
-  const banner   = document.querySelector('[style*="border:2px solid #1a3a6b"]')
+  const banner   = document.getElementById('council-banner')
   // Só o que está em .form-document é impresso — botões, selects e avisos de tela ficam de fora.
   // Um formulário pode ter mais de um bloco .form-document (ex.: Ficha de Atendimento com
   // seção do atendente + complemento do conselheiro): todos entram, na ordem em que aparecem.
