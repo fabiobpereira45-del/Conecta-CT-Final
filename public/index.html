@@ -2127,9 +2127,7 @@ function renderReports() {
   <div class="card"><div class="table-wrap"><table>
     <thead><tr><th>Relatório</th><th>Período</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead>
     <tbody>
-      ${rrow('Relatório Mensal','Setembro 2026','Estatísticas','rascunho')}
-      ${rrow('Relatório Mensal','Agosto 2026','Estatísticas','finalizado')}
-      ${rrow('Relatório Semestral','Jan-Jun 2026','Consolidado','finalizado')}
+      <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">Nenhum relatório gerado ainda.</td></tr>
     </tbody>
   </table></div></div>`
 }
@@ -5901,33 +5899,9 @@ function filterCouncils(v) {
 }
 
 // ── ESTATÍSTICAS GERAIS ──
-// Dados simulados por CT (índice = posição em CONSELHOS_BAIRROS)
-const _STATS_CT = [
-  {at:84,ab:6,enc:27,pl:12,req:18,data:[5,8,7,9,10,8,11,10,16,0,0,0]},
-  {at:71,ab:8,enc:21,pl:10,req:14,data:[4,7,6,8,8,7,9,9,13,0,0,0]},
-  {at:63,ab:4,enc:19,pl:8, req:11,data:[4,6,5,7,7,6,8,7,13,0,0,0]},
-  {at:58,ab:7,enc:18,pl:11,req:12,data:[3,5,5,6,6,6,7,7,13,0,0,0]},
-  {at:77,ab:9,enc:24,pl:13,req:16,data:[4,8,7,8,9,7,10,10,14,0,0,0]},
-  {at:68,ab:5,enc:20,pl:9, req:13,data:[4,7,6,8,8,6,9,9,11,0,0,0]},
-  {at:55,ab:3,enc:15,pl:7, req:9, data:[3,5,4,6,6,5,7,7,12,0,0,0]},
-  {at:49,ab:4,enc:14,pl:6, req:8, data:[3,4,4,5,5,5,6,6,11,0,0,0]},
-  {at:52,ab:5,enc:16,pl:7, req:10,data:[3,5,4,6,6,5,7,6,10,0,0,0]},
-  {at:60,ab:4,enc:18,pl:9, req:11,data:[4,6,5,7,7,6,8,7,10,0,0,0]},
-  {at:45,ab:3,enc:13,pl:6, req:7, data:[3,4,4,5,5,4,6,5,9,0,0,0]},
-  {at:58,ab:6,enc:17,pl:8, req:12,data:[3,6,5,7,7,5,8,7,10,0,0,0]},
-  {at:50,ab:4,enc:15,pl:7, req:9, data:[3,5,4,6,6,5,6,6,9,0,0,0]},
-  {at:43,ab:3,enc:12,pl:5, req:7, data:[2,4,4,5,5,4,5,5,9,0,0,0]},
-  {at:65,ab:5,enc:19,pl:9, req:13,data:[4,6,6,7,8,6,9,8,11,0,0,0]},
-  {at:47,ab:4,enc:14,pl:6, req:8, data:[3,4,4,5,5,4,6,6,10,0,0,0]},
-  {at:55,ab:5,enc:16,pl:7, req:10,data:[3,5,5,6,6,5,7,7,11,0,0,0]},
-  {at:40,ab:3,enc:11,pl:5, req:7, data:[2,4,3,4,5,4,5,5,8,0,0,0]},
-  {at:48,ab:4,enc:14,pl:6, req:8, data:[3,4,4,5,5,4,6,6,11,0,0,0]},
-  {at:44,ab:3,enc:13,pl:5, req:7, data:[3,4,4,5,5,4,5,5,9,0,0,0]},
-  {at:51,ab:4,enc:15,pl:7, req:9, data:[3,5,4,6,6,5,6,6,10,0,0,0]},
-  {at:46,ab:4,enc:13,pl:6, req:8, data:[3,4,4,5,5,4,6,5,10,0,0,0]},
-  {at:42,ab:3,enc:12,pl:5, req:7, data:[2,4,3,5,5,4,5,5,9,0,0,0]},
-  {at:39,ab:2,enc:11,pl:4, req:6, data:[2,3,3,4,4,4,5,5,9,0,0,0]},
-]
+// Estatísticas por CT (índice = posição em CONSELHOS_BAIRROS).
+// Os números de demonstração foram removidos: tudo começa em zero até haver dados reais.
+const _STATS_CT = Array.from({ length: 24 }, () => ({ at:0, ab:0, enc:0, pl:0, req:0, data:Array(12).fill(0) }))
 
 function renderGeneralStats() {
   const isMaster = currentUser?.role === 'master'
