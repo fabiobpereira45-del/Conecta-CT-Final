@@ -539,6 +539,7 @@ const I = {
 const NAV_ALL = [
   { id:'home', label:'Início', icon:'home', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'fichas-inbox', label:'Fichas Recebidas', icon:'inbox', roles:['conselheiro','coordenador','master'] },
+  { id:'fichas-consulta', label:'Consultar Fichas', icon:'search', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'profile', label:'Meu Perfil', icon:'user', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'notices', label:'Convocatórias e Avisos', icon:'megaphone', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'councils', label:'Conselhos e Bairros', icon:'building', roles:['master','coordenador','conselheiro','atendente'] },
@@ -616,7 +617,6 @@ let atendimentoCounter = 0
 
 // ── FORMS DATA ──
 const FORMS = [
-  {id:0,name:'Ficha de Atendimento Recepção',category:'Atendimento'},
   {id:1,name:'Comunicado de Violação de Direitos',category:'Comunicados'},
   {id:2,name:'Remessa de Atendimento',category:'Atendimento'},
   {id:3,name:'Ficha de Atendimento',category:'Atendimento'},
@@ -1057,6 +1057,7 @@ function renderContent() {
     case 'agenda': el.innerHTML = renderAgenda(); break
     case 'forms': el.innerHTML = renderForms(); attachFormsEvents(); break
     case 'fichas-inbox': el.innerHTML = renderFichasInbox(); break
+    case 'fichas-consulta': el.innerHTML = renderConsultaFichas(); break
     case 'reports': el.innerHTML = renderReports(); break
     case 'users': el.innerHTML = renderUsers(); break
     case 'approvals': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando aprovações…</div>'; renderApprovals().then(html => { el.innerHTML = html }); break
@@ -1708,11 +1709,12 @@ function confirmarExcluirFicha(protocolo, nomeCrianca) {
 async function executarExcluirFicha(protocolo) {
   document.getElementById('modal-root').innerHTML = ''
   showToast('🗑️ Excluindo ficha...')
+  // Guarda uma cópia completa no histórico antes de excluir (o histórico não pode ser apagado)
+  try { const copia = await _f03Buscar(protocolo); await _f03Log(protocolo, 'excluida', { copia }) } catch(e) {}
   await _db_excluirFicha(protocolo)
   buildNav()
   showToast('✅ Ficha excluída com sucesso.')
-  // Recarrega inbox
-  navigate('inbox')
+  navigate('fichas-inbox')
 }
 
 function copiarProtocolo(proto) {
@@ -1735,13 +1737,13 @@ function abrirFichaInboxDireto(protocolo) {
   abrirFichaPorProtocolo()
 }
 
-async function abrirFichaPorProtocolo() {
+async function abrirFichaPorProtocolo(protoArg) {
   const inp  = document.getElementById('inbox-protocolo-input')
   const msg  = document.getElementById('inbox-protocolo-msg')
-  const proto = (inp?.value || '').trim()
+  const proto = String(protoArg ?? inp?.value ?? '').trim()
 
   const mostrarMsg = (texto, cor) => {
-    if (!msg) return
+    if (!msg) { if (cor !== 'var(--text-muted)') showToast(texto); return }
     msg.style.display = ''
     msg.style.color = cor || 'var(--danger)'
     msg.textContent = texto
@@ -1758,8 +1760,11 @@ async function abrirFichaPorProtocolo() {
     return
   }
 
+  // Ficha de Atendimento (03): fluxo próprio, com permissões e histórico
+  if (f.formId === 3) { _f03Abrir(f.protocolo); return }
+
   // Verifica permissão de CT
-  if (currentUser.role !== 'master' && f.ctDestino && f.ctDestino !== currentUser.ct) {
+  if (!_vêTudo() && f.ctDestino && f.ctDestino !== currentUser.ct) {
     mostrarMsg('⛔ Esta ficha pertence a outro Conselho Tutelar.', 'var(--danger)'); return
   }
 
@@ -2743,7 +2748,8 @@ function _councilBannerHtml(formNum) {
 }
 
 function renderFormFill(id) {
-  const form = FORMS.find(f => f.id === id)
+  // Formulário 00 foi retirado da lista; permanece só para abrir fichas antigas
+  const form = FORMS.find(f => f.id === id) || (id === 0 ? {id:0,name:'Ficha de Atendimento Recepção (antiga)',category:'Atendimento'} : null)
   if (!form) return '<p>Formulário não encontrado.</p>'
   if (id === 41) return renderFormRequisicaoCertidao(form)
   if (id === 1)  return renderForm01(form)
@@ -3474,69 +3480,595 @@ function renderForm01(form) {
 
 // ── ID 3: Ficha de Atendimento ──
 function renderForm03(form) {
-  const I2 = (w) => `style="display:inline-block;width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-size:inherit;font-family:inherit;padding:0 2px;outline:none;"`
-  return _formHeader(form) + `<div class="card card-pad form-document"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
+  // Campo de linha (mesmo visual da ficha original), com id e rótulo para snapshot/histórico
+  const L = (id, label, w, extra='') => `<input id="f03a-${id}" data-label="${label}" style="width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" ${extra}/>`
+  const C = (id, label, txt) => `<label><input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"> ${txt}</label>`
+  const td = (html, span=1, extra='') => `<td style="padding:6px 8px;border:1px solid #ccc${extra}"${span>1?` colspan="${span}"`:''}>${html}</td>`
+  const th = (txt) => `<tr style="background:#f0f4f8"><td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">${txt}</td></tr>`
+  const genitor = (p, titulo) => `
+      ${th(titulo)}
+      <tr>${td(`Nome: ${L(p+'-nome', titulo+': nome', 'calc(100% - 60px)', `placeholder="Nome completo ${p==='mae'?'da mãe':'do pai'}"`)}`, 4)}</tr>
+      <tr>
+        ${td(`Data de Nascimento: ${L(p+'-nasc', titulo+': nascimento', '120px', 'type="date"')}`, 2)}
+        ${td(`RG: ${L(p+'-rg', titulo+': RG', '130px', 'placeholder="___________"')}`)}
+        ${td(`CPF: ${L(p+'-cpf', titulo+': CPF', '130px', 'placeholder="000.000.000-00" inputmode="numeric" oninput="_f03MascaraCpf(this)"')}`)}
+      </tr>
+      <tr>${td(`Endereço: ${L(p+'-end', titulo+': endereço', 'calc(100% - 80px)', 'placeholder="Endereço completo"')}`, 4)}</tr>
+      <tr>
+        ${td(`Ponto de referência: ${L(p+'-ref', titulo+': referência', 'calc(100% - 130px)', 'placeholder="_______________"')}`, 2)}
+        ${td(`CEP: ${L(p+'-cep', titulo+': CEP', '100px', 'placeholder="00000-000"')}`)}
+        ${td(`Tel.: ${L(p+'-tel', titulo+': telefone', '130px', 'placeholder="(71) 99999-9999"')}`)}
+      </tr>`
+  const box = (inner) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">${inner}</label>`
+
+  setTimeout(_f03Inicializar, 60)
+
+  return _formHeader(form) + `
+  <div id="f03-form">
+  <div class="card card-pad form-document" id="f03-secao-atendente"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
     <p style="text-align:center;font-size:15px;font-weight:700">FICHA DE ATENDIMENTO</p>
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <tr style="background:#f0f4f8">
-        <td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">1. CRI/AD.</td>
-      </tr>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px">
       <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="4"><label>Nome: <input style="width:calc(100% - 60px);border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="Nome completo"/></label></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc">Data de nasc.: <input style="width:110px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" type="date"/></td>
-        <td style="padding:6px 8px;border:1px solid #ccc">Idade: <input style="width:50px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="__"/></td>
-        <td style="padding:6px 8px;border:1px solid #ccc"><label><input type="checkbox" style="width:auto"> MASC</label> &nbsp; <label><input type="checkbox" style="width:auto"> FEM</label></td>
-        <td style="padding:6px 8px;border:1px solid #ccc"><label><input type="checkbox" style="width:auto"> LGBTQIAPN+</label></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc">PCD? <label><input type="checkbox" style="width:auto"> SIM</label> <label><input type="checkbox" style="width:auto"> NÃO</label></td>
-        <td style="padding:6px 8px;border:1px solid #ccc"><label><input type="checkbox" style="width:auto"> Preta</label> <label><input type="checkbox" style="width:auto"> Branca</label> <label><input type="checkbox" style="width:auto"> Indígena</label> <label><input type="checkbox" style="width:auto"> Pardo</label> <label><input type="checkbox" style="width:auto"> Amarelo</label></td>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="2">ESTUDA? <label><input type="checkbox" style="width:auto"> SIM</label> <label><input type="checkbox" style="width:auto"> NÃO</label> &nbsp; Série: <input style="width:80px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="___"/></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="4">Escola: <input style="width:calc(100% - 60px);border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="Nome da escola"/></td>
-      </tr>
-      <tr style="background:#f0f4f8">
-        <td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">MÃE</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="4">Nome: <input style="width:calc(100% - 60px);border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="Nome completo da mãe"/></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="2">Data de Nascimento: <input style="width:120px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" type="date"/></td>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="2">RG: <input style="width:150px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="___________________"/></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="4">Endereço: <input style="width:calc(100% - 80px);border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="Endereço completo"/></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="2">Ponto de referência: <input style="width:calc(100% - 130px);border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="_______________"/></td>
-        <td style="padding:6px 8px;border:1px solid #ccc">CEP: <input style="width:100px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="00000-000"/></td>
-        <td style="padding:6px 8px;border:1px solid #ccc">Tel.: <input style="width:130px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="(71) 99999-9999"/></td>
-      </tr>
-      <tr style="background:#f0f4f8">
-        <td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">PAI</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="4">Nome: <input style="width:calc(100% - 60px);border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="Nome completo do pai"/></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="2">Data de Nascimento: <input style="width:120px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" type="date"/></td>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="2">RG: <input style="width:150px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="___________________"/></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="4">Endereço: <input style="width:calc(100% - 80px);border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="Endereço completo"/></td>
-      </tr>
-      <tr>
-        <td style="padding:6px 8px;border:1px solid #ccc" colspan="2">Ponto de referência: <input style="width:calc(100% - 130px);border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="_______________"/></td>
-        <td style="padding:6px 8px;border:1px solid #ccc">CEP: <input style="width:100px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="00000-000"/></td>
-        <td style="padding:6px 8px;border:1px solid #ccc">Tel.: <input style="width:130px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" placeholder="(71) 99999-9999"/></td>
+        ${td(`Data: <input id="f03a-data" data-label="Data do atendimento" type="date" style="width:140px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit"/>`)}
+        ${td(`Hora: <input id="f03a-hora" data-label="Hora do atendimento" type="time" style="width:100px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit"/>`)}
+        ${td(`Protocolo: <strong id="f03-protocolo" style="font-family:monospace;color:var(--primary)">gerado ao direcionar</strong>`, 2)}
       </tr>
     </table>
-    <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-outline" onclick="exportarWord()">📄 Word</button><button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button></div>
-  </div></div>`
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      ${th('1. CRI/AD.')}
+      <tr>${td(`<label>Nome: ${L('crianca-nome', 'Criança/adolescente: nome', 'calc(100% - 60px)', 'placeholder="Nome completo"')}</label>`, 4)}</tr>
+      <tr>
+        ${td(`Data de nasc.: ${L('crianca-nasc', 'Criança: nascimento', '110px', 'type="date"')}`)}
+        ${td(`Idade: ${L('crianca-idade', 'Criança: idade', '50px', 'placeholder="__"')}`)}
+        ${td(`${C('sexo-masc','Sexo: masculino','MASC')} &nbsp; ${C('sexo-fem','Sexo: feminino','FEM')}`)}
+        ${td(C('lgbt','LGBTQIAPN+','LGBTQIAPN+'))}
+      </tr>
+      <tr>
+        ${td(`PCD? ${C('pcd-sim','PCD: sim','SIM')} ${C('pcd-nao','PCD: não','NÃO')}`)}
+        ${td(`${C('raca-preta','Raça: preta','Preta')} ${C('raca-branca','Raça: branca','Branca')} ${C('raca-indigena','Raça: indígena','Indígena')} ${C('raca-parda','Raça: parda','Pardo')} ${C('raca-amarela','Raça: amarela','Amarelo')}`)}
+        ${td(`ESTUDA? ${C('estuda-sim','Estuda: sim','SIM')} ${C('estuda-nao','Estuda: não','NÃO')} &nbsp; Série: ${L('serie','Série','80px','placeholder="___"')}`, 2)}
+      </tr>
+      <tr>${td(`Escola: ${L('escola', 'Escola', 'calc(100% - 60px)', 'placeholder="Nome da escola"')}`, 4)}</tr>
+      ${genitor('mae', 'MÃE')}
+      ${genitor('pai', 'PAI')}
+      ${th('RESPONSÁVEL LEGAL (se não for a mãe ou o pai)')}
+      <tr>
+        ${td(`Nome: ${L('resp-nome', 'Responsável: nome', 'calc(100% - 60px)', 'placeholder="Nome completo do responsável"')}`, 2)}
+        ${td(`Parentesco: ${L('resp-parentesco', 'Responsável: parentesco', '110px', 'placeholder="______"')}`)}
+        ${td(`CPF: ${L('resp-cpf', 'Responsável: CPF', '130px', 'placeholder="000.000.000-00" inputmode="numeric" oninput="_f03MascaraCpf(this)"')}`)}
+      </tr>
+    </table>
+  </div>
+
+    <!-- Direcionar (atendente) -->
+    <div id="f03-bloco-direcionar" style="margin-top:20px;padding:16px;background:var(--primary-subtle);border-radius:12px;border:1px solid var(--primary)">
+      <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:12px">📨 Direcionar para Conselheiro do CT</div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
+        <div>
+          <label class="field-label">Conselheiro(a) de destino</label>
+          <select id="f03-dest"><option value="">Carregando conselheiros…</option></select>
+        </div>
+        <button class="btn btn-primary" id="f03-btn-direcionar" onclick="_f03Direcionar()" style="padding:10px 20px;font-size:14px">Direcionar</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px">⚠️ Após direcionar, a seção do atendente fica bloqueada e somente o conselheiro selecionado poderá preencher o complemento.</div>
+    </div>
+
+    <!-- Situação da ficha (depois de direcionada) -->
+    <div id="f03-status" style="display:none;margin-top:20px;padding:14px 16px;border-radius:12px;border:1px solid #a5d6a7;background:#e8f5e9;font-size:13px"></div>
+  </div>
+
+  <!-- ══ COMPLEMENTO: SEÇÃO DO CONSELHEIRO TUTELAR ══ -->
+  <div class="card card-pad form-document" id="f03-secao-conselheiro" style="display:none;margin-top:16px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2ecc71">
+      <div style="width:32px;height:32px;background:#2ecc71;border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:#2ecc71;text-transform:uppercase;letter-spacing:.5px">Seção do Conselheiro Tutelar</div>
+        <div style="font-size:12px;color:var(--text-muted)" id="f03-label-resp">Conselheiro responsável pelo caso</div>
+      </div>
+    </div>
+    <div style="display:grid;gap:16px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
+          ${F03_VIOLACOES.map((v,i)=>box(`<input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" /> ${v}`)).join('')}
+        </div>
+        <div><label class="field-label">Descrição da Situação</label>
+          <textarea id="f03c-descricao" data-label="Descrição da situação" rows="4" style="resize:vertical" placeholder="Descreva detalhadamente a situação…"></textarea>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📋 Parecer e Providências</div>
+        <div><label class="field-label">Motivo do Atendimento</label><textarea id="f03c-motivo" data-label="Motivo do atendimento" rows="3" style="resize:vertical" placeholder="Descreva o motivo…"></textarea></div>
+        <div style="margin-top:10px"><label class="field-label">Providências Imediatas</label><textarea id="f03c-providencias" data-label="Providências imediatas" rows="3" style="resize:vertical" placeholder="Providências tomadas…"></textarea></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔀 Encaminhamentos</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:10px">
+          ${F03_ENCAMINHAMENTOS.map((e,i)=>box(`<input type="checkbox" id="f03c-enc-${i}" data-label="Encaminhamento: ${e}" style="accent-color:var(--primary)" /> ${e}`)).join('')}
+        </div>
+        <div><label class="field-label">Observações de Encaminhamento</label>
+          <textarea id="f03c-obs-enc" data-label="Observações de encaminhamento" rows="2" style="resize:vertical" placeholder="Detalhes dos encaminhamentos…"></textarea>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div class="field-row cols-2">
+          <div><label class="field-label">Conselheiro(a) Responsável</label><input id="f03-resp-nome" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
+          <div><label class="field-label">Cargo</label><input value="Conselheiro Tutelar" readonly style="background:var(--bg-subtle,#f8f9fb)" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="f03-acoes-conselheiro" style="margin-top:24px;display:grid;gap:12px">
+      <div style="padding:14px;background:var(--bg-subtle,#f8f9fb);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">🔄 Remeter para outro conselheiro do meu CT</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+          <div><label class="field-label" style="font-size:11px">Conselheiro do CT</label>
+            <select id="f03-remeter"><option value="">-- Selecione --</option></select></div>
+          <button class="btn btn-outline" onclick="_f03Remeter()" style="font-size:13px">Remeter</button>
+        </div>
+      </div>
+      <div style="padding:14px;background:var(--bg-subtle,#f8f9fb);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">📤 Encaminhar para outro Conselho Tutelar de Salvador</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+          <div><label class="field-label" style="font-size:11px">Conselho Tutelar de Salvador</label>
+            <select id="f03-encaminhar"><option value="">-- Selecione o CT --</option>
+              ${CONSELHOS_BAIRROS.map(c=>`<option value="CT${c.num}">${esc(c.nome)} – ${esc(c.regiao)}</option>`).join('')}
+            </select></div>
+          <button class="btn btn-outline" onclick="_f03Encaminhar()" style="font-size:13px">Encaminhar</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="_f03Historico()">📜 Histórico</button>
+        <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
+        <button class="btn btn-outline" onclick="_f03Salvar()">💾 Salvar</button>
+        <button class="btn btn-primary" onclick="_f03Salvar().then(ok => { if (ok !== false) window.print() })">${I.download} Salvar e Imprimir</button>
+      </div>
+    </div>
+  </div>`
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  FICHA DE ATENDIMENTO (03) — fluxo atendente → conselheiro, histórico e busca
+// ════════════════════════════════════════════════════════════════════════════
+const F03_VIOLACOES = ['Negligência','Abandono','Violência Física','Violência Psicológica','Violência Sexual','Trabalho Infantil','Exploração Sexual','Evasão Escolar','Uso de Drogas','Conflito Familiar','Violência Doméstica','Outro']
+const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro']
+
+// Ficha aberta no formulário 03 (null = ficha nova sendo preenchida pelo atendente)
+let _f03Ficha = null
+let _f03ProtocoloPendente = null   // protocolo a abrir quando o formulário terminar de renderizar
+
+const _f03Norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+const _f03Digitos = s => String(s || '').replace(/\D/g, '')
+function _f03MascaraCpf(el) {
+  const d = _f03Digitos(el.value).slice(0, 11)
+  el.value = d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+
+function _f03Coletar(prefixo) {
+  const out = {}
+  document.querySelectorAll(`#content [id^="${prefixo}"]`).forEach(el => {
+    out[el.id] = (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value
+  })
+  return out
+}
+function _f03Aplicar(valores) {
+  Object.entries(valores || {}).forEach(([id, v]) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    if (el.type === 'checkbox' || el.type === 'radio') el.checked = !!v
+    else el.value = v ?? ''
+  })
+}
+function _f03Travar(prefixo, travar) {
+  document.querySelectorAll(`#content [id^="${prefixo}"]`).forEach(el => { el.disabled = travar })
+}
+function _f03Rotulo(id) {
+  return document.getElementById(id)?.dataset.label || id
+}
+// Diferença entre dois snapshots, com rótulos legíveis (para o histórico)
+function _f03Diff(antes, depois) {
+  const alt = {}
+  const fmt = v => v === true ? 'marcado' : v === false ? 'desmarcado' : (v || '(vazio)')
+  new Set([...Object.keys(antes || {}), ...Object.keys(depois || {})]).forEach(id => {
+    const a = antes?.[id] ?? (typeof depois?.[id] === 'boolean' ? false : '')
+    const b = depois?.[id] ?? (typeof antes?.[id] === 'boolean' ? false : '')
+    if (a !== b) alt[_f03Rotulo(id)] = { de: fmt(a), para: fmt(b) }
+  })
+  return alt
+}
+
+// Quem pode preencher o complemento: somente o conselheiro que recebeu a ficha
+function _f03EhDestinatario(f) {
+  if (!f || !currentUser) return false
+  if (f.conselheiro_dest_id) return f.conselheiro_dest_id === currentUser.id
+  return !!f.conselheiro_dest && f.conselheiro_dest === currentUser.name
+}
+function _f03PodeVer(f) {
+  if (!f || !currentUser) return false
+  if (_vêTudo()) return true
+  if (_f03EhDestinatario(f) || f.criado_por_id === currentUser.id) return true
+  const mesmoCt = _mesmoCT(f.ct_destino)
+  if (currentUser.role === 'atendente') return mesmoCt
+  return mesmoCt && !f.conselheiro_dest   // conselheiro: só fichas sem destinatário no próprio CT
+}
+function _f03PodeAssumir(f) {
+  return !!f && !f.conselheiro_dest && ['conselheiro','coordenador'].includes(currentUser?.role) && _mesmoCT(f.ct_destino)
+}
+
+// ── Banco ──
+async function _f03Log(protocolo, acao, detalhes = {}) {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/fichas_historico`, {
+      method: 'POST', headers: _sbHeaders(),
+      body: JSON.stringify({ protocolo, acao, detalhes,
+        usuario_id: currentUser?.id || null, usuario_nome: currentUser?.name || null,
+        usuario_role: currentUser?.role || null, usuario_ct: currentUser?.ct || null })
+    })
+    if (!r.ok) console.warn('histórico não gravado', r.status, await r.text())
+    return r.ok
+  } catch (e) { console.warn('histórico não gravado', e); return false }
+}
+async function _f03Buscar(protocolo) {
+  const r = await fetch(`${_SB_URL}/rest/v1/fichas?protocolo=eq.${encodeURIComponent(protocolo)}&limit=1`, { headers: _sbHeaders() })
+  if (!r.ok) throw new Error('Erro ao buscar a ficha (' + r.status + ')')
+  return (await r.json())[0] || null
+}
+async function _f03Atualizar(protocolo, campos) {
+  const r = await fetch(`${_SB_URL}/rest/v1/fichas?protocolo=eq.${encodeURIComponent(protocolo)}`, {
+    method: 'PATCH', headers: { ..._sbHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify({ ...campos, updated_at: new Date().toISOString() })
+  })
+  if (!r.ok) throw new Error(await r.text() || ('Erro ' + r.status))
+  const rows = await r.json()
+  if (!rows.length) throw new Error('Sem permissão para alterar esta ficha.')
+  return rows[0]
+}
+// Protocolo AAAA/MM/NNNN, sequencial por mês. Colisão (409) → tenta o próximo número.
+async function _f03InserirComProtocolo(linha) {
+  const d = new Date(), pre = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/`
+  let n = 0
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/fichas?protocolo=like.${encodeURIComponent(pre)}*&select=protocolo&limit=10000`, { headers: _sbHeaders() })
+    if (r.ok) (await r.json()).forEach(x => { const k = parseInt(String(x.protocolo).slice(pre.length), 10); if (k > n) n = k })
+  } catch (e) {}
+  for (let t = 0; t < 8; t++) {
+    const protocolo = pre + String(n + 1 + t).padStart(4, '0')
+    const r = await fetch(`${_SB_URL}/rest/v1/fichas`, {
+      method: 'POST', headers: { ..._sbHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({ ...linha, protocolo })
+    })
+    if (r.ok) return (await r.json())[0]
+    if (r.status !== 409) throw new Error(await r.text() || ('Erro ' + r.status))
+  }
+  throw new Error('Não foi possível gerar um protocolo único. Tente novamente.')
+}
+
+async function _f03CarregarConselheiros(selId, { excluirId = null, ct = null } = {}) {
+  const sel = document.getElementById(selId)
+  if (!sel) return
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/usuarios?ativo=eq.true&role=in.(conselheiro,coordenador)&select=id,nome,role,ct&order=nome.asc`, { headers: _sbHeaders() })
+    let us = r.ok ? await r.json() : []
+    const norm = s => String(s || '').replace(/[\s\-–]/g, '').toUpperCase()
+    const alvo = ct ?? (currentUser.role === 'master' ? null : currentUser.ct)
+    if (alvo) us = us.filter(u => norm(u.ct) === norm(alvo))
+    if (excluirId) us = us.filter(u => u.id !== excluirId)
+    sel.innerHTML = (us.length ? '<option value="">-- Selecione o conselheiro --</option>' : '<option value="">Nenhum conselheiro ativo neste CT</option>')
+      + us.map(u => `<option value="${esc(u.id)}" data-nome="${esc(u.nome)}" data-ct="${esc(u.ct || '')}">${esc(u.nome)}${u.role === 'coordenador' ? ' (coordenador)' : ''}${alvo ? '' : ' – ' + esc(u.ct || 'sem CT')}</option>`).join('')
+  } catch (e) { sel.innerHTML = '<option value="">Erro ao carregar conselheiros</option>' }
+}
+
+// ── Montagem da tela conforme a situação da ficha ──
+async function _f03Inicializar() {
+  if (!document.getElementById('f03-form')) return
+  const proto = _f03ProtocoloPendente
+  _f03ProtocoloPendente = null
+  if (!proto) {                                   // ficha nova (preenchimento do atendente)
+    _f03Ficha = null
+    const now = new Date()
+    const data = document.getElementById('f03a-data'), hora = document.getElementById('f03a-hora')
+    if (data) data.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+    if (hora) hora.value = now.toTimeString().slice(0, 5)
+    _f03CarregarConselheiros('f03-dest')
+    return
+  }
+  let f
+  try { f = await _f03Buscar(proto) } catch (e) { showToast(e.message); return }
+  if (!f) { showToast(`Ficha ${proto} não encontrada.`); return }
+  if (!_f03PodeVer(f)) { showToast('⛔ Você não tem acesso a esta ficha.'); backToForms(); return }
+  _f03Ficha = f
+  _f03Log(f.protocolo, 'visualizada')
+  if (_f03EhDestinatario(f) && !f.lida) {
+    _f03Atualizar(f.protocolo, { lida: true }).catch(() => {})
+    const i = fichasEnviadas.findIndex(x => x.protocolo === f.protocolo)
+    if (i >= 0) { fichasEnviadas[i].lida = true; _saveState(); buildNav() }
+  }
+  _f03Render()
+}
+
+function _f03Render() {
+  const f = _f03Ficha
+  document.getElementById('f03-protocolo').textContent = f.protocolo
+  _f03Aplicar(f.campos_snapshot)
+  _f03Travar('f03a-', true)
+  document.getElementById('f03-bloco-direcionar').style.display = 'none'
+
+  const dest = _f03EhDestinatario(f)
+  const podeVerComplemento = dest || currentUser.role === 'master'
+  const status = document.getElementById('f03-status')
+  status.style.display = 'block'
+  status.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+    <div>📋 <strong style="font-family:monospace">${esc(f.protocolo)}</strong> · ${esc(f.nome_crianca || '')}<br>
+      <span style="color:var(--text-muted)">Registrada por ${esc(f.enviado_por || '—')} em ${esc(f.data_hora || '')} ·
+      ${esc(f.ct_destino || '')} · ${f.conselheiro_dest ? 'Conselheiro(a): <strong>' + esc(f.conselheiro_dest) + '</strong>' : '<strong>Aguardando conselheiro</strong>'}</span></div>
+    <div style="display:flex;gap:8px">
+      ${_f03PodeAssumir(f) ? `<button class="btn btn-primary btn-sm" onclick="_f03Assumir()">Assumir esta ficha</button>` : ''}
+      <button class="btn btn-outline btn-sm" onclick="_f03Historico()">📜 Histórico</button>
+    </div></div>
+    ${!podeVerComplemento ? `<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">🔒 O complemento desta ficha é restrito ao conselheiro responsável.</div>` : ''}`
+
+  const sec = document.getElementById('f03-secao-conselheiro')
+  sec.style.display = podeVerComplemento ? 'block' : 'none'
+  if (!podeVerComplemento) return
+  _f03Aplicar(f.dados_conselheiro)
+  document.getElementById('f03-resp-nome').value = f.conselheiro_dest || ''
+  document.getElementById('f03-label-resp').textContent = `Responsável: ${f.conselheiro_dest || '—'}${dest ? '' : ' · somente leitura'}`
+  _f03Travar('f03c-', !dest)
+  document.getElementById('f03-acoes-conselheiro').style.display = dest ? 'grid' : 'none'
+  if (dest) _f03CarregarConselheiros('f03-remeter', { excluirId: currentUser.id, ct: f.ct_destino })
+}
+
+// ── Ações ──
+async function _f03Direcionar() {
+  const sel = document.getElementById('f03-dest')
+  const opt = sel?.selectedOptions?.[0]
+  const nomeCrianca = (document.getElementById('f03a-crianca-nome')?.value || '').trim()
+  if (!nomeCrianca) { showToast('⚠️ Preencha o nome da criança/adolescente.'); document.getElementById('f03a-crianca-nome')?.focus(); return }
+  if (!sel?.value) { showToast('Selecione o conselheiro de destino.'); return }
+  const destNome = opt.dataset.nome, destId = sel.value, destCt = opt.dataset.ct || currentUser.ct
+  if (!confirm(`Direcionar esta ficha para ${destNome}?\n\nDepois disso, a seção do atendente não poderá mais ser alterada.`)) return
+
+  const btn = document.getElementById('f03-btn-direcionar')
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…' }
+  const a = _f03Coletar('f03a-')
+  const v = id => (a['f03a-' + id] || '').trim()
+  const cpfs = ['mae-cpf', 'pai-cpf', 'resp-cpf'].map(k => _f03Digitos(v(k))).filter(Boolean)
+  const agora = new Date()
+  const linha = {
+    nome_crianca: nomeCrianca, tipo: 'Ficha de Atendimento', form_id: 3,
+    enviado_por: currentUser.name, criado_por_id: currentUser.id,
+    ct_destino: destCt, conselheiro_dest: destNome, conselheiro_dest_id: destId,
+    data_hora: agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    campos_snapshot: a, dados: {}, dados_conselheiro: {}, lida: false, status: 'direcionada',
+    nome_mae: v('mae-nome') || null, nome_pai: v('pai-nome') || null, nome_responsavel: v('resp-nome') || null,
+    cpf_mae: _f03Digitos(v('mae-cpf')) || null, cpf_pai: _f03Digitos(v('pai-cpf')) || null, cpf_responsavel: _f03Digitos(v('resp-cpf')) || null,
+    busca_crianca: _f03Norm(nomeCrianca),
+    busca_genitores: [v('mae-nome'), v('pai-nome'), v('resp-nome')].filter(Boolean).map(_f03Norm).join(' | '),
+    busca_cpfs: cpfs.join(' '),
+    created_at: agora.toISOString(), updated_at: agora.toISOString()
+  }
+  try {
+    const f = await _f03InserirComProtocolo(linha)
+    await _f03Log(f.protocolo, 'criada', { campos: a })
+    await _f03Log(f.protocolo, 'direcionada', { para: destNome, para_id: destId, ct: destCt })
+    fichasEnviadas = fichasEnviadas.filter(x => x.protocolo !== f.protocolo)
+    fichasEnviadas.unshift(_rowToFicha(f)); _saveState(); buildNav()
+    _f03Ficha = f
+    _f03Render()
+    showToast(`✅ Ficha ${f.protocolo} direcionada para ${destNome}.`)
+  } catch (e) {
+    showToast('Erro ao salvar a ficha: ' + e.message)
+    if (btn) { btn.disabled = false; btn.textContent = 'Direcionar' }
+  }
+}
+
+async function _f03Salvar({ silencioso = false } = {}) {
+  const f = _f03Ficha
+  if (!f || !_f03EhDestinatario(f)) { showToast('Somente o conselheiro responsável pode salvar o complemento.'); return false }
+  const novo = _f03Coletar('f03c-')
+  const alteracoes = _f03Diff(f.dados_conselheiro, novo)
+  if (!Object.keys(alteracoes).length) { if (!silencioso) showToast('Nenhuma alteração para salvar.'); return true }
+  try {
+    _f03Ficha = await _f03Atualizar(f.protocolo, { dados_conselheiro: novo, status: 'em_atendimento' })
+    await _f03Log(f.protocolo, 'complemento_salvo', { alteracoes })
+    if (!silencioso) showToast(`💾 Complemento salvo (${Object.keys(alteracoes).length} alteração(ões)).`)
+    return true
+  } catch (e) { showToast('Erro ao salvar: ' + e.message); return false }
+}
+
+async function _f03Remeter() {
+  const sel = document.getElementById('f03-remeter'), opt = sel?.selectedOptions?.[0]
+  if (!sel?.value) { showToast('Selecione o conselheiro de destino.'); return }
+  const para = opt.dataset.nome
+  if (!confirm(`Remeter a ficha ${_f03Ficha.protocolo} para ${para}?\n\nVocê deixará de ter acesso ao complemento.`)) return
+  if (!(await _f03Salvar({ silencioso: true }))) return
+  try {
+    const de = _f03Ficha.conselheiro_dest
+    await _f03Atualizar(_f03Ficha.protocolo, { conselheiro_dest: para, conselheiro_dest_id: sel.value, lida: false, status: 'direcionada' })
+    await _f03Log(_f03Ficha.protocolo, 'remetida', { de, para, para_id: sel.value })
+    showToast(`🔄 Ficha remetida para ${para}.`)
+    formsFillActive = null; navigate('fichas-inbox')
+  } catch (e) { showToast('Erro ao remeter: ' + e.message) }
+}
+
+async function _f03Encaminhar() {
+  const ct = document.getElementById('f03-encaminhar')?.value
+  if (!ct) { showToast('Selecione o Conselho Tutelar de destino.'); return }
+  if (_mesmoCT(ct)) { showToast('A ficha já pertence a este CT. Use "Remeter" para outro conselheiro.'); return }
+  if (!confirm(`Encaminhar a ficha ${_f03Ficha.protocolo} para o ${ct}?\n\nO complemento preenchido segue com a ficha e você deixará de ter acesso a ele.`)) return
+  if (!(await _f03Salvar({ silencioso: true }))) return
+  try {
+    const de = { ct: _f03Ficha.ct_destino, conselheiro: _f03Ficha.conselheiro_dest }
+    await _f03Atualizar(_f03Ficha.protocolo, { ct_destino: ct, conselheiro_dest: null, conselheiro_dest_id: null, lida: false, status: 'encaminhada' })
+    await _f03Log(_f03Ficha.protocolo, 'encaminhada', { de_ct: de.ct, de_conselheiro: de.conselheiro, para_ct: ct })
+    showToast(`📤 Ficha encaminhada para o ${ct}.`)
+    formsFillActive = null; navigate('fichas-inbox')
+  } catch (e) { showToast('Erro ao encaminhar: ' + e.message) }
+}
+
+async function _f03Assumir() {
+  if (!confirm(`Assumir a ficha ${_f03Ficha.protocolo} como conselheiro(a) responsável?`)) return
+  try {
+    _f03Ficha = await _f03Atualizar(_f03Ficha.protocolo, { conselheiro_dest: currentUser.name, conselheiro_dest_id: currentUser.id, lida: true, status: 'em_atendimento' })
+    await _f03Log(_f03Ficha.protocolo, 'assumida', {})
+    _f03Render()
+    showToast('✅ Ficha assumida. Preencha o complemento.')
+  } catch (e) { showToast('Erro: ' + e.message) }
+}
+
+// Abre uma ficha do formulário 03 (caixa de entrada, consulta ou link)
+function _f03Abrir(protocolo) {
+  _f03ProtocoloPendente = protocolo
+  formsFillActive = 3
+  navigate('forms')
+}
+
+// ── Histórico (linha do tempo) ──
+const F03_ACOES = {
+  criada: '🆕 Ficha criada', direcionada: '📨 Direcionada', visualizada: '👁️ Visualizada',
+  complemento_salvo: '💾 Complemento salvo', remetida: '🔄 Remetida', encaminhada: '📤 Encaminhada a outro CT',
+  assumida: '✋ Assumida', excluida: '🗑️ Ficha excluída'
+}
+async function _f03Historico(protocolo) {
+  protocolo = protocolo || _f03Ficha?.protocolo
+  if (!protocolo) return
+  const root = document.getElementById('modal-root')
+  const fechar = `document.getElementById('modal-root').innerHTML=''`
+  root.innerHTML = `<div onclick="if(event.target===this)${fechar}" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--card,#fff);color:var(--text);border-radius:12px;max-width:720px;width:100%;max-height:85vh;display:flex;flex-direction:column">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div><strong>Histórico da ficha</strong> <span style="font-family:monospace;color:var(--primary)">${esc(protocolo)}</span></div>
+        <button class="btn btn-outline btn-sm" onclick="${fechar}">Fechar</button>
+      </div>
+      <div id="f03-hist-lista" style="padding:16px 20px;overflow:auto">Carregando…</div>
+    </div></div>`
+  let itens = []
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/fichas_historico?protocolo=eq.${encodeURIComponent(protocolo)}&order=created_at.asc`, { headers: _sbHeaders() })
+    if (!r.ok) throw new Error(r.status)
+    itens = await r.json()
+  } catch (e) { document.getElementById('f03-hist-lista').textContent = 'Não foi possível carregar o histórico.'; return }
+  // Conteúdo do complemento só aparece para quem pode vê-lo
+  const f = _f03Ficha?.protocolo === protocolo ? _f03Ficha : null
+  const verConteudo = currentUser.role === 'master' || (f && _f03EhDestinatario(f))
+  const det = (h) => {
+    const d = h.detalhes || {}
+    if (h.acao === 'direcionada' || h.acao === 'remetida') return `${d.de ? esc(d.de) + ' → ' : 'Para '}<strong>${esc(d.para || '')}</strong>`
+    if (h.acao === 'encaminhada') return `${esc(d.de_ct || '')} → <strong>${esc(d.para_ct || '')}</strong>`
+    if (h.acao === 'complemento_salvo') {
+      const alt = Object.entries(d.alteracoes || {})
+      if (!verConteudo) return `${alt.length} campo(s) alterado(s)`
+      return alt.map(([k, v]) => `<div style="margin-top:2px"><strong>${esc(k)}:</strong> <span style="color:var(--text-muted);text-decoration:line-through">${esc(v.de)}</span> → ${esc(v.para)}</div>`).join('')
+    }
+    return ''
+  }
+  document.getElementById('f03-hist-lista').innerHTML = itens.length ? itens.map(h => `
+    <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <div style="min-width:130px;color:var(--text-muted);font-size:12px">${new Date(h.created_at).toLocaleString('pt-BR')}</div>
+      <div style="flex:1"><div><strong>${F03_ACOES[h.acao] || esc(h.acao)}</strong> · ${esc(h.usuario_nome || '—')} <span style="color:var(--text-muted)">(${esc(h.usuario_role || '')}${h.usuario_ct ? ' · ' + esc(h.usuario_ct) : ''})</span></div>
+        <div style="font-size:12px;margin-top:2px">${det(h)}</div></div>
+    </div>`).join('') : '<p style="color:var(--text-muted)">Nenhum registro.</p>'
+}
+
+// ── Consulta de fichas (arquivo) ──
+function renderConsultaFichas() {
+  const anoAtual = new Date().getFullYear()
+  const anos = Array.from({ length: anoAtual - 2023 }, (_, i) => anoAtual - i)
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+  setTimeout(() => document.getElementById('cf-termo')?.focus(), 50)
+  return `
+  <div class="page-header"><h2>Consultar Fichas</h2>
+    <p>Busque fichas de atendimento por protocolo, criança, genitores/responsável ou CPF${_vêTudo() ? ' · todos os conselhos' : ''}</p></div>
+  <div class="card card-pad" style="margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:10px;margin-bottom:10px">
+      <div><label class="field-label">Buscar por</label>
+        <select id="cf-campo">
+          <option value="todos">Qualquer campo</option>
+          <option value="protocolo">Protocolo</option>
+          <option value="crianca">Nome da criança/adolescente</option>
+          <option value="genitores">Nome da mãe, pai ou responsável</option>
+          <option value="cpf">CPF do genitor/responsável</option>
+        </select></div>
+      <div><label class="field-label">Termo</label>
+        <input id="cf-termo" placeholder="Ex.: 2026/09/0001, Maria da Silva, 123.456.789-00" onkeydown="if(event.key==='Enter')consultarFichas()" /></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr) auto;gap:10px;align-items:end">
+      <div><label class="field-label">Ano (opcional)</label>
+        <select id="cf-ano" onchange="document.getElementById('cf-mes').disabled=!this.value;if(!this.value){document.getElementById('cf-mes').value='';document.getElementById('cf-dia').value='';document.getElementById('cf-dia').disabled=true}">
+          <option value="">Todos</option>${anos.map(a => `<option>${a}</option>`).join('')}</select></div>
+      <div><label class="field-label">Mês (opcional)</label>
+        <select id="cf-mes" disabled onchange="document.getElementById('cf-dia').disabled=!this.value;if(!this.value)document.getElementById('cf-dia').value=''">
+          <option value="">Todos</option>${meses.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')}</select></div>
+      <div><label class="field-label">Dia (opcional)</label>
+        <select id="cf-dia" disabled><option value="">Todos</option>${Array.from({ length: 31 }, (_, i) => `<option>${i + 1}</option>`).join('')}</select></div>
+      <button class="btn btn-primary" onclick="consultarFichas()">${I.search} Buscar</button>
+    </div>
+  </div>
+  <div id="cf-resultados"></div>`
+}
+
+async function consultarFichas() {
+  const out = document.getElementById('cf-resultados')
+  const campo = document.getElementById('cf-campo').value
+  const bruto = document.getElementById('cf-termo').value.trim()
+  const ano = document.getElementById('cf-ano').value, mes = document.getElementById('cf-mes').value, dia = document.getElementById('cf-dia').value
+  if (!bruto && !ano) { showToast('Informe um termo de busca ou pelo menos o ano.'); return }
+
+  const limpo = s => s.replace(/[,()"*:\\]/g, ' ').trim()          // caracteres reservados do filtro
+  const q = v => `"${String(v).replace(/"/g, '')}"`
+  const nome = limpo(_f03Norm(bruto)), txt = limpo(bruto), cpf = _f03Digitos(bruto)
+  const conds = []
+
+  if (bruto) {
+    const porCampo = {
+      protocolo: [`protocolo.ilike.${q('*' + txt + '*')}`],
+      crianca:   [`busca_crianca.ilike.${q('*' + nome + '*')}`, `nome_crianca.ilike.${q('*' + txt + '*')}`],
+      genitores: [`busca_genitores.ilike.${q('*' + nome + '*')}`],
+      cpf:       cpf ? [`busca_cpfs.ilike.${q('*' + cpf + '*')}`] : []
+    }
+    const lista = campo === 'todos' ? [].concat(...Object.values(porCampo)) : porCampo[campo]
+    if (!lista.length) { showToast('Digite os números do CPF.'); return }
+    conds.push(`or(${lista.join(',')})`)
+  }
+  if (ano) {
+    const ini = new Date(+ano, mes ? mes - 1 : 0, dia ? +dia : 1)
+    const fim = dia ? new Date(+ano, mes - 1, +dia + 1) : mes ? new Date(+ano, +mes, 1) : new Date(+ano + 1, 0, 1)
+    conds.push(`created_at.gte.${q(ini.toISOString())}`, `created_at.lt.${q(fim.toISOString())}`)
+  }
+  // Escopo por perfil (espelha as regras de acesso da ficha)
+  if (!_vêTudo()) {
+    const ct = q(currentUser.ct || '-'), me = currentUser.id || '00000000-0000-0000-0000-000000000000'
+    if (currentUser.role === 'atendente') conds.push(`or(ct_destino.eq.${ct},criado_por_id.eq.${me})`)
+    else conds.push(`or(conselheiro_dest_id.eq.${me},conselheiro_dest.eq.${q(currentUser.name)},criado_por_id.eq.${me},and(ct_destino.eq.${ct},conselheiro_dest.is.null))`)
+  }
+
+  out.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-muted)">Buscando…</div>'
+  let rows = []
+  try {
+    const sel = 'protocolo,nome_crianca,nome_mae,nome_pai,nome_responsavel,ct_destino,conselheiro_dest,enviado_por,status,form_id,created_at'
+    const r = await fetch(`${_SB_URL}/rest/v1/fichas?select=${sel}&and=${encodeURIComponent('(' + conds.join(',') + ')')}&order=created_at.desc&limit=200`, { headers: _sbHeaders() })
+    if (!r.ok) throw new Error(await r.text())
+    rows = await r.json()
+  } catch (e) { out.innerHTML = `<div class="card card-pad" style="color:var(--danger)">Erro na busca: ${esc(e.message)}</div>`; return }
+
+  const stLabel = { direcionada: 'Direcionada', em_atendimento: 'Em atendimento', encaminhada: 'Encaminhada' }
+  out.innerHTML = !rows.length ? '<div class="card card-pad empty"><p>Nenhuma ficha encontrada.</p></div>' : `
+  <div class="card"><div style="padding:12px 16px;font-size:12px;color:var(--text-muted)">${rows.length}${rows.length === 200 ? '+' : ''} ficha(s) encontrada(s)</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Protocolo</th><th>Criança/Adolescente</th><th>Genitores/Responsável</th><th>Data</th><th>CT · Conselheiro</th><th>Situação</th><th></th></tr></thead>
+    <tbody>${rows.map(f => `<tr>
+      <td style="font-family:monospace;font-weight:700;color:var(--primary);white-space:nowrap">${esc(f.protocolo)}</td>
+      <td style="font-weight:600">${esc(f.nome_crianca || '—')}</td>
+      <td style="font-size:12px">${[f.nome_mae, f.nome_pai, f.nome_responsavel].filter(Boolean).map(esc).join('<br>') || '—'}</td>
+      <td style="font-size:12px;white-space:nowrap">${new Date(f.created_at).toLocaleDateString('pt-BR')}</td>
+      <td style="font-size:12px">${esc(f.ct_destino || '—')}<br><span style="color:var(--text-muted)">${esc(f.conselheiro_dest || 'sem conselheiro')}</span></td>
+      <td style="font-size:12px">${f.form_id === 3 ? esc(stLabel[f.status] || f.status || '—') : 'Ficha antiga'}</td>
+      <td style="white-space:nowrap"><button class="btn btn-primary btn-sm" onclick="${f.form_id === 3 ? `_f03Abrir('${esc(f.protocolo)}')` : `abrirFichaPorProtocolo('${esc(f.protocolo)}')`}">Abrir</button>
+        <button class="btn btn-outline btn-sm" onclick="_f03Historico('${esc(f.protocolo)}')">📜</button></td>
+    </tr>`).join('')}</tbody>
+  </table></div></div>`
 }
 
 // ── ID 4: Retorno de Atendimento ──
@@ -4810,11 +5342,11 @@ function attachFormsEvents() {
   _carregarConselheirosSelect()
 }
 
-async function _carregarConselheirosSelect() {
-  // Aguarda o elemento ser renderizado (pode levar alguns ms)
+async function _carregarConselheirosSelect(tentativa = 0) {
+  // Aguarda o elemento ser renderizado (pode levar alguns ms); desiste após ~2 s
   const sel1 = document.getElementById('ficha-conselheiro-destino')
   if (!sel1) {
-    setTimeout(() => _carregarConselheirosSelect(), 50)
+    if (tentativa < 40) setTimeout(() => _carregarConselheirosSelect(tentativa + 1), 50)
     return
   }
 
@@ -4857,7 +5389,7 @@ function setFormsCategory(c) {
   document.getElementById('content').innerHTML = renderForms()
   attachFormsEvents()
 }
-function openFormFill(id) { formsFillActive=id; document.getElementById('content').innerHTML=renderForms() }
+function openFormFill(id) { formsFillActive=id; if (typeof _f03ProtocoloPendente !== 'undefined') _f03ProtocoloPendente=null; document.getElementById('content').innerHTML=renderForms() }
 function backToForms() { formsFillActive=null; document.getElementById('content').innerHTML=renderForms(); attachFormsEvents() }
 function updateFormsSearch(v) { formsSearch=v; document.getElementById('forms-grid').innerHTML=getFormsGrid() }
 
