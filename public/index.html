@@ -479,28 +479,111 @@ function _paraWord(el) {
   const c = el.cloneNode(true)
   const orig = el.querySelectorAll('input, select, textarea')
   const copia = c.querySelectorAll('input, select, textarea')
-  const linha = '<span style="color:#999">______________</span>'
   copia.forEach((x, i) => {
     const o = orig[i]
     let html
-    if (o.type === 'checkbox' || o.type === 'radio') html = o.checked ? '☒' : '☐'
-    else if (o.tagName === 'SELECT') html = o.value ? esc(o.selectedOptions[0]?.text || o.value) : linha
-    else if (o.tagName === 'TEXTAREA') html = o.value ? esc(o.value).replace(/\n/g, '<br>') : linha
-    else if (o.type === 'date') html = o.value ? o.value.split('-').reverse().join('/') : '____/____/______'
-    else html = o.value ? '<strong>' + esc(o.value) + '</strong>' : linha
+    if (o.type === 'checkbox' || o.type === 'radio') {
+      html = o.checked ? '☒' : '☐'
+    } else if (o.tagName === 'SELECT') {
+      html = o.value ? esc(o.selectedOptions[0]?.text || o.value) : '<span style="color:#555">____________________</span>'
+    } else if (o.tagName === 'TEXTAREA') {
+      html = o.value ? esc(o.value).replace(/\n/g, '<br>') : '<span style="color:#777">________________________________________________________________________________</span>'
+    } else if (o.type === 'date') {
+      html = o.value ? o.value.split('-').reverse().join('/') : '____/____/________'
+    } else {
+      if (o.value && o.value.trim()) {
+        html = '<strong>' + esc(o.value.trim()) + '</strong>'
+      } else {
+        const ph = (o.placeholder || '').trim()
+        if (/^[_\/\.\-:\s]+$/.test(ph) && ph.length > 0) {
+          html = `<span style="color:#555">${esc(ph)}</span>`
+        } else {
+          const w = o.style.width || ''
+          let numUnder = 20
+          if (w.includes('30px') || w.includes('40px')) numUnder = 4
+          else if (w.includes('50px') || w.includes('60px')) numUnder = 7
+          else if (w.includes('70px') || w.includes('80px')) numUnder = 10
+          else if (w.includes('100px') || w.includes('120px') || w.includes('130px')) numUnder = 14
+          else if (w.includes('140px') || w.includes('160px')) numUnder = 18
+          else if (w.includes('200px') || w.includes('220px')) numUnder = 24
+          else if (w.includes('260px') || w.includes('300px')) numUnder = 32
+          else if (w.includes('100%')) numUnder = 46
+          else if (ph.length > 20) numUnder = 28
+          html = `<span style="color:#555">${'_'.repeat(numUnder)}</span>`
+        }
+      }
+    }
     const span = document.createElement('span')
     span.innerHTML = html
     x.replaceWith(span)
   })
+
+  // Remove elementos exclusivos de tela
   c.querySelectorAll('.so-tela, .no-print, svg, button').forEach(x => x.remove())
-  // Igual à impressão: mostra só as caixas marcadas (☒), some com as desmarcadas (☐)
-  c.querySelectorAll('.f03-opcao, .f03-check').forEach(l => { if (l.textContent.trim().startsWith('☐')) l.remove() })
-  // Assinaturas lado a lado → tabela
-  c.querySelectorAll('.f03-assinaturas').forEach(g => {
-    const cols = [...g.children].map(ch => `<td style="border:none;text-align:center;padding:40pt 12pt 0;width:50%">${ch.innerHTML}</td>`).join('')
-    g.outerHTML = `<table style="width:100%;border:none;margin-top:30pt"><tr>${cols}</tr></table>`
+
+  // Normaliza divisores com line-height herdado da tela (o line-height da tela estoura o Word)
+  c.querySelectorAll('div').forEach(d => {
+    if (d.style.lineHeight) d.style.lineHeight = '1.25'
+    if (d.style.fontSize && d.style.fontSize.includes('px')) d.style.fontSize = '11.5pt'
   })
+  c.querySelectorAll('p').forEach(p => {
+    p.style.lineHeight = '1.25'
+    p.style.margin = '0 0 4.5pt 0'
+  })
+
+  // Substitui placeholders 'XXXX' de Conselho Tutelar pelo CT real do usuário logado
+  const normCt = v => String(v || '').replace(/[\s\-–]/g, '').toUpperCase()
+  const ctNum  = normCt(currentUser?.ct)
+  const ctInfo = ctNum ? CONSELHOS_BAIRROS.find(cb => 'CT' + cb.num === ctNum) : null
+  const ctNomeProprio = ctInfo ? ctInfo.nome.replace(/^CT \w+ – /,'') : (currentUser?.ctFull || '')
+  if (ctNomeProprio) {
+    c.innerHTML = c.innerHTML.replace(/Conselho Tutelar XXXX/g, `Conselho Tutelar – ${ctNomeProprio}`)
+  }
+
+  // Transforma assinaturas _SIG e _SIG3 em tabelas perfeitamente centralizadas e com largura correta no Word
+  c.querySelectorAll('div[style*="text-align:center"]').forEach(d => {
+    const sigDiv = d.querySelector('div[style*="border-top"]')
+    if (sigDiv && sigDiv.textContent.includes('Conselheiro')) {
+      d.outerHTML = `<table align="center" style="margin:18pt auto 0 auto;border:none;border-collapse:collapse;width:240pt;" border="0">
+        <tr><td style="border:none;border-top:1pt solid #000;text-align:center;padding-top:4pt;font-family:'Times New Roman',serif;font-size:11pt;color:#111;">${sigDiv.innerHTML}</td></tr>
+      </table>`
+    }
+  })
+
+  c.querySelectorAll('div[style*="justify-content:center"]').forEach(d => {
+    if (d.textContent.includes('Conselheiro')) {
+      d.outerHTML = `<table align="center" style="width:100%;margin:18pt auto 0 auto;border:none;border-collapse:collapse;" border="0">
+        <tr>
+          <td style="border:none;border-top:1pt solid #000;text-align:center;padding:4pt 6pt 0 6pt;font-family:'Times New Roman',serif;font-size:10pt;">Conselheiro(a) Tutelar</td>
+          <td style="width:16pt;border:none"></td>
+          <td style="border:none;border-top:1pt solid #000;text-align:center;padding:4pt 6pt 0 6pt;font-family:'Times New Roman',serif;font-size:10pt;">Conselheiro(a) Tutelar</td>
+          <td style="width:16pt;border:none"></td>
+          <td style="border:none;border-top:1pt solid #000;text-align:center;padding:4pt 6pt 0 6pt;font-family:'Times New Roman',serif;font-size:10pt;">Conselheiro(a) Tutelar</td>
+        </tr>
+      </table>`
+    }
+  })
+
+  // Protocolo de recebimento (rodapé pontilhado)
+  c.querySelectorAll('div[style*="dashed"]').forEach(d => {
+    d.style.marginTop = '12pt'
+    d.style.paddingTop = '6pt'
+    d.style.fontSize = '9pt'
+    d.querySelectorAll('p').forEach(p => {
+      p.style.margin = '0 0 2pt 0'
+      p.style.lineHeight = '1.15'
+      p.style.fontSize = '9pt'
+    })
+  })
+
+  // Assinaturas f03
+  c.querySelectorAll('.f03-assinaturas').forEach(g => {
+    const cols = [...g.children].map(ch => `<td style="border:none;border-top:1pt solid #000;text-align:center;padding:4pt 12pt 0;width:50%">${ch.innerHTML}</td>`).join('<td style="width:20pt;border:none"></td>')
+    g.outerHTML = `<table style="width:100%;border:none;margin-top:20pt"><tr>${cols}</tr></table>`
+  })
+
   // Opções (caixas) em sequência, separadas
+  c.querySelectorAll('.f03-opcao, .f03-check').forEach(l => { if (l.textContent.trim().startsWith('☐')) l.remove() })
   c.querySelectorAll('.f03-opcao').forEach(l => { l.removeAttribute('style'); l.insertAdjacentHTML('afterend', '&nbsp;&nbsp;&nbsp; ') })
   // Blocos em grade/flex → sem layout de tela
   c.querySelectorAll('[style*="display:grid"], [style*="display:flex"]').forEach(d => {
@@ -508,70 +591,104 @@ function _paraWord(el) {
   })
   return c.innerHTML
 }
+
 function _bannerParaWord(banner) {
   if (!banner) return ''
   const img = banner.querySelector('img')
-  // O texto do cabeçalho é o segundo <div> direto (o primeiro é o wrapper flex) — buscar por
-  // um trecho de `style` é frágil (pode casar com outro elemento da página); pela estrutura é seguro.
   const txt = banner.querySelector(':scope > div > div:last-child') || banner.querySelector('div[style*="text-align:center"]')
-  if (!img) return banner.outerHTML
-  // width/height como atributo E como style: o motor HTML do Word (o .docx aqui é HTML
-  // disfarçado, não OOXML real) às vezes ignora um dos dois — declarar os dois evita a logo
-  // saindo em tamanho natural (podem ser vários cm de largura na imagem original).
-  return `<table style="width:100%;border:2px solid #1a3a6b;border-collapse:collapse;margin-bottom:12pt"><tr>
-    <td style="width:90pt;border:none;padding:6pt;vertical-align:middle"><img src="${img.src}" width="80" height="74" style="width:80px;height:74px;max-width:80px;max-height:74px" alt="Conselho Tutelar"></td>
-    <td style="border:none;border-left:2px solid #1a3a6b;padding:6pt 10pt;text-align:center;vertical-align:middle;font-family:Arial,sans-serif">${txt ? txt.innerHTML : ''}</td>
-  </tr></table>`
+  if (!img || !txt) return banner.outerHTML
+
+  const divs = txt.querySelectorAll('div')
+  const ctNome = divs[0]?.textContent?.trim() || 'CONSELHO TUTELAR'
+  const ctLei = divs[1]?.textContent?.trim() || 'Lei Federal 8.069/90 – Lei Municipal 6.266'
+  const ctEnd = divs[2]?.textContent?.trim() || ''
+  const ctContato = divs[3]?.textContent?.trim() || ''
+
+  return `<table border="1" cellpadding="0" cellspacing="0" borderColor="#1a3a6b" style="width:100%;border-collapse:collapse;border:1.5pt solid #1a3a6b;margin-bottom:12pt;background-color:#ffffff;">
+    <tr>
+      <td width="90" style="width:90pt;border:1.5pt solid #1a3a6b;border-right:none;padding:5pt 8pt;text-align:center;vertical-align:middle;background-color:#ffffff;">
+        <img src="${img.src}" width="75" height="69" style="width:75px;height:69px;max-width:75px;max-height:69px;display:block;margin:0 auto;" alt="Conselho Tutelar">
+      </td>
+      <td style="border:1.5pt solid #1a3a6b;border-left:1.5pt solid #1a3a6b;padding:5pt 10pt;text-align:center;vertical-align:middle;background-color:#ffffff;font-family:Arial,sans-serif;">
+        <p style="margin:0 0 2pt 0;font-family:Arial,sans-serif;font-size:11pt;font-weight:bold;color:#1a3a6b;text-transform:uppercase;letter-spacing:0.5pt;line-height:1.2;">${esc(ctNome)}</p>
+        <p style="margin:0 0 2pt 0;font-family:Arial,sans-serif;font-size:8pt;color:#333;line-height:1.15;">${esc(ctLei)}</p>
+        ${ctEnd ? `<p style="margin:0 0 1.5pt 0;font-family:Arial,sans-serif;font-size:7.5pt;color:#555;line-height:1.15;">${esc(ctEnd)}</p>` : ''}
+        ${ctContato ? `<p style="margin:0;font-family:Arial,sans-serif;font-size:7.5pt;color:#555;line-height:1.15;">${esc(ctContato)}</p>` : ''}
+      </td>
+    </tr>
+  </table>`
 }
 
 function exportarWord() {
   const formName = (document.querySelector('.fill-header h2')?.textContent || 'Formulario').replace(/[^a-zA-Z0-9À-ÿ\s]/g,'').trim()
   const banner   = document.getElementById('council-banner')
-  // Só o que está em .form-document é impresso — botões, selects e avisos de tela ficam de fora.
-  // Um formulário pode ter mais de um bloco .form-document (ex.: Ficha de Atendimento com
-  // seção do atendente + complemento do conselheiro): todos entram, na ordem em que aparecem.
   const formDocs = document.querySelectorAll('.form-document')
 
   if (!formDocs.length) { showToast('Nenhum formulário aberto.'); return }
 
   const bannerHtml = _bannerParaWord(banner)
-  const bodyHtml   = [...formDocs].map(d => _paraWord(d)).join('<br>')
+  const bodyHtml   = [...formDocs].map(d => _paraWord(d)).join('<div style="height:8pt"></div>')
 
-  // Monta HTML completo compatível com Word.
-  // O cabeçalho vai no `mso-element:header` — é a convenção antiga do próprio Word para
-  // "Salvar como Página da Web": ao reabrir esse HTML, o Word reconhece o `div#header` como
-  // cabeçalho de página de verdade (repete no topo de cada página, fora da margem do texto),
-  // em vez de ficar como conteúdo comum no topo do corpo.
   const html = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
       xmlns:w="urn:schemas-microsoft-com:office:word"
       xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8">
+<head>
+<meta charset="utf-8">
 <style>
-  @page Section1 { size: 21cm 29.7cm; margin: 2cm 2cm 2cm 2cm; mso-header-margin: 1cm; mso-footer-margin: 1cm; }
+  @page Section1 {
+    size: 21.0cm 29.7cm;
+    margin: 1.8cm 2.0cm 1.5cm 2.5cm;
+    mso-header-margin: 1.0cm;
+    mso-footer-margin: 1.0cm;
+  }
   div.Section1 { page: Section1; }
-  body { font-family: "Times New Roman", serif; font-size: 12pt; color: #1a2332; margin: 2cm; }
-  /* Sem essas regras diretas em <p>, o espaçamento herdado do line-height:2 usado na tela
-     (bom para leitura em tela, exagerado no papel) faz o texto "saltar" entre parágrafos. */
-  p { margin: 0 0 8pt 0; line-height: 1.5; text-align: justify; }
-  table { border-collapse: collapse; width: 100%; }
-  td, th { border: 1px solid #999; padding: 4pt 6pt; font-size: 10.5pt; vertical-align: top; }
-  label { font-size: 10.5pt; }
-  .field-label { display: block; font-weight: bold; font-size: 9pt; text-transform: uppercase; margin-top: 6pt; }
-  h2, h3 { color: #1a3a6b; }
-  .section-header { background: #e8edf5; font-weight: bold; padding: 4pt; margin-top: 8pt; }
+  body {
+    font-family: "Times New Roman", serif;
+    font-size: 11.5pt;
+    color: #1a2332;
+    margin: 0;
+    padding: 0;
+    line-height: 1.25;
+  }
+  p {
+    margin: 0 0 4.5pt 0;
+    line-height: 1.25;
+    text-align: justify;
+    text-justify: inter-ideograph;
+    font-size: 11.5pt;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top; }
+  label { font-size: 10pt; }
+  .field-label { display: block; font-weight: bold; font-size: 9pt; text-transform: uppercase; margin-top: 4pt; }
+  h2, h3 { color: #1a3a6b; margin: 4pt 0; }
+  .section-header { background: #e8edf5; font-weight: bold; padding: 4pt; margin-top: 6pt; }
   button { display: none; }
 </style>
 </head>
 <body>
-<div style="mso-element:header" id="header"><p class="MsoHeader" style="margin:0;text-align:left">${bannerHtml}</p></div>
 <div class="Section1">
-<div style="margin-top:16pt">${bodyHtml}</div>
+  ${bannerHtml}
+  <div style="margin-top:4pt">${bodyHtml}</div>
 </div>
-</body></html>`
+</body>
+</html>`
+
+  const docxOptions = {
+    orientation: 'portrait',
+    margins: {
+      top: 1020,    // 1.8 cm
+      right: 1134,  // 2.0 cm
+      bottom: 850,  // 1.5 cm
+      left: 1417,   // 2.5 cm
+      header: 567,
+      footer: 567
+    }
+  }
 
   try {
-    const blob = window.htmlDocx ? htmlDocx.asBlob(html) : new Blob([html], {type:'application/msword'})
+    const blob = window.htmlDocx ? htmlDocx.asBlob(html, docxOptions) : new Blob(['\ufeff' + html], {type:'application/msword;charset=utf-8'})
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
     a.href     = url
@@ -3173,8 +3290,8 @@ function renderFormFill(id) {
 }
 // ── HELPERS para formulários específicos ──
 const _INL_W = (w) => `style="display:inline;width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-size:inherit;font-family:inherit;padding:0 2px;outline:none;"`
-const _SIG = `<div style="margin-top:36px;text-align:center"><div style="display:inline-block;border-top:1px solid #333;padding-top:6px;min-width:260px;font-size:12px">Conselheiro(a) Tutelar</div></div>`
-const _SIG3 = `<div style="margin-top:36px;display:flex;gap:40px;justify-content:center;flex-wrap:wrap"><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div></div>`
+const _SIG = `<div style="margin-top:24px;text-align:center"><div style="display:inline-block;border-top:1px solid #333;padding-top:6px;min-width:260px;font-size:12px">Conselheiro(a) Tutelar</div></div>`
+const _SIG3 = `<div style="margin-top:24px;display:flex;gap:40px;justify-content:center;flex-wrap:wrap"><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div></div>`
 
 function _navFormIds() {
   return FORMS.map(f => f.id)
@@ -3217,29 +3334,39 @@ function _formHeader(form) {
 }
 
 function _docWrap(content) {
-  return `<div class="card card-pad form-document"><div style="font-size:13px;line-height:2;font-family:'Times New Roman',serif;text-align:justify">${content}</div><div style="margin-top:24px;text-align:right;display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-outline" onclick="exportarWord()" style="display:flex;align-items:center;gap:6px">📄 Word</button><button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button></div></div>`
+  return `<div class="card card-pad form-document"><div style="font-size:13px;line-height:1.6;font-family:'Times New Roman',serif;text-align:justify">${content}</div><div style="margin-top:24px;text-align:right;display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-outline" onclick="exportarWord()" style="display:flex;align-items:center;gap:6px">📄 Word</button><button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button></div></div>`
 }
 
 // ── ID 2: Remessa de Atendimento ──
 function renderForm02(form) {
   setTimeout(setFormDataHoraAtual, 50)
+  const _dHoje = new Date()
+  const _diaHoje = _dHoje.getDate()
+  const _mesHoje = _dHoje.toLocaleDateString('pt-BR', {month: 'long'})
+  const _anoHoje = String(_dHoje.getFullYear()).slice(-2)
+
+  const normCt = v => String(v || '').replace(/[\s\-–]/g, '').toUpperCase()
+  const ctNum  = normCt(currentUser?.ct)
+  const ctInfo = ctNum ? CONSELHOS_BAIRROS.find(c => 'CT' + c.num === ctNum) : null
+  const ctNomeProprio = ctInfo ? ctInfo.nome.replace(/^CT \w+ – /,'') : (currentUser?.ctFull || '')
+
   return _formHeader(form) + _docWrap(`
-    <p style="text-align:right">Salvador, <input ${_INL_W('40px')} placeholder="___"> de <input ${_INL_W('120px')} placeholder="___________"> de 20<input ${_INL_W('30px')} placeholder="__">.</p>
-    <p>Ofício nº <input ${_INL_W('60px')} placeholder="_______">/20<input ${_INL_W('30px')} placeholder="__">.</p>
+    <p style="text-align:right">Salvador, <input ${_INL_W('40px')} value="${_diaHoje}" placeholder="___"> de <input ${_INL_W('120px')} value="${_mesHoje}" placeholder="___________"> de 20<input ${_INL_W('30px')} value="${_anoHoje}" placeholder="__">.</p>
+    <p>Ofício nº <input ${_INL_W('60px')} placeholder="_______">/20<input ${_INL_W('30px')} value="${_anoHoje}" placeholder="__">.</p>
     <p>Assunto: Remessa de Atendimento</p>
     <p>Conselho Tutelar <input ${_INL_W('60px')} placeholder="_______"> – Bairro: <input ${_INL_W('220px')} placeholder="______________________________________"></p>
     <p>Prezado(a) Conselheiro(a),</p>
-    <p>O Conselho Tutelar XXXX no uso de suas atribuições legais em conformidade com o Art. 136 da Lei Federal 8.069, Estatuto da Criança e do Adolescente, através do(a) Conselheiro(a) que abaixo subscreve, vem por meio deste, repassar para este Conselho o atendimento relacionado à criança e/ou adolescente:</p>
+    <p>O Conselho Tutelar ${ctNomeProprio ? '– ' + ctNomeProprio : '<input ' + _INL_W('140px') + ' placeholder="do Bairro...">'} no uso de suas atribuições legais em conformidade com o Art. 136 da Lei Federal 8.069, Estatuto da Criança e do Adolescente, através do(a) Conselheiro(a) que abaixo subscreve, vem por meio deste, repassar para este Conselho o atendimento relacionado à criança e/ou adolescente:</p>
     <p>Nome: <input ${_INL_W('100%')} placeholder="Nome completo da criança/adolescente"><br>
     <input ${_INL_W('260px')} placeholder="(continuação do nome)">, nascido em <input ${_INL_W('120px')} placeholder="____/____/________"></p>
     <p>Filho de: <input ${_INL_W('100%')} placeholder="Nome do(s) responsável(is)"><br>
     <input ${_INL_W('100%')} placeholder="(continuação)"></p>
-    <p>que chegou ao Conselho Tutelar XXXX através <input ${_INL_W('200px')} placeholder="________________________"><br>
+    <p>que chegou ao Conselho Tutelar ${ctNomeProprio ? '– ' + ctNomeProprio : '<input ' + _INL_W('140px') + ' placeholder="do Bairro...">'} através <input ${_INL_W('200px')} placeholder="________________________"><br>
     <input ${_INL_W('200px')} placeholder="________________________"> e corresponde à área de abrangência deste Conselho Tutelar <input ${_INL_W('200px')} placeholder="________________________">, pois, reside no bairro <input ${_INL_W('220px')} placeholder="________________________">.</p>
     <p>Segue em anexo o relatório de atendimento e demais documentações pertinentes ao caso.</p>
     <p>Sem mais para o momento, renovo votos de estima e consideração, colocando-me à disposição para o que se fizer necessário.</p>
     ${_SIG}
-    <div style="margin-top:32px;border-top:1px dashed #999;padding-top:12px;font-size:11px">
+    <div style="margin-top:24px;border-top:1px dashed #999;padding-top:10px;font-size:11px">
       <p><strong>Recebido por (nome por extenso):</strong> <input ${_INL_W('220px')} placeholder="________________________"> Data: <input ${_INL_W('70px')} placeholder="__/__/__"> Hora: <input ${_INL_W('50px')} placeholder="__:__"> Assinatura: <input ${_INL_W('140px')} placeholder="________________________"></p>
       <p><strong>Recebido por (nome por extenso):</strong> <input ${_INL_W('220px')} placeholder="________________________"> Data: <input ${_INL_W('70px')} placeholder="__/__/__"> Hora: <input ${_INL_W('50px')} placeholder="__:__"> Assinatura: <input ${_INL_W('140px')} placeholder="________________________"></p>
     </div>
