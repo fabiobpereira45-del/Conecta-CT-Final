@@ -606,7 +606,10 @@ function _paraWord(el) {
   })
   c.querySelectorAll('p').forEach(p => {
     p.style.lineHeight = '1.25'
-    p.style.margin = '0 0 4.5pt 0'
+    // Preserva margem-bottom de títulos (>=18pt) – ex.: COMUNICADO DE VIOLAÇÃO
+    const mbOrig = parseFloat(p.style.marginBottom) || 0
+    const isTitle = p.style.textAlign === 'center' && p.style.fontWeight === '700' && mbOrig >= 18
+    p.style.margin = isTitle ? `0 0 ${Math.max(mbOrig, 18)}pt 0` : '0 0 4.5pt 0'
   })
 
   // Substitui placeholders 'XXXX' de Conselho Tutelar pelo CT real do usuário logado
