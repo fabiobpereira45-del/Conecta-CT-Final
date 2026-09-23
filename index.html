@@ -537,20 +537,14 @@ function exportarWord() {
   const bannerHtml = _bannerParaWord(banner)
   const bodyHtml   = [...formDocs].map(d => _paraWord(d)).join('<br>')
 
-  // Monta HTML completo compatível com Word.
-  // O cabeçalho vai no `mso-element:header` — é a convenção antiga do próprio Word para
-  // "Salvar como Página da Web": ao reabrir esse HTML, o Word reconhece o `div#header` como
-  // cabeçalho de página de verdade (repete no topo de cada página, fora da margem do texto),
-  // em vez de ficar como conteúdo comum no topo do corpo.
+  // Monta o HTML "de papel" e manda para o conversor com LibreOffice (api/gerar-docx),
+  // que devolve um .docx de verdade (OOXML), com justificação, tabelas e imagem reais —
+  // bem mais fiel que a conversão puramente no navegador.
   const html = `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office"
-      xmlns:w="urn:schemas-microsoft-com:office:word"
-      xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8">
+<html><head><meta charset="utf-8">
 <style>
-  @page Section1 { size: 21cm 29.7cm; margin: 2cm 2cm 2cm 2cm; mso-header-margin: 1cm; mso-footer-margin: 1cm; }
-  div.Section1 { page: Section1; }
-  body { font-family: "Times New Roman", serif; font-size: 12pt; color: #1a2332; margin: 2cm; }
+  @page { size: 21cm 29.7cm; margin: 2cm; }
+  body { font-family: "Times New Roman", serif; font-size: 12pt; color: #1a2332; }
   /* Sem essas regras diretas em <p>, o espaçamento herdado do line-height:2 usado na tela
      (bom para leitura em tela, exagerado no papel) faz o texto "saltar" entre parágrafos. */
   p { margin: 0 0 8pt 0; line-height: 1.5; text-align: justify; }
@@ -564,14 +558,37 @@ function exportarWord() {
 </style>
 </head>
 <body>
-<div style="mso-element:header" id="header"><p class="MsoHeader" style="margin:0;text-align:left">${bannerHtml}</p></div>
-<div class="Section1">
+${bannerHtml}
 <div style="margin-top:16pt">${bodyHtml}</div>
-</div>
 </body></html>`
 
+  _baixarDocx(html, formName)
+}
+
+// Pede o .docx ao conversor com LibreOffice; se ele estiver fora do ar, cai de volta
+// para a conversão simples no navegador (menos fiel, mas nunca deixa sem nenhum arquivo).
+async function _baixarDocx(html, formName) {
   try {
-    const blob = window.htmlDocx ? htmlDocx.asBlob(html) : new Blob([html], {type:'application/msword'})
+    const r = await fetch('/api/gerar-docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html, filename: formName })
+    })
+    if (!r.ok) throw new Error('conversor indisponível (' + r.status + ')')
+    const blob = await r.blob()
+    _disparaDownload(blob, formName)
+  } catch (e) {
+    console.warn('Conversor com LibreOffice falhou, usando conversão local:', e)
+    showToast('Conversor avançado indisponível — gerando versão simplificada do Word.')
+    _baixarDocxLocal(html, formName)
+  }
+}
+function _baixarDocxLocal(html, formName) {
+  const blob = window.htmlDocx ? htmlDocx.asBlob(html) : new Blob([html], {type:'application/msword'})
+  _disparaDownload(blob, formName)
+}
+function _disparaDownload(blob, formName) {
+  try {
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
     a.href     = url
