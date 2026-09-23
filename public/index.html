@@ -878,7 +878,7 @@ async function _restoreSession() {
   currentUser = { id: row.id, name: row.nome, email: row.email, role: row.role, ct: row.ct || null,
     ctFull: row.role === 'master' ? 'Todos os 24 Conselhos' : (ctMatch ? ctMatch.nome : (row.ct || '')),
     initials: (row.nome || 'U').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase(),
-    senhaHash: row.senha_hash, viaAuth: true, telefone: row.telefone || '' }
+    senhaHash: row.senha_hash, viaAuth: true, telefone: row.telefone || '', photoUrl: row.foto_url || null }
   _enterApp()
 }
 window.addEventListener('load', () => { _restoreSession() })
@@ -930,7 +930,8 @@ async function doLogin() {
       initials,
       senhaHash: row.senha_hash,
       viaAuth:   !!sess,
-      telefone:  row.telefone || ''
+      telefone:  row.telefone || '',
+      photoUrl:  row.foto_url || null
     }
 
     _loadState()
@@ -6580,24 +6581,41 @@ function handleAvatarUpload(event) {
   const file = event.target.files[0]
   if (!file) return
   if (!file.type.startsWith('image/')) { showToast('Selecione uma imagem válida.'); return }
-  if (file.size > 5 * 1024 * 1024) { showToast('Imagem muito grande. Máximo 5 MB.'); return }
+  // Limite menor que o de upload comum: a foto vira uma data URL salva direto na
+  // coluna foto_url (texto), sem bucket de Storage — arquivos grandes deixariam a
+  // linha do usuário pesada e podem passar do limite da requisição PATCH.
+  if (file.size > 1.5 * 1024 * 1024) { showToast('Imagem muito grande. Máximo 1,5 MB.'); return }
 
   const reader = new FileReader()
-  reader.onload = (e) => {
-    currentUser.photoUrl = e.target.result
-    // Atualiza sidebar
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result
+    currentUser.photoUrl = dataUrl
     updateSidebarUser()
-    // Re-renderiza perfil com a nova foto
     document.getElementById('content').innerHTML = renderProfile()
+    if (!(await _salvarFotoPerfil(dataUrl))) {
+      showToast('Foto exibida, mas não foi possível salvá-la — ao sair, ela será perdida.')
+      return
+    }
     showToast('Foto de perfil atualizada!')
   }
   reader.readAsDataURL(file)
 }
-function removeAvatar() {
+async function removeAvatar() {
   currentUser.photoUrl = null
   updateSidebarUser()
   document.getElementById('content').innerHTML = renderProfile()
+  if (!(await _salvarFotoPerfil(null))) { showToast('Não foi possível remover a foto salva.'); return }
   showToast('Foto removida.')
+}
+async function _salvarFotoPerfil(dataUrlOuNull) {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${currentUser.id}`, {
+      method: 'PATCH',
+      headers: _sbHeaders(),
+      body: JSON.stringify({ foto_url: dataUrlOuNull })
+    })
+    return r.ok
+  } catch (e) { return false }
 }
 
 async function _loadProfileStats() {
