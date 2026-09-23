@@ -157,6 +157,9 @@ nav{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:2px;overflow
 .form-card .fc-num{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;margin-bottom:6px}
 .form-card .fc-name{font-size:13px;font-weight:600;line-height:1.4}
 .form-card .fc-cat{font-size:11px;color:var(--text-muted);margin-top:4px}
+.form-card.fc-featured{border-color:var(--primary);background:var(--primary-subtle)}
+.form-card.fc-featured:hover{box-shadow:0 0 0 3px rgba(30,58,95,.12)}
+.form-card.fc-featured .fc-num{color:var(--primary)}
 .forms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .fill-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
 .fill-header button{display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:13px;transition:color .15s}
@@ -617,9 +620,9 @@ let atendimentoCounter = 0
 
 // ── FORMS DATA ──
 const FORMS = [
+  {id:3,name:'Ficha de Atendimento',category:'Atendimento'},
   {id:1,name:'Comunicado de Violação de Direitos',category:'Comunicados'},
   {id:2,name:'Remessa de Atendimento',category:'Atendimento'},
-  {id:3,name:'Ficha de Atendimento',category:'Atendimento'},
   {id:4,name:'Retorno de Atendimento',category:'Atendimento'},
   {id:5,name:'Termo de Atendimento',category:'Termos'},
   {id:6,name:'Atestado de Comparecimento',category:'Atestados'},
@@ -2194,8 +2197,8 @@ function getFormsGrid(filtered) {
     })
   }
   return filtered.map(f=>`
-  <div class="form-card" onclick="openFormFill(${f.id})">
-    <div class="fc-num">Nº ${String(f.id).padStart(2,'0')}</div>
+  <div class="form-card${f.id===3?' fc-featured':''}" onclick="openFormFill(${f.id})">
+    <div class="fc-num">Nº ${String(f.id).padStart(2,'0')}${f.id===3?' · ⭐ Mais usada':''}</div>
     <div class="fc-name">${f.name}</div>
     <div class="fc-cat">${f.category}</div>
   </div>`).join('') || '<div class="empty" style="grid-column:1/-1"><p>Nenhum formulário encontrado.</p></div>'
