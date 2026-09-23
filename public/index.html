@@ -1712,9 +1712,12 @@ async function executarExcluirFicha(protocolo) {
   // Guarda uma cópia completa no histórico antes de excluir (o histórico não pode ser apagado)
   try { const copia = await _f03Buscar(protocolo); await _f03Log(protocolo, 'excluida', { copia }) } catch(e) {}
   await _db_excluirFicha(protocolo)
+  // Permanece na própria caixa de fichas — sem depender de lookup em NAV_ALL
+  activeModule = 'fichas-inbox'
+  document.getElementById('page-title').textContent = 'Fichas Recebidas'
   buildNav()
+  renderContent()
   showToast('✅ Ficha excluída com sucesso.')
-  navigate('fichas-inbox')
 }
 
 function copiarProtocolo(proto) {
