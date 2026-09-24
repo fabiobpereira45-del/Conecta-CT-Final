@@ -2216,7 +2216,11 @@ function enviarFichaAoConselheiro() {
 let _statsDadosBrutos = []
 let _statsFiltroAno = ''
 let _statsFiltroMes = ''
+let _statsFiltroTrimestre = ''
+let _statsFiltroSemestre  = ''
 let _statsFiltroCt  = ''
+const _STATS_TRIMESTRES = { '1':[0,1,2], '2':[3,4,5], '3':[6,7,8], '4':[9,10,11] }
+const _STATS_SEMESTRES  = { '1':[0,1,2,3,4,5], '2':[6,7,8,9,10,11] }
 
 async function _statsCarregar() {
   const role = currentUser.role
@@ -2269,7 +2273,10 @@ function _statsFiltrar(rows) {
     if (_statsFiltroAno) {
       const d = new Date(f.created_at)
       if (String(d.getFullYear()) !== _statsFiltroAno) return false
-      if (_statsFiltroMes !== '' && String(d.getMonth()) !== _statsFiltroMes) return false
+      const mes = d.getMonth()
+      if (_statsFiltroMes !== '' && String(mes) !== _statsFiltroMes) return false
+      if (_statsFiltroTrimestre !== '' && !_STATS_TRIMESTRES[_statsFiltroTrimestre].includes(mes)) return false
+      if (_statsFiltroSemestre !== '' && !_STATS_SEMESTRES[_statsFiltroSemestre].includes(mes)) return false
     }
     if (_statsFiltroCt && currentUser.role === 'master' && (f.ct_destino||'') !== _statsFiltroCt) return false
     return true
@@ -2328,6 +2335,22 @@ function _statsRenderComFiltros() {
         ${_STATS_MESES.map((m,i)=>`<option value="${i}" ${String(i)===_statsFiltroMes?'selected':''}>${m}</option>`).join('')}
       </select>
     </div>
+    <div><label class="field-label">Trimestre</label>
+      <select onchange="_statsSetFiltro('trimestre', this.value)" ${!_statsFiltroAno?'disabled':''}>
+        <option value="">Todos</option>
+        <option value="1" ${_statsFiltroTrimestre==='1'?'selected':''}>1º Trimestre (Jan–Mar)</option>
+        <option value="2" ${_statsFiltroTrimestre==='2'?'selected':''}>2º Trimestre (Abr–Jun)</option>
+        <option value="3" ${_statsFiltroTrimestre==='3'?'selected':''}>3º Trimestre (Jul–Set)</option>
+        <option value="4" ${_statsFiltroTrimestre==='4'?'selected':''}>4º Trimestre (Out–Dez)</option>
+      </select>
+    </div>
+    <div><label class="field-label">Semestre</label>
+      <select onchange="_statsSetFiltro('semestre', this.value)" ${!_statsFiltroAno?'disabled':''}>
+        <option value="">Todos</option>
+        <option value="1" ${_statsFiltroSemestre==='1'?'selected':''}>1º Semestre (Jan–Jun)</option>
+        <option value="2" ${_statsFiltroSemestre==='2'?'selected':''}>2º Semestre (Jul–Dez)</option>
+      </select>
+    </div>
     ${role==='master' ? `<div><label class="field-label">Conselho Tutelar</label>
       <select onchange="_statsSetFiltro('ct', this.value)">
         <option value="">Todos os 24 Conselhos</option>
@@ -2367,8 +2390,10 @@ function _statsRenderComFiltros() {
 }
 
 function _statsSetFiltro(campo, valor) {
-  if (campo === 'ano') { _statsFiltroAno = valor; _statsFiltroMes = '' }
-  else if (campo === 'mes') _statsFiltroMes = valor
+  if (campo === 'ano') { _statsFiltroAno = valor; _statsFiltroMes = ''; _statsFiltroTrimestre = ''; _statsFiltroSemestre = '' }
+  else if (campo === 'mes')       { _statsFiltroMes = valor; _statsFiltroTrimestre = ''; _statsFiltroSemestre = '' }
+  else if (campo === 'trimestre') { _statsFiltroTrimestre = valor; _statsFiltroMes = ''; _statsFiltroSemestre = '' }
+  else if (campo === 'semestre')  { _statsFiltroSemestre = valor; _statsFiltroMes = ''; _statsFiltroTrimestre = '' }
   else if (campo === 'ct') _statsFiltroCt = valor
   document.getElementById('content').innerHTML = _statsRenderComFiltros()
 }
@@ -2380,7 +2405,13 @@ function downloadMinhasEstatisticasPDF() {
   const role = currentUser.role
   const now = new Date()
   const titulo = role === 'master' ? 'Estatísticas Gerais' : (role === 'coordenador' ? `Estatísticas – ${currentUser.ctFull||currentUser.ct||''}` : 'Minhas Estatísticas')
-  const periodo = [_statsFiltroMes!==''?_STATS_MESES[+_statsFiltroMes]:null, _statsFiltroAno||null].filter(Boolean).join(' de ') || 'Todos os períodos'
+  const rotuloTrimestre = { '1':'1º Trimestre (Jan–Mar)', '2':'2º Trimestre (Abr–Jun)', '3':'3º Trimestre (Jul–Set)', '4':'4º Trimestre (Out–Dez)' }
+  const rotuloSemestre  = { '1':'1º Semestre (Jan–Jun)', '2':'2º Semestre (Jul–Dez)' }
+  const recorte = _statsFiltroMes !== '' ? _STATS_MESES[+_statsFiltroMes]
+    : _statsFiltroTrimestre ? rotuloTrimestre[_statsFiltroTrimestre]
+    : _statsFiltroSemestre  ? rotuloSemestre[_statsFiltroSemestre]
+    : null
+  const periodo = [recorte, _statsFiltroAno||null].filter(Boolean).join(' de ') || 'Todos os períodos'
 
   const secao = (t, dict) => {
     const entries = Object.entries(dict).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
