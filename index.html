@@ -2663,9 +2663,12 @@ function renderForms() {
     </div>
   </div>
   ${_councilBannerHtml()}
-  <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+  <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
     <div class="search-box" style="max-width:300px">${I.search}<input id="forms-search" placeholder="Buscar formulário…" value="${formsSearch}" /></div>
+    <div class="search-box" style="max-width:340px;flex:1;min-width:260px">${I.search}<input id="f03-busca-assistido" placeholder="Buscar assistido por nome, CPF ou protocolo…" onkeydown="if(event.key==='Enter'){event.preventDefault();_f03BuscarAssistido()}" /></div>
+    <button class="btn btn-outline btn-sm" onclick="_f03BuscarAssistido()">Buscar atendimento anterior</button>
   </div>
+  <div id="f03-busca-resultado" style="margin-bottom:14px"></div>
   <div class="chip-row" style="margin-bottom:16px">
     ${cats.map(c=>`<button class="chip${formsCategory===c?' active':''}" onclick="setFormsCategory('${c}')">${c}</button>`).join('')}
   </div>
@@ -4017,6 +4020,7 @@ function renderForm03(form) {
         ${td(`Hora: <input id="f03a-hora" data-label="Hora do atendimento" type="time" style="width:100px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit"/>`)}
         ${td(`Protocolo: <strong id="f03-protocolo" style="font-family:monospace;color:var(--primary)">gerado ao direcionar</strong>`, 2)}
       </tr>
+      <tr>${td(`Atendimento: ${C('atend-primeiro','Atendimento: 1º atendimento','1º ATENDIMENTO')} &nbsp; ${C('atend-retorno','Atendimento: retorno','RETORNO')}`, 4)}</tr>
     </table>
     <!-- Grid de 4 colunas fixas: mantém todas as linhas (Nome, CEP, Bairro/Nº…) alinhadas na
          mesma grade vertical, tanto na tela quanto no Word/impressão. Sem isso, cada linha
@@ -4045,6 +4049,16 @@ function renderForm03(form) {
         ${td(`POSSUI LAUDO? ${C('laudo-sim','Laudo: sim','SIM')} ${C('laudo-nao','Laudo: não','NÃO')}`, 2)}
       </tr>
       <tr>${td(`Condição: ${F03_NEURO.map((n, i) => C('neuro-' + i, 'Condição: ' + n, n)).join(' ')} &nbsp; Outra: ${L('neuro-outra', 'Condição: outra', '160px', 'placeholder="______"')}`, 4)}</tr>
+      <tr>${td(`Possui irmão(s) também atendido(s) junto com esta criança/adolescente?
+        <label class="f03-check"><input type="checkbox" id="f03a-tem-irmaos-sim" data-label="Possui irmãos: sim" style="width:auto" onchange="_f03ToggleIrmaos(this,true)"> SIM</label>
+        <label class="f03-check"><input type="checkbox" id="f03a-tem-irmaos-nao" data-label="Possui irmãos: não" style="width:auto" onchange="_f03ToggleIrmaos(this,false)"> NÃO</label>
+        <span id="f03a-irmaos-qtd-wrap" style="display:none;margin-left:12px">Quantidade:
+          <select id="f03a-irmaos-qtd" data-label="Quantidade de irmãos" onchange="_f03IrmaosRender(this.value)" style="width:60px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit;font-size:inherit">
+            <option value="">--</option>
+            ${[1,2,3,4,5,6].map(n=>`<option value="${n}">${n}</option>`).join('')}
+          </select>
+        </span>`, 4)}</tr>
+      <tbody id="f03a-irmaos-lista"></tbody>
       ${genitor('mae', 'MÃE')}
       ${genitor('pai', 'PAI')}
       ${th('RESPONSÁVEL LEGAL (se não for a mãe ou o pai)')}
@@ -4202,6 +4216,45 @@ function _f03CopiarEnderecoMae(chk) {
   })
 }
 
+// ── Irmãos atendidos junto (mesma ficha) ──
+function _f03ToggleIrmaos(el, sim) {
+  const outro = document.getElementById(sim ? 'f03a-tem-irmaos-nao' : 'f03a-tem-irmaos-sim')
+  const wrap  = document.getElementById('f03a-irmaos-qtd-wrap')
+  if (el.checked && outro) outro.checked = false
+  if (sim && el.checked) { wrap.style.display = '' }
+  else if (!sim && el.checked || (sim && !el.checked)) {
+    wrap.style.display = 'none'
+    const qtd = document.getElementById('f03a-irmaos-qtd')
+    if (qtd) qtd.value = ''
+    _f03IrmaosRender('')
+  }
+}
+// Monta os blocos de campos de cada irmão (mesmo padrão da criança principal), preservando
+// os dados já digitados quando a quantidade aumenta (só recria o que faltar).
+function _f03IrmaosRender(qtd) {
+  const cont = document.getElementById('f03a-irmaos-lista')
+  if (!cont) return
+  const n = parseInt(qtd, 10) || 0
+  const L = (id, label, w, extra='') => `<input id="f03a-${id}" data-label="${label}" style="width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" ${extra}/>`
+  const C = (id, label, txt) => `<label class="f03-check"><input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"> ${txt}</label>`
+  const td = (html, span=1) => `<td style="padding:6px 8px;border:1px solid #ccc"${span>1?` colspan="${span}"`:''}>${html}</td>`
+  const th = (txt) => `<tr style="background:#f0f4f8"><td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">${txt}</td></tr>`
+  let html = ''
+  for (let i = 1; i <= n; i++) {
+    const p = 'irmao' + i
+    html += th('IRMÃO(Ã) ' + i)
+    html += `<tr>${td(`Nome: ${L(p+'-nome', 'Irmão '+i+': nome', 'calc(100% - 60px)', 'placeholder="Nome completo"')}`, 4)}</tr>`
+    html += `<tr>
+      ${td(`Data de nasc.: ${L(p+'-nasc', 'Irmão '+i+': nascimento', '110px', 'type="date"')}`)}
+      ${td(`Idade: ${L(p+'-idade', 'Irmão '+i+': idade', '50px', 'placeholder="__"')}`)}
+      ${td(`${C(p+'-sexo-masc','Irmão '+i+': sexo masculino','MASC')} &nbsp; ${C(p+'-sexo-fem','Irmão '+i+': sexo feminino','FEM')}`)}
+      ${td(`PCD? ${C(p+'-pcd-sim','Irmão '+i+': PCD sim','SIM')} ${C(p+'-pcd-nao','Irmão '+i+': PCD não','NÃO')}`)}
+    </tr>`
+    html += `<tr>${td(`ESTUDA? ${C(p+'-estuda-sim','Irmão '+i+': estuda sim','SIM')} ${C(p+'-estuda-nao','Irmão '+i+': estuda não','NÃO')} &nbsp; Escola: ${L(p+'-escola','Irmão '+i+': escola','calc(100% - 340px)','placeholder="Nome da escola"')}`, 4)}</tr>`
+  }
+  cont.innerHTML = html
+}
+
 function _f03Coletar(prefixo) {
   const out = {}
   document.querySelectorAll(`#content [id^="${prefixo}"]`).forEach(el => {
@@ -4350,6 +4403,12 @@ function _f03Render() {
   if (banner && f.ct_destino) banner.outerHTML = _councilBannerHtml(3, f.ct_destino)
   document.getElementById('f03-protocolo').textContent = f.protocolo
   _f03Aplicar(f.campos_snapshot)
+  const qtdIrmaos = f.campos_snapshot?.['f03a-irmaos-qtd']
+  if (qtdIrmaos) {
+    document.getElementById('f03a-irmaos-qtd-wrap').style.display = ''
+    _f03IrmaosRender(qtdIrmaos)
+    _f03Aplicar(f.campos_snapshot)
+  }
   _f03Travar('f03a-', true)
   document.getElementById('f03-bloco-direcionar').style.display = 'none'
 
@@ -4627,6 +4686,63 @@ async function consultarFichas() {
         <button class="btn btn-outline btn-sm" onclick="_f03Historico('${esc(f.protocolo)}')">📜</button></td>
     </tr>`).join('')}</tbody>
   </table></div></div>`
+}
+
+// Busca rápida (tela de Formulários) por nome, CPF ou protocolo, para o atendente/conselheiro
+// verificar se o assistido já tem uma Ficha de Atendimento (03) antes de abrir uma nova.
+// Se houver exatamente uma ficha e o termo digitado parecer um CPF, abre direto a ficha
+// anterior; caso contrário, lista os resultados para escolha manual.
+async function _f03BuscarAssistido() {
+  const inp = document.getElementById('f03-busca-assistido')
+  const out = document.getElementById('f03-busca-resultado')
+  const bruto = (inp?.value || '').trim()
+  if (!bruto) { showToast('Digite um nome, CPF ou protocolo para buscar.'); return }
+  out.innerHTML = '<div class="card card-pad" style="text-align:center;color:var(--text-muted)">Buscando…</div>'
+
+  const limpo = s => s.replace(/[,()"*:\\]/g, ' ').trim()
+  const q = v => `"${String(v).replace(/"/g, '')}"`
+  const nome = limpo(_f03Norm(bruto)), txt = limpo(bruto), cpf = _f03Digitos(bruto)
+  const ors = [`protocolo.ilike.${q('*'+txt+'*')}`, `busca_crianca.ilike.${q('*'+nome+'*')}`, `nome_crianca.ilike.${q('*'+txt+'*')}`, `busca_genitores.ilike.${q('*'+nome+'*')}`]
+  if (cpf) ors.push(`busca_cpfs.ilike.${q('*'+cpf+'*')}`)
+  const conds = [`or(${ors.join(',')})`, `form_id.eq.3`]
+  if (!_vêTudo()) {
+    const ct = q(currentUser.ct || '-'), me = currentUser.id || '00000000-0000-0000-0000-000000000000'
+    if (currentUser.role === 'atendente') conds.push(`or(ct_destino.eq.${ct},criado_por_id.eq.${me})`)
+    else conds.push(`or(conselheiro_dest_id.eq.${me},conselheiro_dest.eq.${q(currentUser.name)},criado_por_id.eq.${me},and(ct_destino.eq.${ct},conselheiro_dest.is.null))`)
+  }
+
+  let rows = []
+  try {
+    const sel = 'protocolo,nome_crianca,ct_destino,conselheiro_dest,status,created_at'
+    const r = await fetch(`${_SB_URL}/rest/v1/fichas?select=${sel}&and=${encodeURIComponent('(' + conds.join(',') + ')')}&order=created_at.desc&limit=20`, { headers: _sbHeaders() })
+    if (!r.ok) throw new Error(await r.text())
+    rows = await r.json()
+  } catch (e) { out.innerHTML = `<div class="card card-pad" style="color:var(--danger)">Erro na busca: ${esc(e.message)}</div>`; return }
+
+  if (!rows.length) {
+    out.innerHTML = `<div class="card card-pad" style="font-size:12px;color:var(--text-muted)">Nenhum atendimento anterior encontrado para "${esc(bruto)}". Pode preencher a Ficha de Atendimento normalmente, marcando <strong>1º Atendimento</strong>.</div>`
+    return
+  }
+  if (rows.length === 1 && cpf.length >= 11) {
+    showToast('Atendimento anterior encontrado — abrindo a ficha existente.')
+    _f03Abrir(rows[0].protocolo)
+    return
+  }
+  const stLabel = { direcionada: 'Direcionada', em_atendimento: 'Em atendimento', encaminhada: 'Encaminhada' }
+  out.innerHTML = `<div class="card">
+    <div style="padding:10px 16px;font-size:12px;color:var(--text-muted)">${rows.length} atendimento(s) anterior(es) encontrado(s) — abra um para marcar como <strong>Retorno</strong>, ou feche esta lista e preencha uma nova ficha marcando <strong>1º Atendimento</strong>.</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Protocolo</th><th>Criança/Adolescente</th><th>Data</th><th>CT · Conselheiro</th><th>Situação</th><th></th></tr></thead>
+      <tbody>${rows.map(f => `<tr>
+        <td style="font-family:monospace;font-weight:700;color:var(--primary);white-space:nowrap">${esc(f.protocolo)}</td>
+        <td style="font-weight:600">${esc(f.nome_crianca || '—')}</td>
+        <td style="font-size:12px;white-space:nowrap">${new Date(f.created_at).toLocaleDateString('pt-BR')}</td>
+        <td style="font-size:12px">${esc(f.ct_destino || '—')}<br><span style="color:var(--text-muted)">${esc(f.conselheiro_dest || 'sem conselheiro')}</span></td>
+        <td style="font-size:12px">${esc(stLabel[f.status] || f.status || '—')}</td>
+        <td><button class="btn btn-primary btn-sm" onclick="_f03Abrir('${esc(f.protocolo)}')">Abrir ficha anterior</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`
 }
 
 // ── ID 4: Retorno de Atendimento ──
