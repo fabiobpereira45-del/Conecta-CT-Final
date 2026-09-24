@@ -1,3 +1,9 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e3a5f">
 <title>Conecta-CT</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -111,17 +117,98 @@ nav{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:2px;overflow
   height:56px;border-bottom:1px solid var(--border);background:var(--card);
   display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;
 }
-#topbar h2{font-size:15px;font-weight:600;flex:1}
-#hamburger{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;transition:background .15s}
+#topbar h2{font-size:15px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hamburger{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;transition:background .15s;flex-shrink:0}
 #hamburger:hover{background:var(--sidebar-hover)}
-#content{flex:1;overflow-y:auto;padding:24px}
+#content{flex:1;overflow-y:auto;padding:24px;-webkit-overflow-scrolling:touch}
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MOBILE — telas de toque (celular/tablet pequeno)
+   Todo elemento tocável tem no mínimo 44px (guideline iOS/Android) e o
+   viewport tem safe-area para notch/home-indicator (meta viewport-fit=cover).
+   ══════════════════════════════════════════════════════════════════════ */
 @media(max-width:768px){
-  #sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%)}
+  html,body{font-size:15px}
+  #sidebar{
+    position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);
+    width:min(280px,84vw);min-width:0;box-shadow:0 0 40px rgba(0,0,0,.25);
+    padding-top:env(safe-area-inset-top);
+  }
   #sidebar.open{transform:translateX(0)}
   #overlay.open{display:block}
-  #hamburger{display:flex}
-  #content{padding:16px}
+  #hamburger{display:flex;width:44px;height:44px;-webkit-tap-highlight-color:transparent}
+  #topbar{padding:0 12px;padding-top:env(safe-area-inset-top);height:auto;min-height:56px}
+  #content{padding:14px;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+
+  /* Toque: itens de navegação, botões e chips crescem para a área mínima de toque */
+  .nav-item{min-height:46px;padding:11px 12px;font-size:14px}
+  .btn{min-height:40px;padding:9px 16px}
+  .btn-sm{min-height:36px;padding:7px 14px}
+  .chip{min-height:32px;padding:6px 14px}
+  .dark-toggle,.cep-btn,.form-admin-actions button{width:38px;height:38px}
+  .btn-logout{min-height:44px}
+  .sidebar-user{min-height:56px}
+  button,.btn,.nav-item,.chip,a{-webkit-tap-highlight-color:rgba(30,58,95,.12);touch-action:manipulation}
+
+  /* iOS aumenta o zoom automaticamente em inputs com font-size < 16px */
+  input,select,textarea{font-size:16px}
+
+  /* Cabeçalhos de página e faixas com botão de ação: empilham em vez de espremer */
+  .page-header{display:flex;flex-direction:column;align-items:stretch !important;gap:10px}
+  .page-header > div:first-child{width:100%}
+  .page-header .btn,.page-header button.btn{width:100%;justify-content:center}
+  .home-welcome{flex-direction:column;align-items:flex-start;gap:12px}
+  .home-welcome .hw-badge{align-self:flex-start}
+
+  /* Tabelas: rolagem horizontal suave com indicação visual de que há mais conteúdo */
+  .table-wrap{
+    -webkit-overflow-scrolling:touch;
+    background:linear-gradient(to right,var(--card) 30%,rgba(255,255,255,0)),
+               linear-gradient(to right,rgba(255,255,255,0),var(--card) 70%) 100% 0,
+               linear-gradient(to right,rgba(0,0,0,.08),rgba(0,0,0,0)),
+               linear-gradient(to left,rgba(0,0,0,.08),rgba(0,0,0,0)) 100% 0;
+    background-repeat:no-repeat;background-color:var(--card);
+    background-size:20px 100%,20px 100%,8px 100%,8px 100%;
+    background-attachment:local,local,scroll,scroll;
+  }
+  th,td{padding:10px 12px;font-size:12.5px}
+
+  /* Modais: quase tela cheia, com rodapé de ações fixo no fim e botões empilhados */
+  .modal-backdrop{padding:0;align-items:flex-end}
+  .modal-box{
+    max-width:100%;width:100%;max-height:92vh;border-radius:16px 16px 0 0;
+    padding:20px 18px calc(18px + env(safe-area-inset-bottom));
+  }
+  .modal-footer{flex-direction:column-reverse;gap:8px}
+  .modal-footer .btn{width:100%;justify-content:center;min-height:44px}
+
+  /* Formulários: campos lado a lado viram uma coluna só */
+  .cep-group{grid-template-columns:1fr}
+  .cep-fields,.cep-fields-3{grid-template-columns:1fr}
+  .field-row.cols-2,.field-row.cols-3{grid-template-columns:1fr}
+
+  /* Linhas com ações (aprovações, formulários admin) empilham para não cortar botões */
+  .approval-row{flex-direction:column;align-items:stretch;gap:10px}
+  .approval-actions{justify-content:stretch}
+  .approval-actions .btn{flex:1}
+  .agenda-item{flex-wrap:wrap}
+
+  /* Toast de aviso: largura total, respeitando a área segura embaixo */
+  #toast{
+    left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));
+    max-width:none;text-align:center;
+  }
+
+  .auth-card{padding:28px 20px}
+  .modal-title{font-size:16px}
+}
+
+/* Telas bem pequenas (a maioria dos celulares em pé) */
+@media(max-width:420px){
+  .grid-3,.grid-2{grid-template-columns:1fr}
+  .stat-card .value{font-size:26px}
+  .forms-grid{grid-template-columns:1fr}
 }
 
 /* ── Components ── */
@@ -335,6 +422,8 @@ tr:hover td{background:var(--sidebar-hover)}
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 </style>
+</head>
+<body>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 
 <!-- AUTH -->
@@ -8201,3 +8290,5 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('app').style.display = 'none'
 document.getElementById('pending-screen').style.display = 'none'
 </script>
+</body>
+</html>
