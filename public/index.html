@@ -4020,7 +4020,9 @@ function renderForm03(form) {
         ${td(`Hora: <input id="f03a-hora" data-label="Hora do atendimento" type="time" style="width:100px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit"/>`)}
         ${td(`Protocolo: <strong id="f03-protocolo" style="font-family:monospace;color:var(--primary)">gerado ao direcionar</strong>`, 2)}
       </tr>
-      <tr>${td(`Atendimento: ${C('atend-primeiro','Atendimento: 1º atendimento','1º ATENDIMENTO')} &nbsp; ${C('atend-retorno','Atendimento: retorno','RETORNO')}`, 4)}</tr>
+      <tr>${td(`Atendimento:
+        <label class="f03-check"><input type="checkbox" id="f03a-atend-primeiro" data-label="Atendimento: 1º atendimento" style="width:auto" onchange="_f03ToggleAtendimento(this,false)"> 1º ATENDIMENTO</label>
+        <label class="f03-check"><input type="checkbox" id="f03a-atend-retorno" data-label="Atendimento: retorno" style="width:auto" onchange="_f03ToggleAtendimento(this,true)"> RETORNO</label>`, 4)}</tr>
     </table>
     <!-- Grid de 4 colunas fixas: mantém todas as linhas (Nome, CEP, Bairro/Nº…) alinhadas na
          mesma grade vertical, tanto na tela quanto no Word/impressão. Sem isso, cada linha
@@ -4086,6 +4088,12 @@ function renderForm03(form) {
 
     <!-- Situação da ficha (depois de direcionada) -->
     <div id="f03-status" style="display:none;margin-top:20px;padding:14px 16px;border-radius:12px;border:1px solid #a5d6a7;background:#e8f5e9;font-size:13px"></div>
+
+    <!-- Retorno: reabre os campos do atendente numa ficha já direcionada -->
+    <div id="f03-retorno-aviso" class="no-print" style="display:none;margin-top:16px;padding:14px 16px;border-radius:12px;border:1px solid #fdba74;background:#fff7ed;font-size:12px;color:#9a3412">
+      🔓 Atendimento marcado como <strong>Retorno</strong>: os campos acima foram desbloqueados para atualização (ex.: incluir irmão(s) atendido(s) nesta visita).
+      <div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="_f03SalvarAtendente()">💾 Salvar atualização do atendimento</button></div>
+    </div>
   </div>
   </div>
 
@@ -4273,6 +4281,36 @@ function _f03Aplicar(valores) {
 function _f03Travar(prefixo, travar) {
   document.querySelectorAll(`#content [id^="${prefixo}"]`).forEach(el => { el.disabled = travar })
 }
+// Trava/destrava a seção do atendente, mas sempre deixa clicáveis os dois checkboxes de
+// "Atendimento" — senão, ao travar de novo, o próprio controle que liga o Retorno ficaria
+// preso e ninguém conseguiria desmarcá-lo.
+function _f03TravarAtendente(travar) {
+  document.querySelectorAll('#content [id^="f03a-"]').forEach(el => {
+    if (el.id === 'f03a-atend-primeiro' || el.id === 'f03a-atend-retorno') return
+    el.disabled = travar
+  })
+}
+// Marcar "Retorno" numa ficha já direcionada reabre os campos do atendente (para atualizar
+// dados e, principalmente, incluir irmãos atendidos nesta nova visita). "1º Atendimento"
+// mantém tudo travado como uma ficha finalizada normalmente fica.
+function _f03ToggleAtendimento(el, retorno) {
+  const outro = document.getElementById(retorno ? 'f03a-atend-primeiro' : 'f03a-atend-retorno')
+  if (el.checked && outro) outro.checked = false
+  if (!_f03Ficha) return   // ficha nova ainda não salva: os campos já estão editáveis
+  const destrava = retorno && el.checked
+  _f03TravarAtendente(!destrava)
+  const aviso = document.getElementById('f03-retorno-aviso')
+  if (aviso) aviso.style.display = destrava ? 'block' : 'none'
+}
+async function _f03SalvarAtendente() {
+  if (!_f03Ficha) return
+  const novo = _f03Coletar('f03a-')
+  try {
+    _f03Ficha = await _f03Atualizar(_f03Ficha.protocolo, { campos_snapshot: novo })
+    await _f03Log(_f03Ficha.protocolo, 'atendimento_atualizado', {})
+    showToast('Atendimento atualizado com sucesso.')
+  } catch (e) { showToast('Erro ao salvar: ' + e.message) }
+}
 function _f03Rotulo(id) {
   return document.getElementById(id)?.dataset.label || id
 }
@@ -4409,7 +4447,7 @@ function _f03Render() {
     _f03IrmaosRender(qtdIrmaos)
     _f03Aplicar(f.campos_snapshot)
   }
-  _f03Travar('f03a-', true)
+  _f03TravarAtendente(true)
   document.getElementById('f03-bloco-direcionar').style.display = 'none'
 
   const dest = _f03EhDestinatario(f)
@@ -4546,7 +4584,7 @@ function _f03Abrir(protocolo) {
 const F03_ACOES = {
   criada: '🆕 Ficha criada', direcionada: '📨 Direcionada', visualizada: '👁️ Visualizada',
   complemento_salvo: '💾 Complemento salvo', remetida: '🔄 Remetida', encaminhada: '📤 Encaminhada a outro CT',
-  assumida: '✋ Assumida', excluida: '🗑️ Ficha excluída'
+  assumida: '✋ Assumida', excluida: '🗑️ Ficha excluída', atendimento_atualizado: '🔁 Atendimento atualizado (retorno)'
 }
 async function _f03Historico(protocolo) {
   protocolo = protocolo || _f03Ficha?.protocolo
