@@ -27,6 +27,7 @@ create trigger trg_usuarios_bloqueia_autoescalada
   before update on usuarios
   for each row execute function public.usuarios_bloqueia_autoescalada();
 
+drop policy if exists usuarios_self_update on usuarios;
 create policy usuarios_self_update on usuarios for update to authenticated
   using (auth_id = auth.uid())
   with check (auth_id = auth.uid());
