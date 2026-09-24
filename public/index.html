@@ -826,7 +826,7 @@ const NAV_ALL = [
   { id:'daily', label:'Lançamentos Diários', icon:'clipboard', roles:['master','coordenador','conselheiro'] },
   { id:'agenda', label:'Agenda', icon:'calendar', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'reports', label:'Meus Relatórios', icon:'report', roles:['master','coordenador','conselheiro'] },
-  { id:'general-stats', label:'Estatísticas Gerais', icon:'pie', roles:['master','coordenador','conselheiro'] },
+  { id:'general-stats', label:'Estatísticas Gerais', icon:'pie', roles:['master'] },
   { id:'duty-roster', label:'Escala de Plantões', icon:'clock', roles:['master','coordenador','conselheiro'] },
   { id:'photos', label:'Álbum de Fotos', icon:'image', roles:['master','coordenador','conselheiro'] },
   { id:'forms', label:'Formulários', icon:'filetext', roles:['master','coordenador','conselheiro','atendente'] },
@@ -1261,7 +1261,7 @@ function buildNav() {
     : 0
   nav.innerHTML = items.map(item => {
     if (item.id === '__sep__') return '<div class="nav-sep"></div>'
-    const label = (item.id === 'general-stats' && role !== 'master') ? 'Minhas Estatísticas' : item.label
+    const label = item.label
     const badge = (item.id === 'fichas-inbox' && unreadFichas > 0)
       ? `<span style="margin-left:auto;background:var(--danger);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 7px;min-width:18px;text-align:center">${unreadFichas}</span>`
       : ''
@@ -2208,58 +2208,224 @@ function enviarFichaAoConselheiro() {
   }
 }
 
-function renderStatistics() {
+// ── MINHAS ESTATÍSTICAS (dados reais da Ficha de Atendimento nº 03) ──
+// A estatística nasce quando o atendente registra a ficha e é completada quando
+// o conselheiro tutelar preenche o complemento (natureza da violação, encaminhamentos
+// etc.). Por isso só entram no cálculo fichas com status diferente de "direcionada"
+// (ou seja, o conselheiro já abriu/complementou o caso).
+let _statsDadosBrutos = []
+let _statsFiltroAno = ''
+let _statsFiltroMes = ''
+let _statsFiltroCt  = ''
+
+async function _statsCarregar() {
   const role = currentUser.role
-  const now = new Date()
-  const mesAtual = now.getMonth()
-  const anoAtual = now.getFullYear()
-  const nomeMes = now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})
-
-  // Filter lancamentos by current user/CT and current month
-  let myLancs = lancamentosData.filter(l => {
-    if (!l.createdAt) return false
-    const d = new Date(l.createdAt)
-    return d.getMonth() === mesAtual && d.getFullYear() === anoAtual
-  })
-  if (role !== 'master') {
-    myLancs = myLancs.filter(l => l.ct === currentUser.ct)
-    if (role === 'conselheiro') myLancs = myLancs.filter(l => l.author === currentUser.name)
+  const q = v => `"${String(v).replace(/"/g,'')}"`
+  const sel = 'protocolo,ct_destino,conselheiro_dest,conselheiro_dest_id,status,created_at,campos_snapshot,dados_conselheiro'
+  let url = `${_SB_URL}/rest/v1/fichas?form_id=eq.3&status=neq.direcionada&select=${sel}&order=created_at.desc&limit=5000`
+  if (role === 'conselheiro') {
+    const me = currentUser.id || '00000000-0000-0000-0000-000000000000'
+    url += `&or=${encodeURIComponent(`(conselheiro_dest_id.eq.${me},conselheiro_dest.eq.${q(currentUser.name)})`)}`
+  } else if (role === 'coordenador') {
+    url += `&ct_destino=eq.${encodeURIComponent(currentUser.ct || '')}`
   }
+  try {
+    const r = await fetch(url, { headers: _sbHeaders() })
+    return r.ok ? await r.json() : []
+  } catch (e) { return [] }
+}
 
-  const totalAt  = myLancs.filter(l=>l.tipo!=='Medida Protetiva'&&l.tipo!=='Encaminhamento').length
-  const totalMed = myLancs.filter(l=>l.tipo==='Medida Protetiva').length
-  const totalEnc = myLancs.filter(l=>l.tipo==='Encaminhamento').length
-  const total    = myLancs.length
+function _statsAgregar(rows) {
+  const out = { total: rows.length, bairro:{}, sexo:{}, faixaEtaria:{}, genero:{}, raca:{}, neuro:{}, pcd:{}, matriculado:{}, violacao:{}, encaminhamento:{} }
+  const soma = (obj, chave) => { if (chave) obj[chave] = (obj[chave]||0) + 1 }
+  rows.forEach(f => {
+    const a = f.campos_snapshot || {}
+    const c = f.dados_conselheiro || {}
+    soma(out.bairro, (a['f03a-crianca-bairro']||'').trim())
+    if (a['f03a-sexo-masc']) soma(out.sexo, 'Masculino')
+    if (a['f03a-sexo-fem'])  soma(out.sexo, 'Feminino')
+    if (a['f03a-lgbt'])      soma(out.genero, 'LGBTQIAPN+')
+    const idade = parseInt(a['f03a-crianca-idade'], 10)
+    if (!isNaN(idade)) {
+      soma(out.faixaEtaria, idade <= 5 ? '0–5 anos' : idade <= 11 ? '6–11 anos' : idade <= 14 ? '12–14 anos' : idade <= 17 ? '15–17 anos' : '18+ anos')
+    }
+    if (a['f03a-pcd-sim']) soma(out.pcd, 'Sim')
+    if (a['f03a-pcd-nao']) soma(out.pcd, 'Não')
+    if (a['f03a-estuda-sim']) soma(out.matriculado, 'Sim')
+    if (a['f03a-estuda-nao']) soma(out.matriculado, 'Não')
+    ;[['f03a-raca-preta','Preta'],['f03a-raca-branca','Branca'],['f03a-raca-indigena','Indígena'],['f03a-raca-parda','Parda'],['f03a-raca-amarela','Amarela']]
+      .forEach(([id,l]) => { if (a[id]) soma(out.raca, l) })
+    if (a['f03a-neuro-sim'])          soma(out.neuro, 'Sim')
+    if (a['f03a-neuro-nao'])          soma(out.neuro, 'Não')
+    if (a['f03a-neuro-investigacao']) soma(out.neuro, 'Em investigação')
+    F03_VIOLACOES.forEach((v,i)       => { if (c['f03c-viol-'+i]) soma(out.violacao, v) })
+    F03_ENCAMINHAMENTOS.forEach((e,i) => { if (c['f03c-enc-'+i])  soma(out.encaminhamento, e) })
+  })
+  return out
+}
 
-  // Count by tipo for bar chart
-  const tiposCount = {}
-  myLancs.forEach(l=>{ tiposCount[l.tipo]=(tiposCount[l.tipo]||0)+1 })
-  const barData = Object.entries(tiposCount).sort((a,b)=>b[1]-a[1]).slice(0,6)
-    .map(([t,v],i)=>[t,v,['#1e3a5f','#2d5a9e','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'][i]])
+function _statsFiltrar(rows) {
+  return rows.filter(f => {
+    if (_statsFiltroAno) {
+      const d = new Date(f.created_at)
+      if (String(d.getFullYear()) !== _statsFiltroAno) return false
+      if (_statsFiltroMes !== '' && String(d.getMonth()) !== _statsFiltroMes) return false
+    }
+    if (_statsFiltroCt && currentUser.role === 'master' && (f.ct_destino||'') !== _statsFiltroCt) return false
+    return true
+  })
+}
 
-  const title = _vêTudo() ? 'Estatísticas Gerais' : (role === 'conselheiro' ? 'Minhas Estatísticas' : `Estatísticas – ${currentUser.ctFull||'CT'}`)
-  const sub = `${nomeMes} · ${_vêTudo() ? 'Todos os Conselhos' : currentUser.name}`
+const _STATS_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const _STATS_CORES = ['#1e3a5f','#2d5a9e','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#0891b2','#16a34a','#d97706','#7c3aed']
 
-  const emptyMsg = total === 0 ? `<div style="text-align:center;padding:40px;color:var(--text-muted)">
+function _statsSecao(titulo, dict) {
+  const entries = Object.entries(dict).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+  if (!entries.length) return ''
+  return `<div class="card card-pad" style="margin-bottom:16px">
+    <strong style="font-size:14px;display:block;margin-bottom:14px">${titulo}</strong>
+    ${bar(entries.map(([l,v],i)=>[l,v,_STATS_CORES[i%_STATS_CORES.length]]))}
+  </div>`
+}
+
+function _statsEscopoLabel() {
+  const role = currentUser.role
+  if (role === 'conselheiro') return currentUser.name
+  if (role === 'coordenador') return currentUser.ctFull || currentUser.ct || 'CT'
+  return _statsFiltroCt || 'Todos os 24 Conselhos'
+}
+
+function renderStatistics() {
+  const el = document.getElementById('content')
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando estatísticas…</div>'
+  _statsCarregar().then(rows => {
+    _statsDadosBrutos = rows
+    if (document.getElementById('content')) el.innerHTML = _statsRenderComFiltros()
+  })
+  return ''
+}
+
+function _statsRenderComFiltros() {
+  const role = currentUser.role
+  const rows = _statsFiltrar(_statsDadosBrutos)
+  const ag = _statsAgregar(rows)
+  const title = role === 'master' ? 'Estatísticas Gerais' : (role === 'coordenador' ? `Estatísticas – ${currentUser.ctFull||currentUser.ct||'CT'}` : 'Minhas Estatísticas')
+
+  const anos = [...new Set(_statsDadosBrutos.map(f=>new Date(f.created_at).getFullYear()))].sort((a,b)=>b-a)
+  const cts  = role === 'master' ? [...new Set(_statsDadosBrutos.map(f=>f.ct_destino).filter(Boolean))].sort() : []
+
+  const filtrosHtml = `
+  <div class="card card-pad" style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+    <div><label class="field-label">Ano</label>
+      <select onchange="_statsSetFiltro('ano', this.value)">
+        <option value="">Todos</option>
+        ${anos.map(a=>`<option value="${a}" ${String(a)===_statsFiltroAno?'selected':''}>${a}</option>`).join('')}
+      </select>
+    </div>
+    <div><label class="field-label">Mês</label>
+      <select onchange="_statsSetFiltro('mes', this.value)" ${!_statsFiltroAno?'disabled':''}>
+        <option value="">Todos</option>
+        ${_STATS_MESES.map((m,i)=>`<option value="${i}" ${String(i)===_statsFiltroMes?'selected':''}>${m}</option>`).join('')}
+      </select>
+    </div>
+    ${role==='master' ? `<div><label class="field-label">Conselho Tutelar</label>
+      <select onchange="_statsSetFiltro('ct', this.value)">
+        <option value="">Todos os 24 Conselhos</option>
+        ${cts.map(c=>`<option value="${esc(c)}" ${c===_statsFiltroCt?'selected':''}>${esc(c)}</option>`).join('')}
+      </select>
+    </div>` : ''}
+  </div>`
+
+  const emptyMsg = `<div style="text-align:center;padding:40px;color:var(--text-muted)">
     <div style="font-size:32px;margin-bottom:12px">📊</div>
-    <p style="font-weight:600;margin-bottom:4px">Nenhum lançamento este mês</p>
-    <p style="font-size:12px">As estatísticas serão geradas conforme novos lançamentos forem registrados.</p>
-  </div>` : ''
+    <p style="font-weight:600;margin-bottom:4px">Nenhum atendimento encontrado</p>
+    <p style="font-size:12px">As estatísticas são geradas a partir da Ficha de Atendimento (nº 03) depois que o conselheiro tutelar completa o caso.</p>
+  </div>`
 
   return `
-  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
-    <div><h2>${title}</h2><p>${sub}</p></div>
-    <button class="btn btn-outline" onclick="downloadEstatisticasPDF()">Exportar PDF</button>
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div><h2>${title}</h2><p>${esc(_statsEscopoLabel())}</p></div>
+    <button class="btn btn-outline" onclick="downloadMinhasEstatisticasPDF()">${I.download} Exportar PDF</button>
   </div>
+  ${filtrosHtml}
+  ${ag.total === 0 ? emptyMsg : `
   <div class="grid-3" style="margin-bottom:20px">
-    ${tile('Atendimentos',String(totalAt),'Total do mês','','neu')}
-    ${tile('Medidas Aplicadas',String(totalMed),'Este mês','','neu')}
-    ${tile('Encaminhamentos',String(totalEnc),'CRAS, CREAS, CAPS','','neu')}
+    ${tile('Atendimentos', String(ag.total), 'No período filtrado', '', 'neu')}
+    ${tile('Bairros distintos', String(Object.keys(ag.bairro).length), 'Atendidos', '', 'neu')}
+    ${tile('Encaminhamentos', String(Object.values(ag.encaminhamento).reduce((s,v)=>s+v,0)), 'Para a rede de proteção', '', 'neu')}
   </div>
-  ${total === 0 ? emptyMsg : `<div class="card card-pad">
-    <strong style="font-size:14px;display:block;margin-bottom:16px">Lançamentos por Tipo</strong>
-    ${barData.length > 0 ? bar(barData) : '<p style="color:var(--text-muted);font-size:13px">Sem dados disponíveis.</p>'}
-  </div>`}`
+  ${_statsSecao('Atendimentos por Bairro', ag.bairro)}
+  ${_statsSecao('Sexo', ag.sexo)}
+  ${_statsSecao('Faixa Etária', ag.faixaEtaria)}
+  ${_statsSecao('Gênero / Diversidade', ag.genero)}
+  ${_statsSecao('Raça/Cor', ag.raca)}
+  ${_statsSecao('Neurodivergência', ag.neuro)}
+  ${_statsSecao('Pessoa com Deficiência (PCD)', ag.pcd)}
+  ${_statsSecao('Situação Escolar (Matriculado)', ag.matriculado)}
+  ${_statsSecao('Tipo de Violência / Violação', ag.violacao)}
+  ${_statsSecao('Encaminhamentos Realizados', ag.encaminhamento)}`}`
+}
+
+function _statsSetFiltro(campo, valor) {
+  if (campo === 'ano') { _statsFiltroAno = valor; _statsFiltroMes = '' }
+  else if (campo === 'mes') _statsFiltroMes = valor
+  else if (campo === 'ct') _statsFiltroCt = valor
+  document.getElementById('content').innerHTML = _statsRenderComFiltros()
+}
+
+function downloadMinhasEstatisticasPDF() {
+  const rows = _statsFiltrar(_statsDadosBrutos)
+  const ag = _statsAgregar(rows)
+  if (!ag.total) { showToast('Não há dados para exportar com os filtros atuais.'); return }
+  const role = currentUser.role
+  const now = new Date()
+  const titulo = role === 'master' ? 'Estatísticas Gerais' : (role === 'coordenador' ? `Estatísticas – ${currentUser.ctFull||currentUser.ct||''}` : 'Minhas Estatísticas')
+  const periodo = [_statsFiltroMes!==''?_STATS_MESES[+_statsFiltroMes]:null, _statsFiltroAno||null].filter(Boolean).join(' de ') || 'Todos os períodos'
+
+  const secao = (t, dict) => {
+    const entries = Object.entries(dict).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+    if (!entries.length) return ''
+    return `<h2>${t}</h2><table><thead><tr><th>Categoria</th><th>Quantidade</th></tr></thead>
+      <tbody>${entries.map(([l,v])=>`<tr><td>${esc(l)}</td><td>${v}</td></tr>`).join('')}</tbody></table>`
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${titulo}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:13px;color:#1a2332;margin:30px}
+    h1{font-size:19px;color:#1e3a5f;margin-bottom:2px}
+    h2{font-size:14px;color:#1e3a5f;margin:18px 0 6px}
+    .meta{color:#6b7a90;font-size:12px;margin-bottom:2px}
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:6px 10px;text-align:left;border-bottom:2px solid #dde3ec;color:#6b7a90}
+    td{padding:6px 10px;border-bottom:1px solid #dde3ec}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <h1>${titulo}</h1>
+  <div class="meta">${esc(_statsEscopoLabel())}</div>
+  <div class="meta">Período: <strong>${esc(periodo)}</strong></div>
+  <div class="meta">Responsável: <strong>${esc(currentUser.name||'')}</strong></div>
+  <div class="meta">Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+  <div class="cards">
+    <div style="border:1px solid #dde3ec;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;color:#6b7a90">Atendimentos</div><div style="font-size:24px;font-weight:700;color:#1e3a5f">${ag.total}</div></div>
+    <div style="border:1px solid #dde3ec;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;color:#6b7a90">Bairros distintos</div><div style="font-size:24px;font-weight:700;color:#0891b2">${Object.keys(ag.bairro).length}</div></div>
+    <div style="border:1px solid #dde3ec;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;color:#6b7a90">Encaminhamentos</div><div style="font-size:24px;font-weight:700;color:#16a34a">${Object.values(ag.encaminhamento).reduce((s,v)=>s+v,0)}</div></div>
+  </div>
+  ${secao('Atendimentos por Bairro', ag.bairro)}
+  ${secao('Sexo', ag.sexo)}
+  ${secao('Faixa Etária', ag.faixaEtaria)}
+  ${secao('Gênero / Diversidade', ag.genero)}
+  ${secao('Raça/Cor', ag.raca)}
+  ${secao('Neurodivergência', ag.neuro)}
+  ${secao('Pessoa com Deficiência (PCD)', ag.pcd)}
+  ${secao('Situação Escolar (Matriculado)', ag.matriculado)}
+  ${secao('Tipo de Violência / Violação', ag.violacao)}
+  ${secao('Encaminhamentos Realizados', ag.encaminhamento)}
+  <script>window.print();<\/script></body></html>`
+  const w = window.open('','_blank')
+  if (w) { w.document.write(html); w.document.close() }
+  else showToast('Permita pop-ups para gerar o PDF.')
 }
 function bar(data) {
   const max = Math.max(...data.map(d=>d[1]))
