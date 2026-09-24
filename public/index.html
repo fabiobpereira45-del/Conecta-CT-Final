@@ -4167,7 +4167,10 @@ function renderForm03(form) {
 const F03_NEURO = ['TEA','TDAH','TOD','Dislexia','Discalculia','Deficiência Intelectual','Altas Habilidades/Superdotação','Síndrome de Down']
 const F03_SERIES = ['Creche','Pré-escola','1º ano','2º ano','3º ano','4º ano','5º ano','6º ano','7º ano','8º ano','9º ano','1º ano EM','2º ano EM','3º ano EM','EJA','Não se aplica']
 const F03_VIOLACOES = ['Negligência','Abandono','Violência Física','Violência Psicológica','Violência Sexual','Trabalho Infantil','Exploração Sexual','Evasão Escolar','Uso de Drogas','Conflito Familiar','Violência Doméstica','Outro']
-const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro']
+// Observação: novos itens sempre vão ANTES de 'Outro', mas nunca reordene ou remova os já
+// existentes — o índice de cada item vira o id do checkbox (f03c-enc-0, f03c-enc-1…) e fichas
+// já salvas guardam esse índice. Mudar a ordem troca o significado de respostas antigas.
+const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro','PROTEJA','Cartório','DERCCA','DAI','Escuta Especializada']
 
 // Ficha aberta no formulário 03 (null = ficha nova sendo preenchida pelo atendente)
 let _f03Ficha = null
