@@ -3654,8 +3654,13 @@ function renderFormFill(id) {
 }
 // ── HELPERS para formulários específicos ──
 const _INL_W = (w) => `style="display:inline;width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-size:inherit;font-family:inherit;padding:0 2px;outline:none;"`
-const _SIG = `<div style="margin-top:24px;text-align:center"><div style="display:inline-block;border-top:1px solid #333;padding-top:6px;min-width:260px;font-size:12px">Conselheiro(a) Tutelar</div></div>`
-const _SIG3 = `<div style="margin-top:24px;display:flex;gap:40px;justify-content:center;flex-wrap:wrap"><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div><div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:200px;font-size:12px;display:inline-block">Conselheiro(a) Tutelar</div></div></div>`
+// Assinatura única do(a) Conselheiro(a) Tutelar responsável, com espaço em branco
+// suficiente acima da linha para a assinatura física (à mão ou no PDF).
+const _SIG = `<div style="margin-top:64px;text-align:center"><div style="display:inline-block;border-top:1px solid #333;padding-top:6px;min-width:280px;font-size:12px">Conselheiro(a) Tutelar</div></div>`
+// _SIG3 existia para 3 assinaturas idênticas de "Conselheiro(a) Tutelar" lado a lado —
+// redundante, já que apenas um conselheiro assina cada documento. Mantido como alias
+// do bloco único (_SIG) para não precisar alterar cada formulário que já o referencia.
+const _SIG3 = _SIG
 
 function _navFormIds() {
   return FORMS.map(f => f.id)
@@ -3873,10 +3878,7 @@ function renderForm19(form) {
     <p><strong>Atividades desenvolvidas durante o plantão:</strong></p>
     <p><textarea style="width:100%;min-height:220px;border:1px solid #ccc;padding:6px;font-family:inherit;font-size:inherit;resize:vertical;line-height:2" placeholder="Descreva as atividades desenvolvidas..."></textarea></p>
     <p style="text-align:right">Salvador, <input ${_INL_W('30px')} placeholder="_____"> de <input ${_INL_W('120px')} placeholder="_________________"> de 202<input ${_INL_W('30px')} placeholder="____"></p>
-    <div style="margin-top:32px;display:flex;gap:40px;justify-content:center">
-      <div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:220px;font-size:12px;display:inline-block">Assinatura – Conselheiro(a) Plantonista</div></div>
-      <div style="text-align:center"><div style="border-top:1px solid #333;padding-top:6px;min-width:220px;font-size:12px;display:inline-block">Assinatura – Conselheiro(a) Tutelar</div></div>
-    </div>
+    <div style="margin-top:64px;text-align:center"><div style="display:inline-block;border-top:1px solid #333;padding-top:6px;min-width:280px;font-size:12px">Assinatura – Conselheiro(a) Tutelar Plantonista</div></div>
   `)
 }
 
@@ -4064,7 +4066,7 @@ function renderForm01(form) {
     <textarea rows="6" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:4px" placeholder="Descreva detalhadamente a situação denunciada…"></textarea>
     <p style="margin-top:12px;font-weight:700">Anotações referentes à averiguação:</p>
     <textarea rows="4" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:4px" placeholder="Anotações sobre a apuração dos fatos…"></textarea>
-    <div style="margin-top:36px;text-align:center"><div style="display:inline-block;border-top:1px solid #333;padding-top:6px;min-width:260px;font-size:12px">ASSINATURA DO INTERLOCUTOR</div></div>
+    <div style="margin-top:64px;text-align:center"><div style="display:inline-block;border-top:1px solid #333;padding-top:6px;min-width:280px;font-size:12px">ASSINATURA DO INTERLOCUTOR</div></div>
   `)
 }
 
