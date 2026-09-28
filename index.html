@@ -4284,7 +4284,7 @@ const F03_VIOLACOES = ['Negligência','Abandono','Violência Física','Violênci
 // Observação: novos itens sempre vão ANTES de 'Outro', mas nunca reordene ou remova os já
 // existentes — o índice de cada item vira o id do checkbox (f03c-enc-0, f03c-enc-1…) e fichas
 // já salvas guardam esse índice. Mudar a ordem troca o significado de respostas antigas.
-const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro','PROTEJA','Cartório','DERCCA','DAI','Escuta Especializada']
+const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro','PROTEJA','Cartório','DERCCA','DAI','Escuta Especializada','Orientação']
 
 // Ficha aberta no formulário 03 (null = ficha nova sendo preenchida pelo atendente)
 let _f03Ficha = null
@@ -4367,6 +4367,7 @@ function _f03Aplicar(valores) {
     if (!el) return
     if (el.type === 'checkbox' || el.type === 'radio') el.checked = !!v
     else el.value = v ?? ''
+    if (el.tagName === 'TEXTAREA') _autosizeTextarea(el)
   })
 }
 function _f03Travar(prefixo, travar) {
@@ -8288,26 +8289,29 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// ── IMPRESSÃO: mostrar 100% do texto das caixas de texto (nunca cortar/rolar) ──
-// Um <textarea> imprime só a parte visível dentro da sua altura fixa (rows="4" etc.);
-// texto mais longo fica cortado no PDF/impressão mesmo estando salvo por completo.
-// Antes de imprimir, cada textarea é esticado para caber todo o conteúdo (scrollHeight);
-// depois da impressão, volta ao tamanho normal da tela.
-window.addEventListener('beforeprint', () => {
-  document.querySelectorAll('textarea').forEach(t => {
-    t.dataset._printH = t.style.height || ''
-    t.style.height = 'auto'
-    t.style.height = (t.scrollHeight + 2) + 'px'
-    t.style.overflow = 'hidden'
-  })
-})
-window.addEventListener('afterprint', () => {
-  document.querySelectorAll('textarea').forEach(t => {
-    t.style.height = t.dataset._printH || ''
-    delete t.dataset._printH
-    t.style.overflow = ''
-  })
-})
+// ── CAIXAS DE TEXTO: sempre mostrar 100% do conteúdo, nunca cortar/rolar ──
+// Um <textarea> com altura fixa (rows="4" etc.) esconde o texto que passa da altura atrás de
+// uma barra de rolagem interna — tanto na tela quanto na impressão/PDF, mesmo com tudo salvo.
+// Em vez de só ajustar no momento de imprimir, a caixa cresce sozinha sempre que tem conteúdo:
+// ao digitar, e sempre que uma tela é montada e preenche o valor programaticamente (_f03Aplicar).
+function _autosizeTextarea(t) {
+  if (!t || t.tagName !== 'TEXTAREA') return
+  t.style.height = 'auto'
+  t.style.height = (t.scrollHeight + 2) + 'px'
+  t.style.overflow = 'hidden'
+}
+document.addEventListener('input', e => { if (e.target?.tagName === 'TEXTAREA') _autosizeTextarea(e.target) })
+// Redimensiona também as textareas que já chegam prontas ao inserir uma tela nova no #content
+// (ex.: abrir uma ficha já preenchida) — não dependem de digitação para mostrar tudo.
+new MutationObserver(muts => {
+  muts.forEach(m => m.addedNodes.forEach(n => {
+    if (n.nodeType !== 1) return
+    if (n.tagName === 'TEXTAREA') _autosizeTextarea(n)
+    n.querySelectorAll?.('textarea').forEach(_autosizeTextarea)
+  }))
+}).observe(document.getElementById('content'), { childList: true, subtree: true })
+// Reforço para a impressão: garante altura correta mesmo se algo escapou dos casos acima.
+window.addEventListener('beforeprint', () => document.querySelectorAll('textarea').forEach(_autosizeTextarea))
 
 // ── INIT: show auth ──
 document.getElementById('app').style.display = 'none'
