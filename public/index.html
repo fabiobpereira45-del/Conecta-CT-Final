@@ -2610,14 +2610,25 @@ function renderAgenda() {
   ${role==='atendente'?`<div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#16a34a;margin-bottom:16px">
     Exibindo agenda de todos os conselheiros do CT01. Somente leitura.
   </div>`:''}
-  ${['Hoje','Sexta','Sábado','Segunda'].map(dia=>{
-    const evs=eventosData.filter(e=>e.dia===dia)
+  ${_agendaDatasOrdenadas().map(dia=>{
+    const evs=eventosData.filter(e=>e.dia===dia).sort((a,b)=>(a.time||'').localeCompare(b.time||''))
     if(!evs.length)return''
     return `<div class="agenda-day">
-      <div class="agenda-day-label">${dia==='Hoje'?'Hoje – Sáb, 19 set.':dia+', set.'}</div>
+      <div class="agenda-day-label">${_agendaRotuloData(dia)}</div>
       ${evs.map(e=>aitem(e.time,e.title,e.sub,e.cls,e.who)).join('')}
     </div>`
-  }).join('')}`
+  }).join('') || `<div class="empty"><p>Nenhum evento na agenda ainda. Clique em <strong>+ Novo</strong> para adicionar.</p></div>`}`
+}
+// Datas (YYYY-MM-DD) com evento cadastrado, em ordem cronológica
+function _agendaDatasOrdenadas() {
+  return [...new Set(eventosData.map(e=>e.dia).filter(Boolean))].sort()
+}
+// "Hoje – sáb., 27 set." ou "sex., 26 set." para as demais datas
+function _agendaRotuloData(iso) {
+  const hojeIso = new Date().toISOString().slice(0,10)
+  const d = new Date(iso + 'T00:00:00')
+  const formatado = d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' })
+  return iso === hojeIso ? `Hoje – ${formatado}` : formatado
 }
 function aitem(time,title,sub,cls,who) {
   return `<div class="agenda-item">
@@ -7302,10 +7313,8 @@ function showEventoModal(){
       <div class="field-row cols-2">
         <div class="field-group"><label class="field-label">Hora</label>
           <input id="m-etime" type="time" value="09:00" /></div>
-        <div class="field-group"><label class="field-label">Dia</label>
-          <select id="m-edia">
-            <option>Hoje</option><option>Sexta</option><option>Sábado</option><option>Segunda</option>
-          </select></div>
+        <div class="field-group"><label class="field-label">Data</label>
+          <input id="m-edia" type="date" value="${new Date().toISOString().slice(0,10)}" /></div>
       </div>
       <div class="field-group"><label class="field-label">Tipo</label>
         <select id="m-ecls">
