@@ -8288,6 +8288,27 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// ── IMPRESSÃO: mostrar 100% do texto das caixas de texto (nunca cortar/rolar) ──
+// Um <textarea> imprime só a parte visível dentro da sua altura fixa (rows="4" etc.);
+// texto mais longo fica cortado no PDF/impressão mesmo estando salvo por completo.
+// Antes de imprimir, cada textarea é esticado para caber todo o conteúdo (scrollHeight);
+// depois da impressão, volta ao tamanho normal da tela.
+window.addEventListener('beforeprint', () => {
+  document.querySelectorAll('textarea').forEach(t => {
+    t.dataset._printH = t.style.height || ''
+    t.style.height = 'auto'
+    t.style.height = (t.scrollHeight + 2) + 'px'
+    t.style.overflow = 'hidden'
+  })
+})
+window.addEventListener('afterprint', () => {
+  document.querySelectorAll('textarea').forEach(t => {
+    t.style.height = t.dataset._printH || ''
+    delete t.dataset._printH
+    t.style.overflow = ''
+  })
+})
+
 // ── INIT: show auth ──
 document.getElementById('app').style.display = 'none'
 document.getElementById('pending-screen').style.display = 'none'
