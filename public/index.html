@@ -997,7 +997,7 @@ const FORMS = [
   {id:10,name:'Notificação (1)',category:'Notificações'},
   {id:11,name:'Notificação (2)',category:'Notificações'},
   {id:12,name:'Convite Adolescente',category:'Convites'},
-  {id:13,name:'Certidão',category:'Certidões'},
+  {id:13,name:'Declaração de Responsabilidade',category:'Certidões'},
   {id:41,name:'Requisição de Certidão',category:'Requisições'},
   {id:14,name:'Termo de Responsabilidade',category:'Termos'},
   {id:15,name:'Permuta De Serviço',category:'Administrativo'},
@@ -5025,7 +5025,7 @@ function renderForm11(form) {
 // ── ID 13: Certidão ──
 function renderForm13(form) {
   return _formHeader(form) + _docWrap(`
-    <p style="text-align:center;font-size:15px;font-weight:700;text-transform:uppercase;margin-bottom:24pt">CERTIDÃO</p>
+    <p style="text-align:center;font-size:15px;font-weight:700;text-transform:uppercase;margin-bottom:24pt">DECLARAÇÃO DE RESPONSABILIDADE</p>
     <p>CERTIFICO, para os devidos fins, após verificação dos procedimentos deste Conselho Tutelar, que a criança/adolescente <input ${_INL_W('260px')} placeholder="________________________________">, nascido(a) em <input ${_INL_W('120px')} placeholder="___/___/_____">, filho(a) de <input ${_INL_W('260px')} placeholder="________________________________"> acompanhado(a) por este Conselho Tutelar, encontrando-se atualmente sob os cuidados e proteção do(a) Sr.(a) <input ${_INL_W('280px')} placeholder="________________________________">, inscrito sob o nº de CPF <input ${_INL_W('140px')} placeholder="___.___.___-__">, residente e domiciliado(a) à <input ${_INL_W('320px')} placeholder="endereço completo">.</p>
     <p>A presente certidão é emitida exclusivamente para demonstrar a situação de fato relativa aos cuidados da referida criança ou adolescente, destinando-se apenas às pessoas acompanhadas por este Conselho Tutelar e serve como elemento indicativo da realidade observada por este órgão.</p>
     <p>Ressalta-se que esta certidão não substitui decisão judicial referente à guarda, tendo o(a) cuidador(a) sido devidamente orientado(a) a regularizar a situação de fato, conforme dispõe o artigo 33, §2º, do Estatuto da Criança e do Adolescente (ECA):</p>
