@@ -7697,6 +7697,12 @@ function _escalaFinsDeSemana(ano, mes, cfg) {
   return fins
 }
 
+// Nome do conselho vem de CONSELHOS E BAIRROS (inclui edições salvas), com o número como reserva
+function _escalaNomeConselho(num) {
+  const c = CONSELHOS_BAIRROS.find(x => x.num === num)
+  return c ? c.nome : ('CT ' + num)
+}
+
 function _escalaMesclarPadrao(dados) {
   const cfg = JSON.parse(JSON.stringify(ESCALA_PADRAO))
   if (!dados) return cfg
@@ -7747,7 +7753,7 @@ function _escalaTela() {
   const badge = g => `<span style="font-size:11px;font-weight:700;color:#fff;background:${cor(g)};padding:3px 10px;border-radius:20px">Grupo ${g}</span>`
   const linhas = lista => lista.map(x => `
     <div style="display:flex;justify-content:space-between;gap:10px;padding:7px 10px;background:var(--bg);border-radius:6px;font-size:13px">
-      <strong>CT ${x.conselho}</strong><span>${esc(x.nome)}</span>
+      <strong>${esc(_escalaNomeConselho(x.conselho))}</strong><span>${esc(x.nome)}</span>
     </div>`).join('')
 
   return `
@@ -7862,7 +7868,7 @@ function exportDutyRoster() {
   if (!fins.length) { showToast('Nenhum final de semana neste mês.'); return }
   const tabela = lista => `
     <table><thead><tr><th>CT</th><th>Conselheiro(a)</th></tr></thead>
-    <tbody>${lista.map(x => `<tr><td>${esc(x.conselho)}</td><td>${esc(x.nome)}</td></tr>`).join('')}</tbody></table>`
+    <tbody>${lista.map(x => `<tr><td>${esc(_escalaNomeConselho(x.conselho))}</td><td>${esc(x.nome)}</td></tr>`).join('')}</tbody></table>`
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Escala de Plantões – ${ESCALA_MESES[_escalaMes-1]} ${_escalaAno}</title>
   <style>
     body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:24px}
