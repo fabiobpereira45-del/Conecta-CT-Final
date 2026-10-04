@@ -4216,6 +4216,12 @@ function renderForm03(form) {
     </div>
     <div style="display:grid;gap:16px">
       <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🚪 Porta de Entrada</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:16px">
+          ${F03_PORTA_ENTRADA.map((p,i)=>box(`<input type="checkbox" id="f03c-porta-${i}" data-label="Porta de entrada: ${p}" style="accent-color:var(--primary)" /> ${p}`)).join('')}
+        </div>
+      </div>
+      <div>
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
           ${F03_VIOLACOES.map((v,i)=>box(`<input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" /> ${v}`)).join('')}
@@ -4298,6 +4304,7 @@ const F03_VIOLACOES = ['Negligência','Abandono','Violência Física','Violênci
 // Observação: novos itens sempre vão ANTES de 'Outro', mas nunca reordene ou remova os já
 // existentes — o índice de cada item vira o id do checkbox (f03c-enc-0, f03c-enc-1…) e fichas
 // já salvas guardam esse índice. Mudar a ordem troca o significado de respostas antigas.
+const F03_PORTA_ENTRADA = ['Espontâneo','Conselhos Tutelares','Outros Municípios','DP','MP','1ª Vara','Judiciário','Disque 100','DERCCA','DAI','Outras Delegacias','SEAS','Projetos Sociais','Escola','Saúde','CRAS','CREAS','Anônima']
 const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro','PROTEJA','Cartório','DERCCA','DAI','Escuta Especializada','Orientação']
 
 // Ficha aberta no formulário 03 (null = ficha nova sendo preenchida pelo atendente)
