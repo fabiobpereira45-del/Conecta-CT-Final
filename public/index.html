@@ -4236,6 +4236,12 @@ function renderForm03(form) {
         </select>
       </div>
       <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📌 Ações e Encaminhamentos</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
+          ${F03_ACOES.map((a,i)=>box(`<input type="checkbox" id="f03c-acao-${i}" data-label="Ação: ${a}" style="accent-color:var(--primary)" /> ${a}`)).join('')}
+        </div>
+      </div>
+      <div>
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
           ${F03_VIOLACOES.map((v,i)=>box(`<input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" /> ${v}`)).join('')}
@@ -4325,6 +4331,7 @@ const F03_IDENT_OCORRENCIA = [
   { grupo: 'Trabalho Infantil', itens: ['Trabalho Infantil'] },
   { grupo: 'Outras', itens: ['Acolhimento','Evasão','Comunicado Improcedente','Não encontrado Disque 100','Dados insuficientes','Dados insuficientes SEAS'] },
 ]
+const F03_ACOES = ['MP','1ª Vara','Judiciário','Disque 100','Defensoria Pública – Guarda','Defensoria Pública – Tutela','Defensoria Pública – Alimentos','Defensoria Pública – Reconhecimento de Paternidade','Acolhimento institucional','Projetos Sociais','Instituições / Filantrópicas','Escola','Saúde','Delegacia – DERCCA','Delegacia – DAI','Delegacia – Outras','CRAS','CREAS','CAPS','CAPS AD','Cartório','Escuta Especializada','SEAS','Requisição de Visita','Tratamento Especializado','Orientação','Advertência','Termo de Responsabilidade','Declaração']
 const F03_AGENTE_VIOLADOR = ['Família','Poder Público','Sociedade','Pela Própria Conduta']
 const F03_PORTA_ENTRADA = ['Espontâneo','Conselhos Tutelares','Outros Municípios','DP','MP','1ª Vara','Judiciário','Disque 100','DERCCA','DAI','Outras Delegacias','SEAS','Projetos Sociais','Escola','Saúde','CRAS','CREAS','Anônima']
 const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro','PROTEJA','Cartório','DERCCA','DAI','Escuta Especializada','Orientação']
