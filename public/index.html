@@ -2331,31 +2331,43 @@ async function _statsCarregar() {
   } catch (e) { return [] }
 }
 
+// Cada seção estatística é derivada de uma parte da ficha (exceto a descrição dos casos).
+// A mesma lista alimenta a tela e o PDF, então ambos mostram exatamente as mesmas seções.
+const F03_ESTAT_SECOES = [
+  { id:'atendimento', titulo:'Tipo de Atendimento', v: (a,c) => [a['f03a-atend-primeiro'] && '1º Atendimento', a['f03a-atend-retorno'] && 'Retorno'] },
+  { id:'irmaos', titulo:'Irmãos Atendidos Junto', v: (a,c) => [a['f03a-tem-irmaos-sim'] && 'Com irmãos', a['f03a-tem-irmaos-nao'] && 'Sem irmãos'] },
+  { id:'bairro', titulo:'Atendimentos por Bairro', v: (a,c) => [(a['f03a-crianca-bairro']||'').trim()] },
+  { id:'sexo', titulo:'Sexo', v: (a,c) => [a['f03a-sexo-masc'] && 'Masculino', a['f03a-sexo-fem'] && 'Feminino'] },
+  { id:'faixa', titulo:'Faixa Etária', v: (a,c) => {
+      const i = parseInt(a['f03a-crianca-idade'], 10)
+      if (isNaN(i)) return []
+      return [i <= 5 ? '0–5 anos' : i <= 11 ? '6–11 anos' : i <= 14 ? '12–14 anos' : i <= 17 ? '15–17 anos' : '18+ anos']
+  } },
+  { id:'genero', titulo:'Gênero / Diversidade', v: (a,c) => [a['f03a-lgbt'] && 'LGBTQIAPN+'] },
+  { id:'raca', titulo:'Raça/Cor', v: (a,c) => [['preta','Preta'],['branca','Branca'],['indigena','Indígena'],['parda','Parda'],['amarela','Amarela']].filter(([k])=>a['f03a-raca-'+k]).map(([,l])=>l) },
+  { id:'serie', titulo:'Série / Ano Escolar', v: (a,c) => [a['f03a-serie']] },
+  { id:'matriculado', titulo:'Situação Escolar (Matriculado)', v: (a,c) => [a['f03a-estuda-sim'] && 'Sim', a['f03a-estuda-nao'] && 'Não'] },
+  { id:'pcd', titulo:'Pessoa com Deficiência (PCD)', v: (a,c) => [a['f03a-pcd-sim'] && 'Sim', a['f03a-pcd-nao'] && 'Não'] },
+  { id:'neuro', titulo:'Neurodivergência', v: (a,c) => [a['f03a-neuro-sim'] && 'Sim', a['f03a-neuro-nao'] && 'Não', a['f03a-neuro-investigacao'] && 'Em investigação'] },
+  { id:'neuroCond', titulo:'Condição Neurodivergente', v: (a,c) => F03_NEURO.filter((n,i)=>a['f03a-neuro-'+i]) },
+  { id:'laudo', titulo:'Possui Laudo', v: (a,c) => [a['f03a-laudo-sim'] && 'Sim', a['f03a-laudo-nao'] && 'Não'] },
+  { id:'porta', titulo:'Porta de Entrada', v: (a,c) => F03_PORTA_ENTRADA.filter((p,i)=>c['f03c-porta-'+i]) },
+  { id:'ident', titulo:'Identificação de Ocorrência', v: (a,c) => [c['f03c-ident-ocorrencia']] },
+  { id:'agente', titulo:'Agente Violador', v: (a,c) => [c['f03c-agente-violador']] },
+  { id:'violacao', titulo:'Tipo de Violência / Violação', v: (a,c) => F03_VIOLACOES.filter((v,i)=>c['f03c-viol-'+i]) },
+  { id:'acoes', titulo:'Ações e Encaminhamentos', v: (a,c) => F03_ACOES_ENCAMINHAMENTO.filter((x,i)=>c['f03c-acao-'+i]) },
+  { id:'encaminhamento', titulo:'Encaminhamentos Realizados', v: (a,c) => F03_ENCAMINHAMENTOS.filter((e,i)=>c['f03c-enc-'+i]) },
+]
+
 function _statsAgregar(rows) {
-  const out = { total: rows.length, bairro:{}, sexo:{}, faixaEtaria:{}, genero:{}, raca:{}, neuro:{}, pcd:{}, matriculado:{}, violacao:{}, encaminhamento:{} }
-  const soma = (obj, chave) => { if (chave) obj[chave] = (obj[chave]||0) + 1 }
+  const out = { total: rows.length }
+  F03_ESTAT_SECOES.forEach(s => { out[s.id] = {} })
   rows.forEach(f => {
     const a = f.campos_snapshot || {}
     const c = f.dados_conselheiro || {}
-    soma(out.bairro, (a['f03a-crianca-bairro']||'').trim())
-    if (a['f03a-sexo-masc']) soma(out.sexo, 'Masculino')
-    if (a['f03a-sexo-fem'])  soma(out.sexo, 'Feminino')
-    if (a['f03a-lgbt'])      soma(out.genero, 'LGBTQIAPN+')
-    const idade = parseInt(a['f03a-crianca-idade'], 10)
-    if (!isNaN(idade)) {
-      soma(out.faixaEtaria, idade <= 5 ? '0–5 anos' : idade <= 11 ? '6–11 anos' : idade <= 14 ? '12–14 anos' : idade <= 17 ? '15–17 anos' : '18+ anos')
-    }
-    if (a['f03a-pcd-sim']) soma(out.pcd, 'Sim')
-    if (a['f03a-pcd-nao']) soma(out.pcd, 'Não')
-    if (a['f03a-estuda-sim']) soma(out.matriculado, 'Sim')
-    if (a['f03a-estuda-nao']) soma(out.matriculado, 'Não')
-    ;[['f03a-raca-preta','Preta'],['f03a-raca-branca','Branca'],['f03a-raca-indigena','Indígena'],['f03a-raca-parda','Parda'],['f03a-raca-amarela','Amarela']]
-      .forEach(([id,l]) => { if (a[id]) soma(out.raca, l) })
-    if (a['f03a-neuro-sim'])          soma(out.neuro, 'Sim')
-    if (a['f03a-neuro-nao'])          soma(out.neuro, 'Não')
-    if (a['f03a-neuro-investigacao']) soma(out.neuro, 'Em investigação')
-    F03_VIOLACOES.forEach((v,i)       => { if (c['f03c-viol-'+i]) soma(out.violacao, v) })
-    F03_ENCAMINHAMENTOS.forEach((e,i) => { if (c['f03c-enc-'+i])  soma(out.encaminhamento, e) })
+    F03_ESTAT_SECOES.forEach(s => {
+      s.v(a, c).filter(Boolean).forEach(label => { out[s.id][label] = (out[s.id][label] || 0) + 1 })
+    })
   })
   return out
 }
@@ -2469,16 +2481,7 @@ function _statsRenderComFiltros() {
     ${tile('Bairros distintos', String(Object.keys(ag.bairro).length), 'Atendidos', '', 'neu')}
     ${tile('Encaminhamentos', String(Object.values(ag.encaminhamento).reduce((s,v)=>s+v,0)), 'Para a rede de proteção', '', 'neu')}
   </div>
-  ${_statsSecao('Atendimentos por Bairro', ag.bairro)}
-  ${_statsSecao('Sexo', ag.sexo)}
-  ${_statsSecao('Faixa Etária', ag.faixaEtaria)}
-  ${_statsSecao('Gênero / Diversidade', ag.genero)}
-  ${_statsSecao('Raça/Cor', ag.raca)}
-  ${_statsSecao('Neurodivergência', ag.neuro)}
-  ${_statsSecao('Pessoa com Deficiência (PCD)', ag.pcd)}
-  ${_statsSecao('Situação Escolar (Matriculado)', ag.matriculado)}
-  ${_statsSecao('Tipo de Violência / Violação', ag.violacao)}
-  ${_statsSecao('Encaminhamentos Realizados', ag.encaminhamento)}`}`
+  ${F03_ESTAT_SECOES.map(s => _statsSecao(s.titulo, ag[s.id])).join("")}`}`
 }
 
 function _statsSetFiltro(campo, valor) {
@@ -2536,16 +2539,7 @@ function downloadMinhasEstatisticasPDF() {
     <div style="border:1px solid #dde3ec;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;color:#6b7a90">Bairros distintos</div><div style="font-size:24px;font-weight:700;color:#0891b2">${Object.keys(ag.bairro).length}</div></div>
     <div style="border:1px solid #dde3ec;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;color:#6b7a90">Encaminhamentos</div><div style="font-size:24px;font-weight:700;color:#16a34a">${Object.values(ag.encaminhamento).reduce((s,v)=>s+v,0)}</div></div>
   </div>
-  ${secao('Atendimentos por Bairro', ag.bairro)}
-  ${secao('Sexo', ag.sexo)}
-  ${secao('Faixa Etária', ag.faixaEtaria)}
-  ${secao('Gênero / Diversidade', ag.genero)}
-  ${secao('Raça/Cor', ag.raca)}
-  ${secao('Neurodivergência', ag.neuro)}
-  ${secao('Pessoa com Deficiência (PCD)', ag.pcd)}
-  ${secao('Situação Escolar (Matriculado)', ag.matriculado)}
-  ${secao('Tipo de Violência / Violação', ag.violacao)}
-  ${secao('Encaminhamentos Realizados', ag.encaminhamento)}
+  ${F03_ESTAT_SECOES.map(s => secao(s.titulo, ag[s.id])).join("")}
   <script>window.print();<\/script></body></html>`
   const w = window.open('','_blank')
   if (w) { w.document.write(html); w.document.close() }
