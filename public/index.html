@@ -7872,7 +7872,9 @@ function exportDutyRoster() {
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Escala de Plantões – ${ESCALA_MESES[_escalaMes-1]} ${_escalaAno}</title>
   <style>
     body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:24px}
-    .cab{text-align:center;margin-bottom:14px}
+    .cab-wrap{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:14px}
+    .cab-wrap .logo{width:110px;height:auto;flex-shrink:0}
+    .cab{text-align:center}
     .cab strong{font-size:14px;color:#1e3a5f}
     h1{font-size:17px;color:#1e3a5f;text-align:center;margin:10px 0 14px}
     .fim{border:1px solid #dde3ec;border-radius:6px;margin-bottom:12px;page-break-inside:avoid;overflow:hidden}
@@ -7885,11 +7887,11 @@ function exportDutyRoster() {
     th,td{padding:4px 6px;border-bottom:1px solid #eef1f5;text-align:left}
     th{color:#6b7a90;font-size:10px;text-transform:uppercase}
   </style></head><body>
-  <div class="cab"><strong>PLANTÃO CENTRALIZADO CAJAZEIRAS</strong><br>
+  <div class="cab-wrap"><img class="logo" src="${_CT_LOGO_SRC}" alt="Conselho Tutelar"><div class="cab"><strong>PLANTÃO CENTRALIZADO CAJAZEIRAS</strong><br>
     Lei Federal 8.069/90 – Lei Municipal 6.266<br>
     Estrada do Coqueiro Grande, Fazenda Grande III – Nº 1902 – Salvador/BA<br>
     Telefone: 9991-9745 · ct.centralizadocastelobranco@salvador.ba.gov.br<br>
-    <span>Coordenação do mês: ${esc(cfg.coordenacao)}</span></div>
+    <span>Coordenação do mês: ${esc(cfg.coordenacao)}</span></div></div>
   <h1>ESCALA ${ESCALA_MESES[_escalaMes-1].toUpperCase()} ${_escalaAno}</h1>
   ${fins.map(f => `
     <div class="fim">
