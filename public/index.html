@@ -7634,15 +7634,16 @@ const ESCALA_PADRAO = {
   ancora: '2026-09-05',
   grupoAncora: 'A',
   coordenacao: 'Conselho Tutelar XIII Narandiba',
+  inicioRodizio: '2026-10-03',
   rosters: {
-    IV:    ['Mateus Ferreira','Gilcimara','Josenira Meireles','Luzivane Guimarães','Aline Gomes'],
-    VII:   ['Celeste Caldas','Joselina Soares','Raquel Rodrigues','Renan Oliveira','Roseane Jesus'],
-    XII:   ['Sidney Silva Santos','Cidinalva Santos','Carmen Lucia','Cristiane Passos','Lucicleide Castro'],
-    XXII:  ['Rosana Meireles','Ana Cristina','Djanira','Jandiara Dorea','Noemi Xavier'],
-    VIII:  ['Flávia Regina','Sônia Soares','Analice','Laura','Jacilda Brito','Balbina Alves'],
-    XIII:  ['Regiane Santos','Jailton','Alex Teles','Fabio Barreto','Joilson Almeida'],
-    XVIII: ['Paula','Ana Paula','Elionai','Josiane','Matheus Borges'],
-    XXI:   ['Mário Filho','Araci','Ana Glaucia','Ednalda','Edson Barcelos'],
+    IV:    ['Josenira Meireles','Mateus Ferreira','Gilcimara','Luzivane Guimarães','Aline Gomes'],
+    VII:   ['Jacilda Brito','Celeste Caldas','Joselina Soares','Sônia Soares','Raquel Rodrigues','Renan Oliveira'],
+    XII:   ['Sidney Santos','Cidinalva Santos','Carmem Lucia','Cristiane Passos'],
+    XXII:  ['Milene Leone','Djanira','Jandiara Dorea','Noemi Xavier'],
+    VIII:  ['Flávia Regina','Analice'],
+    XIII:  ['Roseane Jesus','Joilson Almeida','Regiane Santos','Alex Teles','Fabio Barreto'],
+    XVIII: ['Lucicleide Castro','Matheus Borges','Paula','Ana Paula','Elionai'],
+    XXI:   ['Rosana Meireles','Edson Barcelos','Mário Filho','Ana Glaucia','Araci'],
   },
 }
 const ESCALA_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -7670,6 +7671,7 @@ function _escalaDataBr(ms) {
 function _escalaFinsDeSemana(ano, mes, cfg) {
   const ancora = _escalaUTC(cfg.ancora)
   const outro = g => (g === 'A' ? 'B' : 'A')
+  const kInicio = Math.round((_escalaUTC(cfg.inicioRodizio || cfg.ancora) - ancora) / (7 * ESCALA_DIA))
   const fins = []
   const diasNoMes = new Date(Date.UTC(ano, mes, 0)).getUTCDate()
   for (let d = 1; d <= diasNoMes; d++) {
@@ -7681,7 +7683,8 @@ function _escalaFinsDeSemana(ano, mes, cfg) {
     const nomeDe = (conselho) => {
       const lista = cfg.rosters[conselho] || []
       if (!lista.length) return '—'
-      return lista[((k % lista.length) + lista.length) % lista.length]
+      const pos = k - kInicio
+      return lista[((pos % lista.length) + lista.length) % lista.length]
     }
     fins.push({
       k, sat, sun: sat + ESCALA_DIA,
@@ -7698,6 +7701,7 @@ function _escalaMesclarPadrao(dados) {
   if (!dados) return cfg
   if (dados.ancora) cfg.ancora = dados.ancora
   if (dados.grupoAncora) cfg.grupoAncora = dados.grupoAncora
+  if (dados.inicioRodizio) cfg.inicioRodizio = dados.inicioRodizio
   if (typeof dados.coordenacao === 'string') cfg.coordenacao = dados.coordenacao
   if (dados.rosters) cfg.rosters = dados.rosters
   return cfg
