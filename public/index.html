@@ -5881,7 +5881,7 @@ function renderFormRequisicaoCertidao(form) {
       <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">${form.category} · Nº 41</div>
       <h2 style="font-size:18px;font-weight:700">${form.name}</h2>
     </div>
-    <button class="btn btn-primary" onclick="downloadFormDocx()">${I.download} Baixar .docx</button>
+    <button class="btn btn-primary" onclick="gerarRequisicaoCertidaoPDF()">${I.download} Baixar PDF</button>
   </div>
   ${_councilBannerHtml()}`
 
@@ -5892,8 +5892,8 @@ function renderFormRequisicaoCertidao(form) {
       <!-- Destinatário -->
       <div style="background:var(--primary-subtle);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;color:var(--text)">
         <strong>Ao Cartório de Registro Civil das Pessoas Naturais</strong><br>
-        Comarca de <input style="display:inline;width:180px;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 4px;font-size:13px" placeholder="_______________" />
-        &nbsp;&nbsp;Subdistrito de <input style="display:inline;width:180px;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 4px;font-size:13px" placeholder="_______________" />
+        Comarca de <input id="rc-comarca" style="display:inline;width:180px;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 4px;font-size:13px" placeholder="_______________" />
+        &nbsp;&nbsp;Subdistrito de <input id="rc-subdistrito" style="display:inline;width:180px;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:2px 4px;font-size:13px" placeholder="_______________" />
         &nbsp;<strong>NESTA</strong>
       </div>
 
@@ -5901,11 +5901,11 @@ function renderFormRequisicaoCertidao(form) {
       <div class="field-row cols-2">
         <div>
           <label class="field-label">Nº do Conselho Tutelar</label>
-          <input placeholder="Ex: I, IV, XII…" value="I" />
+          <input id="rc-ct" placeholder="Ex: I, IV, XII…" value="I" />
         </div>
         <div>
           <label class="field-label">Conselheiro(a) Requisitante</label>
-          <input value="${currentUser.name}" />
+          <input id="rc-conselheiro" value="${currentUser.name}" />
         </div>
       </div>
 
@@ -5914,14 +5914,14 @@ function renderFormRequisicaoCertidao(form) {
 
       <!-- Requerido -->
       <div class="field-row cols-2">
-        <div><label class="field-label">Nome Completo</label><input placeholder="Nome do(a) requerido(a)" /></div>
-        <div><label class="field-label">Data de Nascimento</label><input type="date" /></div>
+        <div><label class="field-label">Nome Completo</label><input id="rc-nome" placeholder="Nome do(a) requerido(a)" /></div>
+        <div><label class="field-label">Data de Nascimento</label><input id="rc-nasc" type="date" /></div>
       </div>
       <div class="field-row cols-2">
-        <div><label class="field-label">CPF</label><input placeholder="000.000.000-00" /></div>
-        <div><label class="field-label">Filiação – Mãe</label><input placeholder="Nome da mãe" /></div>
+        <div><label class="field-label">CPF</label><input id="rc-cpf" placeholder="000.000.000-00" /></div>
+        <div><label class="field-label">Filiação – Mãe</label><input id="rc-mae" placeholder="Nome da mãe" /></div>
       </div>
-      <div><label class="field-label">Filiação – Pai</label><input placeholder="Nome do pai" /></div>
+      <div><label class="field-label">Filiação – Pai</label><input id="rc-pai" placeholder="Nome do pai" /></div>
 
       <div class="divider"></div>
       <strong style="font-size:13px">Especificações da certidão</strong>
@@ -5961,7 +5961,7 @@ function renderFormRequisicaoCertidao(form) {
       <!-- Número de vias -->
       <div style="max-width:200px">
         <label class="field-label">Número de vias</label>
-        <select>
+        <select id="rc-vias">
           <option value="1">1ª via</option>
           <option value="2">2ª via</option>
           <option value="3">3ª via</option>
@@ -5972,21 +5972,21 @@ function renderFormRequisicaoCertidao(form) {
       <strong style="font-size:13px">Dados do Registro</strong>
 
       <div class="field-row cols-3">
-        <div><label class="field-label">Data do Evento</label><input type="date" /></div>
-        <div><label class="field-label">Livro</label><input placeholder="Ex: A-15" /></div>
-        <div><label class="field-label">Folha</label><input placeholder="Ex: 42" /></div>
+        <div><label class="field-label">Data do Evento</label><input id="rc-evento" type="date" /></div>
+        <div><label class="field-label">Livro</label><input id="rc-livro" placeholder="Ex: A-15" /></div>
+        <div><label class="field-label">Folha</label><input id="rc-folha" placeholder="Ex: 42" /></div>
       </div>
       <div>
         <label class="field-label">Termo</label>
-        <input placeholder="Nº do Termo" />
+        <input id="rc-termo" placeholder="Nº do Termo" />
       </div>
 
       <div class="divider"></div>
 
       <!-- Data e local -->
       <div class="field-row cols-2">
-        <div><label class="field-label">Local</label><input value="Salvador" /></div>
-        <div><label class="field-label">Data</label><input type="date" value="2026-09-18" /></div>
+        <div><label class="field-label">Local</label><input id="rc-local" value="Salvador" /></div>
+        <div><label class="field-label">Data</label><input id="rc-data" type="date" value="2026-09-18" /></div>
       </div>
 
       <div style="margin-top:8px;padding:12px;background:var(--primary-subtle);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.6">
@@ -6000,9 +6000,74 @@ function renderFormRequisicaoCertidao(form) {
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
         Enviar por e-mail ao Cartório
       </button>
-      <button class="btn btn-primary" onclick="showToast('Requisição de Certidão gerada!')">${I.download} Gerar e Baixar</button>
+      <button class="btn btn-primary" onclick="gerarRequisicaoCertidaoPDF()">${I.download} Gerar e Baixar</button>
     </div>
   </div>`
+}
+
+// Documento limpo da requisição de certidão: lê só os campos do formulário
+function gerarRequisicaoCertidaoPDF() {
+  const v = id => (document.getElementById(id)?.value || '').trim()
+  const sel = name => document.querySelector('[name="' + name + '"]:checked')?.value || ''
+  const tipo = sel('tipo-certidao')
+  const modalidade = sel('modalidade-certidao')
+  const linha = (rotulo, valor) => '<tr><td class="rot">' + rotulo + '</td><td class="val">' + (valor ? esc(valor) : '&nbsp;') + '</td></tr>'
+  const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
+  const ct = v('rc-ct') || '—'
+  const banner = _bannerParaWord(document.getElementById('council-banner'))
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Requisição de Certidão</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:28px}
+    .banner{margin-bottom:14px}
+    h1{font-size:15px;color:#1e3a5f;text-align:center;letter-spacing:.5px;margin:12px 0 14px}
+    .dest{border:1px solid #dde3ec;border-radius:6px;padding:10px 12px;margin-bottom:12px;line-height:1.7}
+    h2{font-size:12px;color:#1e3a5f;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.4px}
+    table{width:100%;border-collapse:collapse}
+    td{padding:6px 8px;border:1px solid #dde3ec;vertical-align:top}
+    td.rot{width:34%;background:#f4f6f9;font-weight:700;color:#334155}
+    td.val{font-size:12.5px}
+    .par{margin:12px 0;line-height:1.6;text-align:justify}
+    .obs{margin-top:12px;font-size:10.5px;color:#444;border-left:3px solid #1e3a5f;padding:6px 10px;background:#f8fafc}
+    .local{margin-top:22px;text-align:right}
+    .assin{display:flex;justify-content:space-around;margin-top:56px}
+    .assin div{width:42%;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}
+    @media print{body{margin:14mm}}
+  </style></head><body>
+  <div class="banner">${banner}</div>
+  <h1>REQUISIÇÃO DE CERTIDÃO</h1>
+  <div class="dest">
+    <strong>Ao Cartório de Registro Civil das Pessoas Naturais</strong><br>
+    Comarca de <strong>${esc(v('rc-comarca') || '________________')}</strong> &nbsp; Subdistrito de <strong>${esc(v('rc-subdistrito') || '________________')}</strong> &nbsp; <strong>NESTA</strong>
+  </div>
+  <p class="par">O Conselho Tutelar nº <strong>${esc(ct)}</strong>, por meio do(a) Conselheiro(a) <strong>${esc(v('rc-conselheiro'))}</strong>, no uso de suas atribuições legais (art. 136 da Lei nº 8.069/1990 – ECA), REQUISITA a expedição da certidão abaixo especificada.</p>
+  <h2>1. Dados da pessoa requerida</h2>
+  <table>
+    ${linha('Nome completo', v('rc-nome'))}
+    ${linha('Data de nascimento', dataBr(v('rc-nasc')))}
+    ${linha('CPF', v('rc-cpf'))}
+    ${linha('Filiação – mãe', v('rc-mae'))}
+    ${linha('Filiação – pai', v('rc-pai'))}
+  </table>
+  <h2>2. Certidão requerida</h2>
+  <table>
+    ${linha('Tipo', tipo)}
+    ${linha('Modalidade', modalidade)}
+    ${linha('Número de vias', v('rc-vias') ? v('rc-vias') + 'ª via' : '')}
+  </table>
+  <h2>3. Dados do registro</h2>
+  <table>
+    ${linha('Data do evento', dataBr(v('rc-evento')))}
+    ${linha('Livro', v('rc-livro'))}
+    ${linha('Folha', v('rc-folha'))}
+    ${linha('Termo', v('rc-termo'))}
+  </table>
+  <p class="local">${esc(v('rc-local') || 'Salvador')}, ${esc(dataBr(v('rc-data')) || '____/____/______')}.</p>
+  <div class="assin"><div>Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
+  <div class="obs"><strong>Observação legal (ECA, art. 136):</strong> em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.</div>
+  <script>window.print();<\/script></body></html>`
+  const w = window.open('', '_blank')
+  if (w) { w.document.write(html); w.document.close() }
+  else showToast('Permita pop-ups para gerar o PDF.')
 }
 
 // ── REQUISIÇÕES DE CERTIDÃO ──
