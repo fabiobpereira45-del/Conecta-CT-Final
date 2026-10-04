@@ -4222,6 +4222,13 @@ function renderForm03(form) {
         </div>
       </div>
       <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🏷️ Identificação de Ocorrência</div>
+        <select id="f03c-ident-ocorrencia" data-label="Identificação de ocorrência" style="width:100%;margin-bottom:16px">
+          <option value="">-- Selecione a identificação --</option>
+          ${F03_IDENT_OCORRENCIA.map(g=>`<optgroup label="${esc(g.grupo)}">${g.itens.map(it=>`<option value="${esc(it)}">${esc(it)}</option>`).join('')}</optgroup>`).join('')}
+        </select>
+      </div>
+      <div>
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
           ${F03_VIOLACOES.map((v,i)=>box(`<input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" /> ${v}`)).join('')}
@@ -4304,6 +4311,13 @@ const F03_VIOLACOES = ['Negligência','Abandono','Violência Física','Violênci
 // Observação: novos itens sempre vão ANTES de 'Outro', mas nunca reordene ou remova os já
 // existentes — o índice de cada item vira o id do checkbox (f03c-enc-0, f03c-enc-1…) e fichas
 // já salvas guardam esse índice. Mudar a ordem troca o significado de respostas antigas.
+const F03_IDENT_OCORRENCIA = [
+  { grupo: 'Negligência Familiar', itens: ['Retorno','Saúde','Educação','Cuidados','Situação de Rua'] },
+  { grupo: 'Omissão / Poder Público', itens: ['Educação','Assistência','Saúde','Profissionalização','Evasão Hospitalar','Vulnerabilidade Social','Gravidez na Adolescência','Conflito Familiar','Adolescente Infrator','USO/SPA','Evasão Escolar','Elevado nº de Faltas','Vaga Escolar','Perdido(a)','Desaparecido','Abandono de incapaz','Abandono Afetivo','Ameaça','Risco Social','Tentativa de Suicídio','Automutilação','Orfandade','Exercício da cidadania (ocorrência)','Intolerância Religiosa','LGBTfobia','Racismo','Bullying','Cyberbullying','Maus Tratos','Violência Física','Violência Psicológica'] },
+  { grupo: 'Violência Sexual', itens: ['Violência Sexual'] },
+  { grupo: 'Trabalho Infantil', itens: ['Trabalho Infantil'] },
+  { grupo: 'Outras', itens: ['Acolhimento','Evasão','Comunicado Improcedente','Não encontrado Disque 100','Dados insuficientes','Dados insuficientes SEAS'] },
+]
 const F03_PORTA_ENTRADA = ['Espontâneo','Conselhos Tutelares','Outros Municípios','DP','MP','1ª Vara','Judiciário','Disque 100','DERCCA','DAI','Outras Delegacias','SEAS','Projetos Sociais','Escola','Saúde','CRAS','CREAS','Anônima']
 const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro','PROTEJA','Cartório','DERCCA','DAI','Escuta Especializada','Orientação']
 
