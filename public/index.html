@@ -31,6 +31,9 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;ba
 button{cursor:pointer;border:none;background:none;font:inherit;color:inherit}
 input,textarea,select{font:inherit;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;outline:none;width:100%}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+/* Caixinhas de marcação têm tamanho natural; a regra geral de campos (width:100%) não pode esticá-las */
+input[type="checkbox"],input[type="radio"]{width:auto;padding:0;margin:0 6px 0 0;border:none;box-shadow:none;flex-shrink:0;accent-color:var(--primary)}
+label:has(> input[type="checkbox"]){display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 a{color:var(--accent);text-decoration:none}
 
 /* ── AUTH SCREEN ── */
