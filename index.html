@@ -7624,343 +7624,272 @@ async function lookupCep() {
 }
 
 // ── DUTY ROSTER ──
-// Grupos de plantão centralizados (baseados nas escalas analisadas)
-const DUTY_GROUPS = {
-  A: {
-    label: 'Grupo A',
-    councils: [
-      { num:'IV',   name:'CT IV',   conselheiros:['Alves','Borges','Carvalho','Dantas','Esteves'] },
-      { num:'VII',  name:'CT VII',  conselheiros:['Farias','Gomes','Henrique','Ismael','Jardim'] },
-      { num:'XII',  name:'CT XII',  conselheiros:['Lacerda','Matos','Neves','Oliveira','Pinto'] },
-      { num:'XXII', name:'CT XXII', conselheiros:['Queiroz','Rocha','Santos','Torres','Ubaldo'] },
-    ]
+// ── ESCALA DE PLANTÃO (Plantão Centralizado) ──
+// Regra fixa: dois grupos de 4 conselhos. Em cada final de semana um grupo trabalha no
+// sábado e o outro no domingo; na semana seguinte os grupos trocam de dia. Todo conselho
+// trabalha em todo final de semana (um dia), então o intervalo entre plantões é sempre o
+// mesmo. A rotação de nomes é em ordem fixa por conselho. Feriados são ignorados de propósito.
+const ESCALA_GRUPOS = { A: ['IV','VII','XII','XXII'], B: ['VIII','XIII','XVIII','XXI'] }
+const ESCALA_PADRAO = {
+  ancora: '2026-09-05',
+  grupoAncora: 'A',
+  coordenacao: 'Conselho Tutelar XIII Narandiba',
+  rosters: {
+    IV:    ['Mateus Ferreira','Gilcimara','Josenira Meireles','Luzivane Guimarães','Aline Gomes'],
+    VII:   ['Celeste Caldas','Joselina Soares','Raquel Rodrigues','Renan Oliveira','Roseane Jesus'],
+    XII:   ['Sidney Silva Santos','Cidinalva Santos','Carmen Lucia','Cristiane Passos','Lucicleide Castro'],
+    XXII:  ['Rosana Meireles','Ana Cristina','Djanira','Jandiara Dorea','Noemi Xavier'],
+    VIII:  ['Flávia Regina','Sônia Soares','Analice','Laura','Jacilda Brito','Balbina Alves'],
+    XIII:  ['Regiane Santos','Jailton','Alex Teles','Fabio Barreto','Joilson Almeida'],
+    XVIII: ['Paula','Ana Paula','Elionai','Josiane','Matheus Borges'],
+    XXI:   ['Mário Filho','Araci','Ana Glaucia','Ednalda','Edson Barcelos'],
   },
-  B: {
-    label: 'Grupo B',
-    councils: [
-      { num:'VIII', name:'CT VIII', conselheiros:['Vieira','Xavier','Almeida','Barbosa','Cunha'] },
-      { num:'XIII', name:'CT XIII', conselheiros:['Dias','Eiras','Ferro','Guedes','Hora'] },
-      { num:'XVIII',name:'CT XVIII',conselheiros:['Inocêncio','Júlio','Klein','Lima','Moura'] },
-      { num:'XXI',  name:'CT XXI',  conselheiros:['Nascimento','Ortiz','Paes','Ramos','Silva'] },
-    ]
-  }
+}
+const ESCALA_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const ESCALA_DIA = 864e5
+
+let _escalaCfg = null
+let _escalaAno = new Date().getFullYear()
+let _escalaMes = new Date().getMonth() + 1
+
+function _escalaUTC(iso) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return Date.UTC(y, m - 1, d)
+}
+function _escalaIso(ms) {
+  const d = new Date(ms)
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`
+}
+function _escalaDataBr(ms) {
+  const d = new Date(ms)
+  return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`
 }
 
-// Estado da escala gerada
-let dutyRosterState = {
-  month: new Date().getMonth() + 1,
-  year: new Date().getFullYear(),
-  // índice de rotação por conselho (persiste entre gerações)
-  rotIdx: {}
-}
-
-function getWeekends(month, year) {
-  const weekends = []
-  const daysInMonth = new Date(year, month, 0).getDate()
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dt = new Date(year, month - 1, d)
-    const dow = dt.getDay()
-    if (dow === 6) {
-      // Sábado → verifica se o domingo seguinte é do mesmo mês
-      const sun = new Date(year, month - 1, d + 1)
-      weekends.push({
-        sat: new Date(year, month - 1, d),
-        sun: sun.getMonth() === month - 1 ? sun : null
-      })
+// Um registro por final de semana do mês: sábado, domingo e o grupo de cada dia.
+// k = número de semanas desde a âncora (negativo antes dela); a paridade de k define a troca.
+function _escalaFinsDeSemana(ano, mes, cfg) {
+  const ancora = _escalaUTC(cfg.ancora)
+  const outro = g => (g === 'A' ? 'B' : 'A')
+  const fins = []
+  const diasNoMes = new Date(Date.UTC(ano, mes, 0)).getUTCDate()
+  for (let d = 1; d <= diasNoMes; d++) {
+    const sat = Date.UTC(ano, mes - 1, d)
+    if (new Date(sat).getUTCDay() !== 6) continue
+    const k = Math.round((sat - ancora) / (7 * ESCALA_DIA))
+    const grupoSab = (((k % 2) + 2) % 2 === 0) ? cfg.grupoAncora : outro(cfg.grupoAncora)
+    const grupoDom = outro(grupoSab)
+    const nomeDe = (conselho) => {
+      const lista = cfg.rosters[conselho] || []
+      if (!lista.length) return '—'
+      return lista[((k % lista.length) + lista.length) % lista.length]
     }
-  }
-  return weekends
-}
-
-function formatDate(dt) {
-  if (!dt) return '—'
-  return dt.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', weekday:'short' })
-}
-
-function generateDutyRoster(month, year) {
-  const weekends = getWeekends(month, year)
-  // Determinar qual grupo começa no sábado da primeira semana.
-  // Padrão observado: alterna a cada semana, starting group determinado
-  // pelo primeiro sábado do mês.
-  // Referência: Agosto 2026 – 01/08 (Sábado) = Grupo B
-  // Determinamos o grupo base usando a contagem de semanas desde uma referência.
-  const REF_SAT = new Date(2026, 7, 1) // 01/08/2026 = Grupo B on Saturday
-  const firstSat = weekends.length > 0 ? weekends[0].sat : new Date(year, month-1, 1)
-  const weeksDiff = Math.round((firstSat - REF_SAT) / (7 * 24 * 3600 * 1000))
-  // Ref: Grupo B on Sat. A cada semana, alterna.
-  // weeksDiff par → Grupo B no sábado; ímpar → Grupo A no sábado
-  const firstSatGroup = weeksDiff % 2 === 0 ? 'B' : 'A'
-
-  // Copiar índices de rotação
-  const rotIdx = { ...dutyRosterState.rotIdx }
-
-  const rows = []
-  weekends.forEach((wknd, wi) => {
-    const satGroup = wi % 2 === 0 ? firstSatGroup : (firstSatGroup === 'A' ? 'B' : 'A')
-    const sunGroup = satGroup === 'A' ? 'B' : 'A'
-
-    const buildShift = (group, date) => {
-      if (!date) return null
-      return DUTY_GROUPS[group].councils.map(council => {
-        const key = `${group}-${council.num}`
-        if (!(key in rotIdx)) rotIdx[key] = 0
-        const conselheiro = council.conselheiros[rotIdx[key] % council.conselheiros.length]
-        rotIdx[key]++
-        return { council: council.num, name: council.name, conselheiro }
-      })
-    }
-
-    rows.push({
-      weekNum: wi + 1,
-      sat: wknd.sat,
-      sun: wknd.sun,
-      satGroup,
-      sunGroup,
-      satShifts: buildShift(satGroup, wknd.sat),
-      sunShifts: buildShift(sunGroup, wknd.sun),
+    fins.push({
+      k, sat, sun: sat + ESCALA_DIA,
+      grupoSab, grupoDom,
+      sabado: ESCALA_GRUPOS[grupoSab].map(c => ({ conselho: c, nome: nomeDe(c) })),
+      domingo: ESCALA_GRUPOS[grupoDom].map(c => ({ conselho: c, nome: nomeDe(c) })),
     })
-  })
+  }
+  return fins
+}
 
-  dutyRosterState.rotIdx = rotIdx
-  return rows
+function _escalaMesclarPadrao(dados) {
+  const cfg = JSON.parse(JSON.stringify(ESCALA_PADRAO))
+  if (!dados) return cfg
+  if (dados.ancora) cfg.ancora = dados.ancora
+  if (dados.grupoAncora) cfg.grupoAncora = dados.grupoAncora
+  if (typeof dados.coordenacao === 'string') cfg.coordenacao = dados.coordenacao
+  if (dados.rosters) cfg.rosters = dados.rosters
+  return cfg
+}
+
+async function _escalaCarregar() {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/escala_config?id=eq.plantao&select=dados`, { headers: _sbHeaders() })
+    if (!r.ok) return _escalaMesclarPadrao(null)
+    const rows = await r.json()
+    return _escalaMesclarPadrao(rows[0]?.dados || null)
+  } catch (e) { return _escalaMesclarPadrao(null) }
+}
+
+async function _escalaSalvar(cfg) {
+  const r = await fetch(`${_SB_URL}/rest/v1/escala_config`, {
+    method: 'POST',
+    headers: { ..._sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify([{ id: 'plantao', dados: cfg, updated_at: new Date().toISOString() }])
+  })
+  return r.ok
 }
 
 function renderDutyRoster() {
-  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-  const mSel = months.map((m,i) =>
-    `<option value="${i+1}" ${i+1===dutyRosterState.month?'selected':''}>${m}</option>`).join('')
-  const ySel = [2025,2026,2027].map(y =>
-    `<option value="${y}" ${y===dutyRosterState.year?'selected':''}>${y}</option>`).join('')
-
-  return `
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-pad" style="border-bottom:1px solid var(--border)">
-      <strong style="font-size:15px">Gerador de Escala de Plantões Centralizados</strong>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">
-        Grupos fixos · Apenas sábados e domingos · Rotação automática de conselheiros
-      </p>
-    </div>
-    <div class="card-pad" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-      <div>
-        <label class="field-label" style="margin-bottom:4px">Mês</label>
-        <select id="duty-month" style="width:140px">${mSel}</select>
-      </div>
-      <div>
-        <label class="field-label" style="margin-bottom:4px">Ano</label>
-        <select id="duty-year" style="width:100px">${ySel}</select>
-      </div>
-      <button class="btn btn-primary" onclick="genDutyRoster()" style="height:38px">Gerar Escala</button>
-      <button class="btn btn-outline" onclick="exportDutyRoster()" style="height:38px" id="duty-export-btn" disabled>Exportar PDF</button>
-    </div>
-  </div>
-
-  <!-- Legenda dos grupos -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-    <div class="card">
-      <div class="card-pad" style="display:flex;align-items:center;gap:10px">
-        <div style="width:14px;height:14px;border-radius:3px;background:#1e3a5f;flex-shrink:0"></div>
-        <div>
-          <strong style="font-size:13px">Grupo A</strong>
-          <p style="font-size:11px;color:var(--text-muted);margin-top:1px">CT IV · CT VII · CT XII · CT XXII</p>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-pad" style="display:flex;align-items:center;gap:10px">
-        <div style="width:14px;height:14px;border-radius:3px;background:#0891b2;flex-shrink:0"></div>
-        <div>
-          <strong style="font-size:13px">Grupo B</strong>
-          <p style="font-size:11px;color:var(--text-muted);margin-top:1px">CT VIII · CT XIII · CT XVIII · CT XXI</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="duty-result">
-    <div class="empty" style="padding:40px">
-      <div style="font-size:32px;margin-bottom:8px">📅</div>
-      <p>Selecione o mês e ano e clique em <strong>Gerar Escala</strong></p>
-    </div>
-  </div>
-
-  <!-- Painel de configuração dos conselheiros -->
-  <div class="card" style="margin-top:16px">
-    <div class="card-pad" style="border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <strong style="font-size:14px">Configuração dos Plantonistas</strong>
-      <button class="btn btn-outline btn-sm" onclick="toggleDutyConfig()">Editar</button>
-    </div>
-    <div id="duty-config" style="display:none">
-      <div style="padding:16px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border)">
-        Edite os nomes dos conselheiros de cada CT. A rotação segue a ordem da lista.
-      </div>
-      ${['A','B'].map(grp => `
-        <div style="padding:16px;border-bottom:1px solid var(--border)">
-          <strong style="font-size:13px;color:${grp==='A'?'#1e3a5f':'#0891b2'}">${DUTY_GROUPS[grp].label}</strong>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px">
-            ${DUTY_GROUPS[grp].councils.map(c => `
-              <div style="border:1px solid var(--border);border-radius:8px;padding:12px">
-                <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px">CT ${c.num}</div>
-                ${c.conselheiros.map((con,ci) => `
-                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                    <span style="font-size:11px;color:var(--text-muted);width:18px">${ci+1}.</span>
-                    <input style="font-size:12px;height:28px;padding:4px 8px" value="${con}"
-                      onchange="updateDutyConselheiro('${grp}','${c.num}',${ci},this.value)" />
-                  </div>
-                `).join('')}
-                <button onclick="addDutyConselheiro('${grp}','${c.num}')"
-                  style="margin-top:6px;font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0">
-                  + Adicionar conselheiro
-                </button>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  </div>`
+  return `<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando escala…</div>`
 }
 
 function attachDutyRosterEvents() {
-  // Auto-gera ao renderizar
-  genDutyRoster()
+  _escalaCarregar().then(cfg => {
+    _escalaCfg = cfg
+    const el = document.getElementById('content')
+    if (el && activeModule === 'duty-roster') el.innerHTML = _escalaTela()
+  })
 }
 
-function toggleDutyConfig() {
-  const el = document.getElementById('duty-config')
-  if (el) el.style.display = el.style.display === 'none' ? '' : 'none'
-}
+function _escalaTela() {
+  const cfg = _escalaCfg || _escalaMesclarPadrao(null)
+  const fins = _escalaFinsDeSemana(_escalaAno, _escalaMes, cfg)
+  const anos = [2025, 2026, 2027, 2028]
+  const podeEditar = _éAdmin()
+  const cor = g => (g === 'A' ? '#1e3a5f' : '#0891b2')
+  const badge = g => `<span style="font-size:11px;font-weight:700;color:#fff;background:${cor(g)};padding:3px 10px;border-radius:20px">Grupo ${g}</span>`
+  const linhas = lista => lista.map(x => `
+    <div style="display:flex;justify-content:space-between;gap:10px;padding:7px 10px;background:var(--bg);border-radius:6px;font-size:13px">
+      <strong>CT ${x.conselho}</strong><span>${esc(x.nome)}</span>
+    </div>`).join('')
 
-function updateDutyConselheiro(grp, ctNum, idx, val) {
-  const council = DUTY_GROUPS[grp].councils.find(c => c.num === ctNum)
-  if (council) council.conselheiros[idx] = val
-}
-
-function addDutyConselheiro(grp, ctNum) {
-  const council = DUTY_GROUPS[grp].councils.find(c => c.num === ctNum)
-  if (!council) return
-  const name = prompt('Nome do conselheiro:')
-  if (name && name.trim()) {
-    council.conselheiros.push(name.trim())
-    document.getElementById('content').innerHTML = renderDutyRoster()
-    attachDutyRosterEvents()
-  }
-}
-
-function genDutyRoster() {
-  const month = parseInt(document.getElementById('duty-month')?.value || dutyRosterState.month)
-  const year = parseInt(document.getElementById('duty-year')?.value || dutyRosterState.year)
-  dutyRosterState.month = month
-  dutyRosterState.year = year
-  // Ao gerar novo mês, resetar rotação para consistência (ou manter)
-  // Mantemos para simular continuidade real
-  const rows = generateDutyRoster(month, year)
-  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-
-  const colorA = '#1e3a5f'
-  const colorB = '#0891b2'
-  const bgA = '#e8f0fe'
-  const bgB = '#e0f2fe'
-
-  const html = `
-    <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
-      <h3 style="font-size:15px;font-weight:700">${months[month-1]} ${year}</h3>
-      <span style="font-size:12px;color:var(--text-muted)">${rows.length} final(is) de semana</span>
+  return `
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2>Escala de Plantões</h2>
+      <p>Plantão Centralizado · ${esc(cfg.coordenacao)} · ${fins.length} finais de semana em ${ESCALA_MESES[_escalaMes-1]}</p>
     </div>
-    ${rows.map(row => {
-      const satColor = row.satGroup === 'A' ? colorA : colorB
-      const sunColor = row.sunGroup === 'A' ? colorA : colorB
-      const satBg = row.satGroup === 'A' ? bgA : bgB
-      const sunBg = row.sunGroup === 'A' ? bgA : bgB
-      return `
-      <div class="card" style="margin-bottom:12px;overflow:hidden">
-        <div style="padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
-          <span style="font-size:13px;font-weight:700">Semana ${row.weekNum}</span>
-          <span style="font-size:12px;color:var(--text-muted)">—</span>
-          <span style="font-size:12px;color:var(--text-muted)">
-            ${formatDate(row.sat)}${row.sun ? ' · ' + formatDate(row.sun) : ''}
-          </span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${podeEditar ? `<button class="btn btn-outline" onclick="abrirEditorEscala()">✏️ Editar nomes</button>` : ''}
+      <button class="btn btn-primary" onclick="exportDutyRoster()">${I.download} Imprimir / PDF</button>
+    </div>
+  </div>
+
+  <div class="card card-pad" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+    <div><label class="field-label">Mês</label>
+      <select onchange="_escalaMudarPeriodo('mes', this.value)">
+        ${ESCALA_MESES.map((m,i)=>`<option value="${i+1}" ${i+1===_escalaMes?'selected':''}>${m}</option>`).join('')}
+      </select></div>
+    <div><label class="field-label">Ano</label>
+      <select onchange="_escalaMudarPeriodo('ano', this.value)">
+        ${anos.map(a=>`<option value="${a}" ${a===_escalaAno?'selected':''}>${a}</option>`).join('')}
+      </select></div>
+    <div style="font-size:12px;color:var(--text-muted);padding-bottom:8px">
+      Sábado de referência: <strong>${_escalaDataBr(_escalaUTC(cfg.ancora))}</strong> (Grupo ${cfg.grupoAncora})
+    </div>
+  </div>
+
+  ${fins.length === 0 ? `<div class="empty"><p>Nenhum final de semana neste mês.</p></div>` : fins.map(f => `
+  <div class="card" style="margin-bottom:14px;overflow:hidden">
+    <div style="padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <strong style="font-size:14px">${_escalaDataBr(f.sat)} – ${_escalaDataBr(f.sun)}</strong>
+    </div>
+    <div class="grid-2" style="gap:0">
+      <div style="padding:14px;border-right:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <strong style="font-size:13px">Sábado · ${_escalaDataBr(f.sat)}</strong>${badge(f.grupoSab)}
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          <!-- SÁBADO -->
-          <div style="border-right:1px solid var(--border);padding:14px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <span style="font-size:13px;font-weight:700">🟡 Sábado<br><span style="font-size:11px;font-weight:400;color:var(--text-muted)">${formatDate(row.sat)}</span></span>
-              <span style="font-size:11px;font-weight:700;color:${satColor};background:${satBg};padding:3px 8px;border-radius:20px">Grupo ${row.satGroup}</span>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:6px">
-              ${row.satShifts.map(s => `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--bg);border-radius:6px;font-size:12px">
-                  <span style="font-weight:700;color:${satColor}">CT ${s.council}</span>
-                  <span style="color:var(--text)">${s.conselheiro}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-          <!-- DOMINGO -->
-          <div style="padding:14px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <span style="font-size:13px;font-weight:700">🔵 Domingo<br><span style="font-size:11px;font-weight:400;color:var(--text-muted)">${row.sun ? formatDate(row.sun) : '—'}</span></span>
-              <span style="font-size:11px;font-weight:700;color:${sunColor};background:${sunBg};padding:3px 8px;border-radius:20px">Grupo ${row.sunGroup}</span>
-            </div>
-            ${row.sun ? `
-            <div style="display:flex;flex-direction:column;gap:6px">
-              ${row.sunShifts.map(s => `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--bg);border-radius:6px;font-size:12px">
-                  <span style="font-weight:700;color:${sunColor}">CT ${s.council}</span>
-                  <span style="color:var(--text)">${s.conselheiro}</span>
-                </div>
-              `).join('')}
-            </div>` : `<div style="font-size:12px;color:var(--text-muted);padding:6px">Domingo não está neste mês.</div>`}
-          </div>
+        <div style="display:flex;flex-direction:column;gap:6px">${linhas(f.sabado)}</div>
+      </div>
+      <div style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <strong style="font-size:13px">Domingo · ${_escalaDataBr(f.sun)}</strong>${badge(f.grupoDom)}
         </div>
-      </div>`
-    }).join('')}
-  `
-  const res = document.getElementById('duty-result')
-  if (res) res.innerHTML = html
-  const expBtn = document.getElementById('duty-export-btn')
-  if (expBtn) expBtn.disabled = false
-  showToast(`Escala de ${months[month-1]} ${year} gerada!`)
+        <div style="display:flex;flex-direction:column;gap:6px">${linhas(f.domingo)}</div>
+      </div>
+    </div>
+  </div>`).join('')}`
+}
+
+function _escalaMudarPeriodo(campo, valor) {
+  if (campo === 'mes') _escalaMes = parseInt(valor, 10)
+  else _escalaAno = parseInt(valor, 10)
+  document.getElementById('content').innerHTML = _escalaTela()
+}
+
+function abrirEditorEscala() {
+  if (!_éAdmin()) { showToast('Somente o master pode editar a escala.'); return }
+  const cfg = _escalaCfg || _escalaMesclarPadrao(null)
+  const grupos = ['A','B'].map(g => `
+    <div style="margin-bottom:14px">
+      <strong style="font-size:13px;color:${g==='A'?'#1e3a5f':'#0891b2'}">Grupo ${g}</strong>
+      <div class="grid-2" style="margin-top:8px">
+        ${ESCALA_GRUPOS[g].map(c => `
+          <div>
+            <label class="field-label">CT ${c} – um nome por linha (ordem de rotação)</label>
+            <textarea id="esc-ct-${c}" rows="5" style="font-size:13px">${(cfg.rosters[c]||[]).map(esc).join('\n')}</textarea>
+          </div>`).join('')}
+      </div>
+    </div>`).join('')
+  showModal(`
+    <div class="modal-box" style="max-width:720px">
+      <div class="modal-title">✏️ Editar Escala de Plantões</div>
+      <div class="field-group"><label class="field-label">Coordenação (aparece no cabeçalho)</label>
+        <input id="esc-coord" value="${esc(cfg.coordenacao)}" /></div>
+      <div class="field-row cols-2">
+        <div class="field-group"><label class="field-label">Sábado de referência</label>
+          <input id="esc-ancora" type="date" value="${cfg.ancora}" /></div>
+        <div class="field-group"><label class="field-label">Grupo que trabalha nesse sábado</label>
+          <select id="esc-grupo"><option value="A" ${cfg.grupoAncora==='A'?'selected':''}>Grupo A</option><option value="B" ${cfg.grupoAncora==='B'?'selected':''}>Grupo B</option></select></div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Os nomes que se repetem em mais de um mês são titulares; os que aparecem uma ou duas vezes são suplentes. Edite aqui sempre que a composição mudar.</p>
+      ${grupos}
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEditorEscala()">Salvar</button>
+      </div>
+    </div>`)
+}
+
+async function salvarEditorEscala() {
+  if (!_éAdmin()) return
+  const cfg = JSON.parse(JSON.stringify(_escalaCfg || _escalaMesclarPadrao(null)))
+  cfg.coordenacao = document.getElementById('esc-coord').value.trim() || cfg.coordenacao
+  cfg.ancora = document.getElementById('esc-ancora').value || cfg.ancora
+  cfg.grupoAncora = document.getElementById('esc-grupo').value
+  Object.values(ESCALA_GRUPOS).flat().forEach(c => {
+    const nomes = document.getElementById('esc-ct-' + c).value.split('\n').map(s => s.trim()).filter(Boolean)
+    if (nomes.length) cfg.rosters[c] = nomes
+  })
+  const ok = await _escalaSalvar(cfg)
+  if (!ok) { showToast('Não foi possível salvar a escala. Verifique a migração 012 no Supabase.'); return }
+  _escalaCfg = cfg
+  closeModal()
+  document.getElementById('content').innerHTML = _escalaTela()
+  showToast('Escala salva.')
 }
 
 function exportDutyRoster() {
-  const state = dutyRosterState
-  if (!state || !state.month || !state.year) { showToast('Gere a escala primeiro.'); return }
-  const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                      'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-  const rows = generateDutyRoster(state.month, state.year)
-  const now = new Date()
-
-  const rowsHtml = rows.map(row => {
-    const satShiftsHtml = row.satShifts.map(s=>`
-      <tr><td style="color:#1e3a5f;font-weight:700">CT ${s.council}</td><td>${s.conselheiro}</td><td>Sábado – Grupo ${row.satGroup}</td></tr>`).join('')
-    const sunShiftsHtml = row.sun ? row.sunShifts.map(s=>`
-      <tr><td style="color:#0891b2;font-weight:700">CT ${s.council}</td><td>${s.conselheiro}</td><td>Domingo – Grupo ${row.sunGroup}</td></tr>`).join('') : ''
-    return `<tr><td colspan="3" style="background:#f4f6f9;font-weight:700;font-size:12px;padding:6px 10px">Semana ${row.weekNum} — ${formatDate(row.sat)}${row.sun?' · '+formatDate(row.sun):''}</td></tr>
-    ${satShiftsHtml}${sunShiftsHtml}`
-  }).join('')
-
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>Escala de Plantão – ${monthNames[state.month-1]} ${state.year}</title>
+  const cfg = _escalaCfg || _escalaMesclarPadrao(null)
+  const fins = _escalaFinsDeSemana(_escalaAno, _escalaMes, cfg)
+  if (!fins.length) { showToast('Nenhum final de semana neste mês.'); return }
+  const tabela = lista => `
+    <table><thead><tr><th>CT</th><th>Conselheiro(a)</th></tr></thead>
+    <tbody>${lista.map(x => `<tr><td>${esc(x.conselho)}</td><td>${esc(x.nome)}</td></tr>`).join('')}</tbody></table>`
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Escala de Plantões – ${ESCALA_MESES[_escalaMes-1]} ${_escalaAno}</title>
   <style>
-    body{font-family:Arial,sans-serif;font-size:13px;color:#1a2332;margin:30px}
-    h1{font-size:20px;color:#1e3a5f;margin-bottom:4px}
-    p{color:#6b7a90;margin-bottom:20px}
-    table{width:100%;border-collapse:collapse}
-    th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;text-align:left;border-bottom:2px solid #dde3ec;color:#6b7a90;background:#f4f6f9}
-    td{padding:8px 10px;border-bottom:1px solid #dde3ec}
-    @media print{body{margin:10px}}
+    body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:24px}
+    .cab{text-align:center;margin-bottom:14px}
+    .cab strong{font-size:14px;color:#1e3a5f}
+    h1{font-size:17px;color:#1e3a5f;text-align:center;margin:10px 0 14px}
+    .fim{border:1px solid #dde3ec;border-radius:6px;margin-bottom:12px;page-break-inside:avoid;overflow:hidden}
+    .fim-t{background:#f4f6f9;padding:8px 12px;font-weight:700;border-bottom:1px solid #dde3ec}
+    .cols{display:grid;grid-template-columns:1fr 1fr}
+    .col{padding:10px 12px}
+    .col+.col{border-left:1px solid #dde3ec}
+    h3{font-size:12px;margin:0 0 6px;color:#1e3a5f}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th,td{padding:4px 6px;border-bottom:1px solid #eef1f5;text-align:left}
+    th{color:#6b7a90;font-size:10px;text-transform:uppercase}
   </style></head><body>
-  <h1>Conselho Tutelar – Salvador/BA</h1>
-  <p>Escala de Plantão – ${monthNames[state.month-1]} ${state.year} · Gerado em ${now.toLocaleDateString('pt-BR')}</p>
-  <table>
-    <thead><tr><th>Conselho</th><th>Conselheiro</th><th>Turno</th></tr></thead>
-    <tbody>${rowsHtml}</tbody>
-  </table>
+  <div class="cab"><strong>PLANTÃO CENTRALIZADO CAJAZEIRAS</strong><br>
+    Lei Federal 8.069/90 – Lei Municipal 6.266<br>
+    Estrada do Coqueiro Grande, Fazenda Grande III – Nº 1902 – Salvador/BA<br>
+    Telefone: 9991-9745 · ct.centralizadocastelobranco@salvador.ba.gov.br<br>
+    <span>Coordenação do mês: ${esc(cfg.coordenacao)}</span></div>
+  <h1>ESCALA ${ESCALA_MESES[_escalaMes-1].toUpperCase()} ${_escalaAno}</h1>
+  ${fins.map(f => `
+    <div class="fim">
+      <div class="fim-t">${_escalaDataBr(f.sat)} – ${_escalaDataBr(f.sun)}</div>
+      <div class="cols">
+        <div class="col"><h3>Sábado · ${_escalaDataBr(f.sat)} (Grupo ${f.grupoSab})</h3>${tabela(f.sabado)}</div>
+        <div class="col"><h3>Domingo · ${_escalaDataBr(f.sun)} (Grupo ${f.grupoDom})</h3>${tabela(f.domingo)}</div>
+      </div>
+    </div>`).join('')}
   <script>window.print();<\/script></body></html>`
-  const w = window.open('','_blank')
+  const w = window.open('', '_blank')
   if (w) { w.document.write(html); w.document.close() }
   else showToast('Permita pop-ups para gerar o PDF.')
 }
