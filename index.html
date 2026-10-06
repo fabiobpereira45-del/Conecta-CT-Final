@@ -2370,8 +2370,7 @@ const F03_ESTAT_SECOES = [
   { id:'ident', titulo:'Identificação de Ocorrência', v: (a,c) => [c['f03c-ident-ocorrencia']] },
   { id:'agente', titulo:'Agente Violador', v: (a,c) => [c['f03c-agente-violador']] },
   { id:'violacao', titulo:'Tipo de Violência / Violação', v: (a,c) => F03_VIOLACOES.filter((v,i)=>c['f03c-viol-'+i]) },
-  { id:'acoes', titulo:'Ações e Encaminhamentos', v: (a,c) => F03_ACOES_ENCAMINHAMENTO.filter((x,i)=>c['f03c-acao-'+i]) },
-  { id:'encaminhamento', titulo:'Encaminhamentos Realizados', v: (a,c) => F03_ENCAMINHAMENTOS.filter((e,i)=>c['f03c-enc-'+i]) },
+  { id:'encaminhamento', titulo:'Ações e Encaminhamentos', v: (a,c) => { const m = _f03MigrarAcoes(c); return F03_ACOES_UNIFICADAS.filter(x => m[x.id]).map(x => x.label) } },
 ]
 
 function _statsAgregar(rows) {
@@ -4245,12 +4244,6 @@ function renderForm03(form) {
         </select>
       </div>
       <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📌 Ações e Encaminhamentos</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
-          ${F03_ACOES_ENCAMINHAMENTO.map((a,i)=>box(`<input type="checkbox" id="f03c-acao-${i}" data-label="Ação: ${a}" style="accent-color:var(--primary)" /> ${a}`)).join('')}
-        </div>
-      </div>
-      <div>
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
           ${F03_VIOLACOES.map((v,i)=>box(`<input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" /> ${v}`)).join('')}
@@ -4265,9 +4258,9 @@ function renderForm03(form) {
         <div style="margin-top:10px"><label class="field-label">Providências Imediatas</label><textarea id="f03c-providencias" data-label="Providências imediatas" rows="3" style="resize:vertical" placeholder="Providências tomadas…"></textarea></div>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:14px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔀 Encaminhamentos</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:10px">
-          ${F03_ENCAMINHAMENTOS.map((e,i)=>box(`<input type="checkbox" id="f03c-enc-${i}" data-label="Encaminhamento: ${e}" style="accent-color:var(--primary)" /> ${e}`)).join('')}
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📌 Ações e Encaminhamentos</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:10px">
+          ${F03_ACOES_UNIFICADAS.map(x=>box(`<input type="checkbox" id="${x.id}" data-label="Ação/Encaminhamento: ${x.label}" style="accent-color:var(--primary)" /> ${x.label}`)).join('')}
         </div>
         <div><label class="field-label">Observações de Encaminhamento</label>
           <textarea id="f03c-obs-enc" data-label="Observações de encaminhamento" rows="2" style="resize:vertical" placeholder="Detalhes dos encaminhamentos…"></textarea>
@@ -4344,6 +4337,28 @@ const F03_ACOES_ENCAMINHAMENTO = ['MP','1ª Vara','Judiciário','Disque 100','De
 const F03_AGENTE_VIOLADOR = ['Família','Poder Público','Sociedade','Pela Própria Conduta']
 const F03_PORTA_ENTRADA = ['Espontâneo','Conselhos Tutelares','Outros Municípios','DP','MP','1ª Vara','Judiciário','Disque 100','DERCCA','DAI','Outras Delegacias','SEAS','Projetos Sociais','Escola','Saúde','CRAS','CREAS','Anônima']
 const F03_ENCAMINHAMENTOS = ['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro','PROTEJA','Cartório','DERCCA','DAI','Escuta Especializada','Orientação']
+
+// Lista única "Ações e Encaminhamentos": os encaminhamentos mantêm o id f03c-enc-N e as ações que não
+// existem neles entram com f03c-acao-N, então fichas já salvas continuam abrindo e contando.
+const _F03_ACAO_ALIAS = { 'MP':'MP / Promotoria', 'Saúde':'UBS / Posto de Saúde', 'Delegacia – DERCCA':'DERCCA', 'Delegacia – DAI':'DAI', 'Delegacia – Outras':'Delegacia' }
+const _f03Semacento = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+const _f03AcaoParaEnc = a => {
+  const alvo = _f03Semacento(_F03_ACAO_ALIAS[a] || a)
+  return F03_ENCAMINHAMENTOS.findIndex(e => _f03Semacento(e) === alvo)
+}
+const F03_ACOES_UNIFICADAS = [
+  ...F03_ENCAMINHAMENTOS.map((e, i) => ({ label: e, id: 'f03c-enc-' + i })),
+  ...F03_ACOES_ENCAMINHAMENTO.map((a, j) => ({ a, j })).filter(x => _f03AcaoParaEnc(x.a) < 0).map(x => ({ label: x.a, id: 'f03c-acao-' + x.j })),
+]
+// Marca o encaminhamento equivalente quando a ficha antiga só tinha a ação marcada
+function _f03MigrarAcoes(c) {
+  const out = { ...(c || {}) }
+  F03_ACOES_ENCAMINHAMENTO.forEach((a, j) => {
+    const i = _f03AcaoParaEnc(a)
+    if (i >= 0 && out['f03c-acao-' + j]) out['f03c-enc-' + i] = true
+  })
+  return out
+}
 
 // Ficha aberta no formulário 03 (null = ficha nova sendo preenchida pelo atendente)
 let _f03Ficha = null
@@ -4618,7 +4633,7 @@ function _f03Render() {
   const sec = document.getElementById('f03-secao-conselheiro')
   sec.style.display = podeVerComplemento ? 'block' : 'none'
   if (!podeVerComplemento) return
-  _f03Aplicar(f.dados_conselheiro)
+  _f03Aplicar(_f03MigrarAcoes(f.dados_conselheiro))
   document.getElementById('f03-resp-nome').value = f.conselheiro_dest || ''
   _f03AtualizarAssinaturas()
   document.getElementById('f03-label-resp').textContent = `Responsável: ${f.conselheiro_dest || '—'}${dest ? '' : ' · somente leitura'}`
