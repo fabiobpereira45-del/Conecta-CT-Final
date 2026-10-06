@@ -736,6 +736,20 @@ function _paraWord(el) {
     }
   })
 
+  // Espaço garantido entre o fim do texto e a assinatura (o Word ignora margin-top em
+  // tabelas/divs, mas respeita um parágrafo vazio com altura fixa)
+  const _gap = () => { const p = document.createElement('p'); p.setAttribute('data-sig-gap', '1'); p.setAttribute('style', 'margin:0;padding:0;height:44pt;line-height:44pt;font-size:10pt'); p.innerHTML = '&nbsp;'; return p }
+  const _ehAssinatura = el => el.tagName === 'TABLE'
+    ? /border-top:\s*1pt solid #000/.test(el.innerHTML) && /Conselheiro/.test(el.textContent)
+    : /border-top:\s*1px solid #333/.test(el.getAttribute('style') || '') || !!el.querySelector(':scope > div[style*="border-top:1px solid #333"], :scope > div > div[style*="border-top:1px solid #333"]')
+  Array.from(c.querySelectorAll('table, div')).forEach(el => {
+    if (!_ehAssinatura(el)) return
+    if (el.closest('table') && el.tagName !== 'TABLE' && el.closest('table') !== el) return
+    const prev = el.previousElementSibling
+    if (prev && (prev.getAttribute('data-sig-gap') || _ehAssinatura(prev))) return
+    el.parentNode.insertBefore(_gap(), el)
+  })
+
   // Protocolo de recebimento (rodapé pontilhado)
   c.querySelectorAll('div[style*="dashed"]').forEach(d => {
     d.style.marginTop = '12pt'
