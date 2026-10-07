@@ -930,6 +930,7 @@ const NAV_ALL = [
   { id:'notices', label:'Convocatórias e Avisos', icon:'megaphone', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'councils', label:'Conselhos e Bairros', icon:'building', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'statistics', label:'Minhas Estatísticas', icon:'chart', roles:['master','coordenador','conselheiro'] },
+  { id:'dashboard', label:'Painel de Gráficos', icon:'pie', roles:['master','coordenador','conselheiro'] },
   { id:'daily', label:'Lançamentos Diários', icon:'clipboard', roles:['master','coordenador','conselheiro'] },
   { id:'agenda', label:'Agenda', icon:'calendar', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'reports', label:'Meus Relatórios', icon:'report', roles:['master','coordenador','conselheiro'] },
@@ -1436,6 +1437,7 @@ function renderContent() {
     case 'profile': el.innerHTML = renderProfile(); _loadProfileStats(); break
     case 'notices': el.innerHTML = renderNotices(); break
     case 'statistics': el.innerHTML = renderStatistics(); break
+    case 'dashboard': el.innerHTML = renderDashboard(); break
     case 'daily': el.innerHTML = renderDaily(); break
     case 'agenda': el.innerHTML = renderAgenda(); break
     case 'forms': el.innerHTML = renderForms(); attachFormsEvents(); break
@@ -7999,6 +8001,407 @@ function exportDutyRoster() {
   const w = window.open('', '_blank')
   if (w) { w.document.write(html); w.document.close() }
   else showToast('Permita pop-ups para gerar o PDF.')
+}
+
+// ── PAINEL DE GRÁFICOS (estatísticas visuais, comparativos, PDF e PPTX) ──
+// Usa os mesmos dados das Estatísticas (fichas nº 03 já complementadas pelo conselheiro) e a
+// mesma lista de seções (F03_ESTAT_SECOES), então tela, PDF e slides mostram os mesmos números.
+const DASH_GRUPOS = [
+  { grupo: 'Atendimento', cor: '#ff6b6b', secoes: [['atendimento','donut'],['irmaos','donut'],['bairro','bar']] },
+  { grupo: 'Perfil do Atendimento', cor: '#a78bfa', secoes: [['sexo','donut'],['faixa','donut'],['raca','donut'],['genero','donut'],['matriculado','donut'],['serie','bar']] },
+  { grupo: 'Grupos Específicos', cor: '#2dd4bf', secoes: [['pcd','donut'],['neuro','donut'],['neuroCond','bar'],['laudo','donut']] },
+  { grupo: 'Porta de Entrada', cor: '#ffb938', secoes: [['porta','bar']] },
+  { grupo: 'Identificação da Ocorrência', cor: '#7ed957', secoes: [['ident','bar'],['agente','donut'],['violacao','bar']] },
+  { grupo: 'Aplicação de Medidas', cor: '#4fc3f7', secoes: [['encaminhamento','bar']] },
+]
+const DASH_CORES = ['#ff6b6b','#a78bfa','#ffb938','#7ed957','#4fc3f7','#2dd4bf','#f472b6','#94a3b8','#fb923c','#38bdf8']
+const DASH_PERIODOS = [
+  ['', 'Ano inteiro'],
+  ['t1','1º Trimestre (Jan–Mar)'],['t2','2º Trimestre (Abr–Jun)'],['t3','3º Trimestre (Jul–Set)'],['t4','4º Trimestre (Out–Dez)'],
+  ['s1','1º Semestre (Jan–Jun)'],['s2','2º Semestre (Jul–Dez)'],
+  ...ESCALA_MESES.map((m, i) => ['m' + i, m]),
+]
+
+let _dash = { rows: null, ano: '', per: '', ct: '', sexo: '', faixa: '', comparar: true }
+
+function renderDashboard() {
+  const el = document.getElementById('content')
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando painel…</div>'
+  _statsCarregar().then(rows => {
+    _dash.rows = rows
+    if (activeModule === 'dashboard') el.innerHTML = _dashTela()
+  })
+  return ''
+}
+
+// Intervalo [início, fim) em ms de um ano + recorte (mês/trimestre/semestre)
+function _dashIntervalo(ano, per) {
+  if (!ano) return null
+  let m0 = 0, m1 = 12
+  if (per && per[0] === 'm') { m0 = +per.slice(1); m1 = m0 + 1 }
+  else if (per && per[0] === 't') { m0 = (+per.slice(1) - 1) * 3; m1 = m0 + 3 }
+  else if (per && per[0] === 's') { m0 = (+per.slice(1) - 1) * 6; m1 = m0 + 6 }
+  return [new Date(+ano, m0, 1).getTime(), new Date(+ano, m1, 1).getTime()]
+}
+// Período imediatamente anterior, do mesmo tipo (mês→mês, trimestre→trimestre, ano→ano)
+function _dashAnterior(ano, per) {
+  if (!ano) return null
+  const a = +ano
+  if (!per) return { ano: String(a - 1), per: '' }
+  const k = per[0], n = +per.slice(1)
+  if (k === 'm') return n === 0 ? { ano: String(a - 1), per: 'm11' } : { ano: String(a), per: 'm' + (n - 1) }
+  if (k === 't') return n === 1 ? { ano: String(a - 1), per: 't4' } : { ano: String(a), per: 't' + (n - 1) }
+  if (k === 's') return n === 1 ? { ano: String(a - 1), per: 's2' } : { ano: String(a), per: 's1' }
+  return null
+}
+function _dashRotulo(ano, per) {
+  if (!ano) return 'Todos os períodos'
+  const p = DASH_PERIODOS.find(x => x[0] === (per || ''))
+  return (per ? p[1] + ' de ' : 'Ano ') + ano
+}
+
+function _dashFiltrar(rows, ano, per) {
+  const iv = _dashIntervalo(ano, per)
+  return rows.filter(f => {
+    if (iv) { const t = new Date(f.created_at).getTime(); if (t < iv[0] || t >= iv[1]) return false }
+    if (_dash.ct && currentUser.role === 'master' && (f.ct_destino || '') !== _dash.ct) return false
+    if (_dash.sexo || _dash.faixa) {
+      const a = f.campos_snapshot || {}, c = f.dados_conselheiro || {}
+      const tem = (id, label) => F03_ESTAT_SECOES.find(s => s.id === id).v(a, c).includes(label)
+      if (_dash.sexo && !tem('sexo', _dash.sexo)) return false
+      if (_dash.faixa && !tem('faixa', _dash.faixa)) return false
+    }
+    return true
+  })
+}
+
+const _dashPct = (v, t) => (t ? (v / t * 100) : 0)
+const _dashFmtPct = x => x.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: x && x < 10 ? 1 : 0 }) + '%'
+function _dashDelta(cur, prev) {
+  if (prev == null) return null
+  if (!prev) return cur ? { txt: 'novo', cls: 'up' } : null
+  const d = (cur - prev) / prev * 100
+  if (Math.abs(d) < 0.05) return { txt: '= 0%', cls: 'eq' }
+  return { txt: (d > 0 ? '▲ +' : '▼ ') + d.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + '%', cls: d > 0 ? 'up' : 'down' }
+}
+
+// Monta todos os números uma vez; tela, PDF e PPTX consomem este objeto
+function _dashDados() {
+  const rows = _dash.rows || []
+  const atuais = _dashFiltrar(rows, _dash.ano, _dash.per)
+  const ant = _dash.comparar ? _dashAnterior(_dash.ano, _dash.per) : null
+  const anteriores = ant ? _dashFiltrar(rows, ant.ano, ant.per) : null
+  const ag = _statsAgregar(atuais)
+  const agPrev = anteriores ? _statsAgregar(anteriores) : null
+  const total = ag.total
+  const secDef = id => F03_ESTAT_SECOES.find(s => s.id === id)
+  const grupos = DASH_GRUPOS.map(g => ({
+    grupo: g.grupo, cor: g.cor,
+    secoes: g.secoes.map(([id, tipo]) => {
+      const dict = ag[id] || {}
+      const entries = Object.entries(dict).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])
+        .map(([l, v]) => ({ label: l, valor: v, pct: _dashPct(v, total), prev: agPrev ? (agPrev[id] || {})[l] || 0 : null }))
+      return { id, titulo: secDef(id).titulo, tipo, entries }
+    }).filter(s => s.entries.length)
+  })).filter(g => g.secoes.length)
+  const topo = id => { const e = (grupos.flatMap(g => g.secoes).find(s => s.id === id) || {}).entries; return e && e[0] ? e[0] : null }
+  const retorno = (ag.atendimento || {})['Retorno'] || 0
+  return {
+    total, totalPrev: agPrev ? agPrev.total : null, grupos,
+    rotulo: _dashRotulo(_dash.ano, _dash.per),
+    rotuloAnt: ant ? _dashRotulo(ant.ano, ant.per) : null,
+    escopo: currentUser.role === 'conselheiro' ? currentUser.name : (currentUser.role === 'coordenador' ? (currentUser.ctFull || currentUser.ct || 'CT') : (_dash.ct || 'Todos os 24 Conselhos')),
+    filtros: [_dash.sexo && 'Sexo: ' + _dash.sexo, _dash.faixa && 'Faixa etária: ' + _dash.faixa].filter(Boolean),
+    kpis: {
+      porta: topo('porta'), ocorrencia: topo('ident') || topo('violacao'), medida: topo('encaminhamento'),
+      retornoPct: _dashPct(retorno, total), retorno, bairros: Object.keys(ag.bairro || {}).length,
+    },
+  }
+}
+
+function _dashTela() {
+  const role = currentUser.role
+  const d = _dashDados()
+  const rows = _dash.rows || []
+  const anos = [...new Set(rows.map(f => new Date(f.created_at).getFullYear()))].sort((a, b) => b - a)
+  const cts = role === 'master' ? [...new Set(rows.map(f => f.ct_destino).filter(Boolean))].sort() : []
+  const sel = (id, atual, opts, extra = '') => `<select onchange="_dashSet('${id}', this.value)" ${extra}>${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === atual ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`
+
+  const kpi = (rot, val, sub, cor, delta) => `
+    <div class="dash-kpi" style="border-top-color:${cor}">
+      <div class="dash-kpi-val" style="color:${cor}">${val}</div>
+      <div class="dash-kpi-rot">${rot}</div>
+      <div class="dash-kpi-sub">${sub}${delta ? ` <span class="dash-delta ${delta.cls}">${delta.txt}</span>` : ''}</div>
+    </div>`
+  const k = d.kpis
+  const kpis = d.total ? `
+    <div class="dash-kpis">
+      ${kpi('Atendimentos', d.total.toLocaleString('pt-BR'), d.rotuloAnt ? 'vs ' + esc(d.rotuloAnt) : esc(d.rotulo), '#ff6b6b', _dashDelta(d.total, d.totalPrev))}
+      ${kpi('Porta de entrada principal', k.porta ? esc(k.porta.label) : '—', k.porta ? _dashFmtPct(k.porta.pct) + ' dos atendimentos (' + k.porta.valor + ')' : 'sem dados', '#ffb938')}
+      ${kpi('Ocorrência mais registrada', k.ocorrencia ? esc(k.ocorrencia.label) : '—', k.ocorrencia ? _dashFmtPct(k.ocorrencia.pct) + ' dos atendimentos (' + k.ocorrencia.valor + ')' : 'sem dados', '#7ed957')}
+      ${kpi('Medida mais aplicada', k.medida ? esc(k.medida.label) : '—', k.medida ? _dashFmtPct(k.medida.pct) + ' dos atendimentos (' + k.medida.valor + ')' : 'sem dados', '#4fc3f7')}
+      ${kpi('Retornos', _dashFmtPct(k.retornoPct), k.retorno + ' de ' + d.total + ' atendimentos', '#a78bfa')}
+      ${kpi('Bairros atendidos', k.bairros, 'bairros distintos', '#2dd4bf')}
+    </div>` : ''
+
+  const donut = (s) => {
+    const tot = s.entries.reduce((a, e) => a + e.valor, 0)
+    let off = 0
+    const arcos = s.entries.map((e, i) => {
+      const p = _dashPct(e.valor, tot)
+      const seg = `<circle r="15.9155" cx="21" cy="21" fill="none" stroke="${DASH_CORES[i % DASH_CORES.length]}" stroke-width="6" stroke-dasharray="${p} ${100 - p}" stroke-dashoffset="${25 - off}"/>`
+      off += p
+      return seg
+    }).join('')
+    return `<div class="dash-donut-wrap">
+      <svg viewBox="0 0 42 42" class="dash-donut"><circle r="15.9155" cx="21" cy="21" fill="none" stroke="var(--border)" stroke-width="6"/>${arcos}
+        <text x="21" y="22.5" text-anchor="middle" font-size="6.5" font-weight="700" fill="var(--text)">${tot}</text></svg>
+      <div class="dash-legenda">${s.entries.map((e, i) => `
+        <div class="dash-leg-item"><span class="dash-dot" style="background:${DASH_CORES[i % DASH_CORES.length]}"></span>
+          <span class="dash-leg-l">${esc(e.label)}</span><strong>${e.valor}</strong><span class="dash-leg-p">${_dashFmtPct(_dashPct(e.valor, tot))}</span>${_dashDeltaHtml(e)}</div>`).join('')}</div>
+    </div>`
+  }
+  const bar = (s, cor) => {
+    const max = s.entries[0].valor
+    return `<div class="dash-bars">${s.entries.slice(0, 15).map(e => `
+      <div class="dash-bar-row"><div class="dash-bar-l" title="${esc(e.label)}">${esc(e.label)}</div>
+        <div class="dash-bar-t"><div class="dash-bar-f" style="width:${(e.valor / max * 100).toFixed(1)}%;background:${cor}"></div></div>
+        <div class="dash-bar-v"><strong>${e.valor}</strong> <span>${_dashFmtPct(e.pct)}</span>${_dashDeltaHtml(e)}</div></div>`).join('')}
+      ${s.entries.length > 15 ? `<div class="dash-mais">+ ${s.entries.length - 15} itens menores (veja no PDF/PPTX)</div>` : ''}</div>`
+  }
+
+  const corpo = !d.total
+    ? `<div class="card card-pad empty"><p style="font-weight:600;margin-bottom:4px">Nenhum atendimento encontrado neste filtro</p>
+       <p style="font-size:12px">Os gráficos usam as Fichas de Atendimento (nº 03) já complementadas pelo conselheiro.</p></div>`
+    : d.grupos.map(g => `
+      <div class="dash-grupo"><div class="dash-grupo-t" style="border-left-color:${g.cor}">${esc(g.grupo)}</div>
+        <div class="dash-grid">${g.secoes.map(s => `
+          <div class="card card-pad dash-card ${s.tipo === 'bar' ? 'dash-wide' : ''}">
+            <div class="dash-card-t">${esc(s.titulo)}</div>
+            ${s.tipo === 'donut' ? donut(s) : bar(s, g.cor)}
+          </div>`).join('')}</div></div>`).join('')
+
+  return `
+  <style>
+    .dash-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px}
+    .dash-kpi{background:var(--card);border:1px solid var(--border);border-top:4px solid;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+    .dash-kpi-val{font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1.15;word-break:break-word}
+    .dash-kpi-rot{font-size:12px;font-weight:700;margin-top:4px}
+    .dash-kpi-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .dash-delta{font-weight:700;font-size:11px;margin-left:4px}
+    .dash-delta.up{color:#16a34a}.dash-delta.down{color:#dc2626}.dash-delta.eq{color:var(--text-muted)}
+    .dash-grupo{margin-bottom:22px}
+    .dash-grupo-t{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-left:5px solid;padding-left:10px;margin-bottom:10px}
+    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+    .dash-wide{grid-column:span 2}
+    @media(max-width:760px){.dash-wide{grid-column:span 1}}
+    .dash-card-t{font-size:13px;font-weight:700;margin-bottom:12px}
+    .dash-donut-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+    .dash-donut{width:130px;height:130px;flex-shrink:0}
+    .dash-legenda{flex:1;min-width:150px;display:flex;flex-direction:column;gap:5px}
+    .dash-leg-item{display:flex;align-items:center;gap:6px;font-size:12px}
+    .dash-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+    .dash-leg-l{flex:1;min-width:0}
+    .dash-leg-p{color:var(--text-muted);width:46px;text-align:right}
+    .dash-bars{display:flex;flex-direction:column;gap:7px}
+    .dash-bar-row{display:grid;grid-template-columns:minmax(110px,190px) 1fr minmax(96px,auto);gap:10px;align-items:center;font-size:12px}
+    .dash-bar-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .dash-bar-t{background:var(--border);border-radius:5px;height:14px;overflow:hidden}
+    .dash-bar-f{height:100%;border-radius:5px}
+    .dash-bar-v span{color:var(--text-muted);margin-left:4px}
+    .dash-mais{font-size:11px;color:var(--text-muted);margin-top:4px}
+  </style>
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div><h2>Painel de Gráficos</h2><p>${esc(d.escopo)} · ${esc(d.rotulo)}${d.filtros.length ? ' · ' + esc(d.filtros.join(' · ')) : ''}</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="dashExportarPDF()">${I.download} PDF</button>
+      <button class="btn btn-primary" onclick="dashExportarPPTX()">📽️ Apresentação (PPTX)</button>
+    </div>
+  </div>
+  <div class="card card-pad" style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+    <div><label class="field-label">Ano</label>${sel('ano', _dash.ano, [['', 'Todos'], ...anos.map(a => [String(a), String(a)])])}</div>
+    <div><label class="field-label">Período</label>${sel('per', _dash.per, DASH_PERIODOS, _dash.ano ? '' : 'disabled')}</div>
+    ${role === 'master' ? `<div><label class="field-label">Conselho Tutelar</label>${sel('ct', _dash.ct, [['', 'Todos os 24 Conselhos'], ...cts.map(c => [c, c])])}</div>` : ''}
+    <div><label class="field-label">Sexo</label>${sel('sexo', _dash.sexo, [['', 'Todos'], ['Masculino', 'Masculino'], ['Feminino', 'Feminino']])}</div>
+    <div><label class="field-label">Faixa etária</label>${sel('faixa', _dash.faixa, [['', 'Todas'], ...['0–5 anos', '6–11 anos', '12–14 anos', '15–17 anos', '18+ anos'].map(x => [x, x])])}</div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding-bottom:8px;cursor:pointer">
+      <input type="checkbox" ${_dash.comparar ? 'checked' : ''} onchange="_dashSet('comparar', this.checked)"> Comparar com período anterior</label>
+    ${_dash.comparar && !_dash.ano ? '<span style="font-size:11px;color:var(--text-muted);padding-bottom:8px">Escolha um ano para comparar.</span>' : ''}
+  </div>
+  ${kpis}
+  ${corpo}`
+}
+function _dashDeltaHtml(e) {
+  const dl = _dashDelta(e.valor, e.prev)
+  return dl ? ` <span class="dash-delta ${dl.cls}" title="vs período anterior (${e.prev})">${dl.txt}</span>` : ''
+}
+function _dashSet(campo, valor) {
+  if (campo === 'ano') { _dash.ano = valor; _dash.per = '' }
+  else _dash[campo] = valor
+  document.getElementById('content').innerHTML = _dashTela()
+}
+
+// ── PDF (janela de impressão com barras em CSS, mantém cores) ──
+function dashExportarPDF() {
+  const d = _dashDados()
+  if (!d.total) { showToast('Não há dados para exportar neste filtro.'); return }
+  const now = new Date()
+  const k = d.kpis
+  const kp = (r, v, s, c) => `<div class="kpi" style="border-top-color:${c}"><div class="v" style="color:${c}">${v}</div><div class="r">${r}</div><div class="s">${s}</div></div>`
+  const dl = (cur, prev) => { const x = _dashDelta(cur, prev); return x ? ` <span class="${x.cls}">${x.txt}</span>` : '' }
+  const sec = (s, cor) => {
+    const max = s.entries[0].valor
+    return `<div class="sec"><h3>${esc(s.titulo)}</h3><table>${s.entries.map(e => `
+      <tr><td class="l">${esc(e.label)}</td><td class="b"><div><i style="width:${(e.valor / max * 100).toFixed(1)}%;background:${cor}"></i></div></td>
+      <td class="n"><b>${e.valor}</b> · ${_dashFmtPct(e.pct)}${dl(e.valor, e.prev)}</td></tr>`).join('')}</table></div>`
+  }
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Painel de Gráficos – ${esc(d.rotulo)}</title>
+  <style>
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font-family:Arial,sans-serif;color:#1a2332;margin:26px;font-size:12px}
+    .cab{display:flex;align-items:center;gap:16px;border-bottom:3px solid #1e3a5f;padding-bottom:10px;margin-bottom:14px}
+    .cab img{width:90px}.cab h1{font-size:19px;color:#1e3a5f;margin:0 0 3px}.cab p{margin:0;color:#6b7a90;font-size:11.5px}
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+    .kpi{border:1px solid #dde3ec;border-top:4px solid;border-radius:8px;padding:10px 12px;page-break-inside:avoid}
+    .kpi .v{font-size:20px;font-weight:700}.kpi .r{font-weight:700;margin-top:2px}.kpi .s{font-size:10.5px;color:#6b7a90;margin-top:2px}
+    h2{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#fff;padding:6px 10px;border-radius:5px;margin:18px 0 8px}
+    .sec{margin-bottom:12px;page-break-inside:avoid}.sec h3{font-size:12px;margin:0 0 5px;color:#1e3a5f}
+    table{width:100%;border-collapse:collapse}td{padding:3px 6px;border-bottom:1px solid #eef1f5}
+    td.l{width:30%}td.b{width:42%}td.b div{background:#e8edf5;border-radius:4px;height:11px;overflow:hidden}
+    td.b i{display:block;height:100%;border-radius:4px}td.n{width:28%;text-align:right;white-space:nowrap}
+    .up{color:#16a34a;font-weight:700}.down{color:#dc2626;font-weight:700}.eq{color:#6b7a90}
+    .rod{margin-top:18px;color:#6b7a90;font-size:10px;text-align:center}
+    @media print{body{margin:12mm}}
+  </style></head><body>
+  <div class="cab"><img src="${_CT_LOGO_SRC}"><div><h1>Painel de Estatísticas</h1>
+    <p>${esc(d.escopo)} · ${esc(d.rotulo)}${d.rotuloAnt ? ' · comparado a ' + esc(d.rotuloAnt) : ''}${d.filtros.length ? ' · ' + esc(d.filtros.join(' · ')) : ''}</p>
+    <p>Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} por ${esc(currentUser.name || '')}</p></div></div>
+  <div class="kpis">
+    ${kp('Atendimentos', d.total + (d.totalPrev != null ? dl(d.total, d.totalPrev) : ''), d.rotuloAnt ? 'vs ' + esc(d.rotuloAnt) : esc(d.rotulo), '#ff6b6b')}
+    ${kp('Porta de entrada principal', k.porta ? esc(k.porta.label) : '—', k.porta ? _dashFmtPct(k.porta.pct) + ' (' + k.porta.valor + ')' : '', '#ffb938')}
+    ${kp('Ocorrência mais registrada', k.ocorrencia ? esc(k.ocorrencia.label) : '—', k.ocorrencia ? _dashFmtPct(k.ocorrencia.pct) + ' (' + k.ocorrencia.valor + ')' : '', '#7ed957')}
+    ${kp('Medida mais aplicada', k.medida ? esc(k.medida.label) : '—', k.medida ? _dashFmtPct(k.medida.pct) + ' (' + k.medida.valor + ')' : '', '#4fc3f7')}
+    ${kp('Retornos', _dashFmtPct(k.retornoPct), k.retorno + ' de ' + d.total, '#a78bfa')}
+    ${kp('Bairros atendidos', k.bairros, 'bairros distintos', '#2dd4bf')}
+  </div>
+  ${d.grupos.map(g => `<h2 style="background:${g.cor}">${esc(g.grupo)}</h2>${g.secoes.map(s => sec(s, g.cor)).join('')}`).join('')}
+  <div class="rod">Percentuais calculados sobre o total de atendimentos do filtro. Fonte: Fichas de Atendimento (nº 03) – Conecta-CT.</div>
+  <script>window.print();<\/script></body></html>`
+  const w = window.open('', '_blank')
+  if (w) { w.document.write(html); w.document.close() }
+  else showToast('Permita pop-ups para gerar o PDF.')
+}
+
+// ── PPTX (apresentação para palestras, com gráficos nativos editáveis) ──
+function _dashCarregarPptx() {
+  if (window.PptxGenJS) return Promise.resolve()
+  return new Promise((ok, err) => {
+    const s = document.createElement('script')
+    s.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js'
+    s.onload = ok
+    s.onerror = () => err(new Error('Não foi possível carregar o gerador de slides (verifique a internet).'))
+    document.head.appendChild(s)
+  })
+}
+
+async function dashExportarPPTX() {
+  const d = _dashDados()
+  if (!d.total) { showToast('Não há dados para exportar neste filtro.'); return }
+  showToast('Gerando apresentação…')
+  try { await _dashCarregarPptx() } catch (e) { showToast(e.message); return }
+  const pres = new window.PptxGenJS()
+  pres.layout = 'LAYOUT_WIDE'
+  pres.title = 'Estatísticas – ' + d.rotulo
+  const BG = '0F1623', CARD = '17233A', TXT = 'E8EDF5', MUTED = '8A9AB5'
+  const hex = c => c.replace('#', '')
+  const rodape = (sl, n) => {
+    sl.addText('Conselho Tutelar · ' + d.escopo + ' · ' + d.rotulo, { x: 0.6, y: 7.0, w: 9, h: 0.3, fontSize: 10, color: MUTED })
+    sl.addText(String(n), { x: 12.2, y: 7.0, w: 0.6, h: 0.3, fontSize: 10, color: MUTED, align: 'right' })
+  }
+  const novoSlide = (kicker, titulo, cor, n) => {
+    const sl = pres.addSlide()
+    sl.background = { color: BG }
+    sl.addImage({ data: _CT_LOGO_SRC, x: 11.9, y: 0.25, w: 1.0, h: 0.62 })
+    sl.addText(kicker.toUpperCase(), { x: 0.6, y: 0.35, w: 10, h: 0.35, fontSize: 12, bold: true, color: hex(cor), charSpacing: 3 })
+    sl.addText(titulo, { x: 0.6, y: 0.7, w: 11, h: 0.8, fontSize: 28, color: 'FFFFFF' })
+    rodape(sl, n)
+    return sl
+  }
+  let n = 1
+  // 1. capa
+  let sl = pres.addSlide(); sl.background = { color: BG }
+  sl.addImage({ data: _CT_LOGO_SRC, x: 11.6, y: 0.4, w: 1.3, h: 0.8 })
+  sl.addText('ESTATÍSTICAS · ' + d.rotulo.toUpperCase(), { x: 0.8, y: 2.0, w: 11, h: 0.4, fontSize: 14, bold: true, color: 'FFB938', charSpacing: 4 })
+  sl.addText('Conselho Tutelar', { x: 0.8, y: 2.5, w: 11, h: 1.0, fontSize: 48, color: 'FFFFFF' })
+  sl.addText(d.escopo, { x: 0.8, y: 3.5, w: 11, h: 0.7, fontSize: 28, color: TXT })
+  sl.addText('Atendimento, perfil, porta de entrada, ocorrências e medidas aplicadas', { x: 0.8, y: 4.4, w: 11, h: 0.5, fontSize: 16, color: MUTED })
+  sl.addText('Lei Federal 8.069/90 · Lei Municipal 6.266', { x: 0.8, y: 4.9, w: 11, h: 0.4, fontSize: 12, color: MUTED })
+  // 2. panorama
+  n++; sl = novoSlide('Panorama', 'Principais indicadores', '#ffb938', n)
+  const k = d.kpis
+  const cards = [
+    [d.total.toLocaleString('pt-BR'), 'Atendimentos', d.totalPrev != null ? (_dashDelta(d.total, d.totalPrev) || { txt: '' }).txt + ' vs ' + d.rotuloAnt : d.rotulo, 'FF6B6B'],
+    [k.porta ? k.porta.label : '—', 'Porta de entrada principal', k.porta ? _dashFmtPct(k.porta.pct) + ' (' + k.porta.valor + ')' : '', 'FFB938'],
+    [k.ocorrencia ? k.ocorrencia.label : '—', 'Ocorrência mais registrada', k.ocorrencia ? _dashFmtPct(k.ocorrencia.pct) + ' (' + k.ocorrencia.valor + ')' : '', '7ED957'],
+    [k.medida ? k.medida.label : '—', 'Medida mais aplicada', k.medida ? _dashFmtPct(k.medida.pct) + ' (' + k.medida.valor + ')' : '', '4FC3F7'],
+    [_dashFmtPct(k.retornoPct), 'Retornos', k.retorno + ' de ' + d.total, 'A78BFA'],
+    [String(k.bairros), 'Bairros atendidos', 'bairros distintos', '2DD4BF'],
+  ]
+  cards.forEach((c, i) => {
+    const x = 0.6 + (i % 3) * 4.1, y = 1.9 + Math.floor(i / 3) * 2.35
+    sl.addShape(pres.ShapeType.roundRect, { x, y, w: 3.9, h: 2.15, fill: { color: CARD }, line: { color: c[3], width: 0 }, rectRadius: 0.1 })
+    sl.addShape(pres.ShapeType.rect, { x, y, w: 3.9, h: 0.07, fill: { color: c[3] }, line: { color: c[3], width: 0 } })
+    sl.addText(c[0], { x: x + 0.2, y: y + 0.2, w: 3.5, h: 0.9, fontSize: c[0].length > 12 ? 20 : 34, color: c[3], bold: true, fit: 'shrink' })
+    sl.addText(c[1], { x: x + 0.2, y: y + 1.1, w: 3.5, h: 0.4, fontSize: 14, bold: true, color: 'FFFFFF' })
+    sl.addText(c[2], { x: x + 0.2, y: y + 1.5, w: 3.5, h: 0.5, fontSize: 11, color: MUTED })
+  })
+  // 3. uma ou mais lâminas por seção
+  d.grupos.forEach(g => g.secoes.forEach(s => {
+    n++
+    const sl2 = novoSlide(g.grupo, s.titulo, g.cor, n)
+    const itens = s.entries.slice(0, 12)
+    const labels = itens.map(e => e.label), vals = itens.map(e => e.valor)
+    sl2.addText(d.total.toLocaleString('pt-BR') + ' atendimentos no filtro', { x: 9.2, y: 1.05, w: 3.6, h: 0.35, fontSize: 11, color: MUTED, align: 'right' })
+    if (s.tipo === 'donut') {
+      sl2.addChart(pres.charts.DOUGHNUT, [{ name: s.titulo, labels, values: vals }], {
+        x: 0.5, y: 1.7, w: 6.2, h: 5.0, holeSize: 58, showPercent: true, showLegend: false,
+        dataLabelColor: 'FFFFFF', dataLabelFontSize: 12, chartColors: DASH_CORES.map(hex),
+      })
+    } else {
+      sl2.addChart(pres.charts.BAR, [{ name: s.titulo, labels, values: vals }], {
+        x: 0.5, y: 1.7, w: 7.4, h: 5.1, barDir: 'bar', chartColors: [hex(g.cor)], showValue: true,
+        dataLabelColor: 'FFFFFF', dataLabelFontSize: 11, catAxisLabelColor: TXT, catAxisLabelFontSize: 11,
+        valAxisHidden: true, valGridLine: { style: 'none' }, catAxisOrientation: 'maxMin', barGapWidthPct: 40,
+      })
+    }
+    // tabela de números e percentuais ao lado
+    const x0 = s.tipo === 'donut' ? 7.1 : 8.2, w0 = s.tipo === 'donut' ? 5.7 : 4.6
+    const head = [['Item', 'Qtd', '%'].map(t => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: hex(g.cor) }, fontSize: 11 } }))]
+    const body = itens.map((e, i) => [
+      { text: e.label, options: { color: TXT, fontSize: 11, fill: { color: i % 2 ? '1C2B45' : CARD } } },
+      { text: String(e.valor), options: { color: TXT, fontSize: 11, align: 'right', fill: { color: i % 2 ? '1C2B45' : CARD } } },
+      { text: _dashFmtPct(e.pct) + (e.prev != null && _dashDelta(e.valor, e.prev) ? ' ' + _dashDelta(e.valor, e.prev).txt : ''), options: { color: TXT, fontSize: 11, align: 'right', fill: { color: i % 2 ? '1C2B45' : CARD } } },
+    ])
+    sl2.addTable(head.concat(body), { x: x0, y: 1.7, w: w0, colW: [w0 - 2.0, 0.7, 1.3], rowH: 0.34, border: { type: 'none' } })
+  }))
+  // 4. destaques
+  n++; sl = novoSlide('Destaques', 'O que os números mostram', '#ffb938', n)
+  const dest = []
+  if (k.porta) dest.push([_dashFmtPct(k.porta.pct), 'dos atendimentos chegaram por ' + k.porta.label + ' (' + k.porta.valor + ' de ' + d.total + ')', 'FFB938'])
+  if (k.ocorrencia) dest.push([String(k.ocorrencia.valor), 'registros de ' + k.ocorrencia.label + ', a ocorrência mais registrada', '7ED957'])
+  if (k.medida) dest.push([String(k.medida.valor), 'vezes em que "' + k.medida.label + '" foi a ação/encaminhamento aplicado, o mais frequente', '4FC3F7'])
+  dest.push([_dashFmtPct(k.retornoPct), 'dos atendimentos foram retornos (' + k.retorno + ' de ' + d.total + ')', 'A78BFA'])
+  dest.forEach((c, i) => {
+    const x = 0.6 + (i % 2) * 6.2, y = 1.9 + Math.floor(i / 2) * 2.4
+    sl.addShape(pres.ShapeType.roundRect, { x, y, w: 6.0, h: 2.2, fill: { color: CARD }, line: { color: c[2], width: 0 }, rectRadius: 0.1 })
+    sl.addShape(pres.ShapeType.rect, { x, y, w: 6.0, h: 0.07, fill: { color: c[2] }, line: { color: c[2], width: 0 } })
+    sl.addText(c[0], { x: x + 0.25, y: y + 0.25, w: 5.5, h: 0.9, fontSize: 38, color: c[2], bold: true })
+    sl.addText(c[1], { x: x + 0.25, y: y + 1.2, w: 5.5, h: 0.9, fontSize: 14, color: TXT })
+  })
+  sl.addText('Fonte: Fichas de Atendimento (nº 03) – Conecta-CT. Percentuais calculados sobre o total de atendimentos do filtro.', { x: 0.6, y: 6.6, w: 12, h: 0.3, fontSize: 10, color: MUTED })
+  const nome = 'Estatisticas_' + d.rotulo.replace(/[^\w]+/g, '_')
+  try { await pres.writeFile({ fileName: nome + '.pptx' }); showToast('Apresentação gerada.') }
+  catch (e) { showToast('Erro ao gerar a apresentação: ' + e.message) }
 }
 
 // ── TOGGLE PASSWORD VISIBILITY ──
