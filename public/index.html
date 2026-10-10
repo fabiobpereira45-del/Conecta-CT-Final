@@ -716,7 +716,9 @@ function _paraWord(el) {
   c.querySelectorAll('div[style*="text-align:center"]').forEach(d => {
     const sigDiv = d.querySelector('div[style*="border-top"]')
     if (sigDiv && sigDiv.textContent.includes('Conselheiro')) {
-      d.outerHTML = `<table align="center" style="margin:18pt auto 0 auto;border:none;border-collapse:collapse;width:240pt;" border="0">
+      const assImg = d.querySelector('img.ass-img')
+      const assHtml = assImg ? `<p data-sig-img="1" align="center" style="margin:6pt 0 -4pt 0;text-align:center"><img src="${assImg.src}" height="56" style="height:56px;max-width:240px" alt="Assinatura"></p>` : ''
+      d.outerHTML = assHtml + `<table align="center" style="margin:18pt auto 0 auto;border:none;border-collapse:collapse;width:240pt;" border="0">
         <tr><td style="border:none;border-top:1pt solid #000;text-align:center;padding-top:4pt;font-family:'Times New Roman',serif;font-size:11pt;color:#111;">${sigDiv.innerHTML}</td></tr>
       </table>`
     }
@@ -742,11 +744,15 @@ function _paraWord(el) {
   const _ehAssinatura = el => el.tagName === 'TABLE'
     ? /border-top:\s*1pt solid #000/.test(el.innerHTML) && /Conselheiro/.test(el.textContent)
     : /border-top:\s*1px solid #333/.test(el.getAttribute('style') || '') || !!el.querySelector(':scope > div[style*="border-top:1px solid #333"], :scope > div > div[style*="border-top:1px solid #333"]')
+  c.querySelectorAll('p[data-sig-img]').forEach(p => {
+    const prev = p.previousElementSibling
+    if (!prev || !prev.getAttribute('data-sig-gap')) p.parentNode.insertBefore(_gap(), p)
+  })
   Array.from(c.querySelectorAll('table, div')).forEach(el => {
     if (!_ehAssinatura(el)) return
     if (el.closest('table') && el.tagName !== 'TABLE' && el.closest('table') !== el) return
     const prev = el.previousElementSibling
-    if (prev && (prev.getAttribute('data-sig-gap') || _ehAssinatura(prev))) return
+    if (prev && (prev.getAttribute('data-sig-gap') || prev.getAttribute('data-sig-img') || _ehAssinatura(prev))) return
     el.parentNode.insertBefore(_gap(), el)
   })
 
@@ -1202,7 +1208,7 @@ async function _restoreSession() {
   currentUser = { id: row.id, name: row.nome, email: row.email, role: row.role, ct: row.ct || null,
     ctFull: row.role === 'master' ? 'Todos os 24 Conselhos' : (ctMatch ? ctMatch.nome : (row.ct || '')),
     initials: (row.nome || 'U').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase(),
-    senhaHash: row.senha_hash, viaAuth: true, telefone: row.telefone || '', photoUrl: row.foto_url || null }
+    senhaHash: row.senha_hash, viaAuth: true, telefone: row.telefone || '', photoUrl: row.foto_url || null, assinatura: row.assinatura_url || null }
   _enterApp()
 }
 window.addEventListener('load', () => { _restoreSession(); _carregarConselhosOverrides() })
@@ -1254,7 +1260,8 @@ async function doLogin() {
       senhaHash: row.senha_hash,
       viaAuth:   !!sess,
       telefone:  row.telefone || '',
-      photoUrl:  row.foto_url || null
+      photoUrl:  row.foto_url || null,
+      assinatura: row.assinatura_url || null
     }
 
     _loadState()
@@ -1650,6 +1657,18 @@ function renderProfile() {
       <button class="btn btn-primary" onclick="salvarPerfil()" style="margin-top:8px">Salvar alterações</button>
     </div>
     <div>
+      ${u.role !== 'atendente' ? `<div class="card card-pad" style="margin-bottom:16px">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:4px">Minha assinatura</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Envie uma imagem PNG/JPG da sua assinatura. Ela é recortada e o fundo branco vira transparente automaticamente, e entra no campo "Conselheiro(a) Tutelar" dos formulários impressos, em PDF e Word.</p>
+        <div style="border:1px dashed var(--border);border-radius:8px;min-height:90px;display:flex;align-items:center;justify-content:center;background:#fff;margin-bottom:12px">
+          ${u.assinatura ? `<img src="${u.assinatura}" alt="Assinatura" style="max-height:80px;max-width:100%" />` : '<span style="font-size:12px;color:#6b7a90">Nenhuma assinatura enviada</span>'}
+        </div>
+        <input type="file" id="ass-file-input" accept="image/png,image/jpeg" style="display:none" onchange="enviarAssinatura(event)" />
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label for="ass-file-input" class="btn btn-primary btn-sm" style="cursor:pointer">${u.assinatura ? 'Trocar assinatura' : 'Enviar assinatura'}</label>
+          ${u.assinatura ? '<button class="btn btn-outline btn-sm" onclick="removerAssinatura()">Remover</button>' : ''}
+        </div>
+      </div>` : ''}
       <div class="card card-pad" style="margin-bottom:16px">
         <h3 style="font-size:14px;font-weight:600;margin-bottom:14px">Segurança</h3>
         <div style="margin-bottom:12px"><label class="field-label">Senha atual</label><input type="password" id="prof-senha-atual" placeholder="••••••••" /></div>
@@ -6093,7 +6112,7 @@ function gerarRequisicaoCertidaoPDF() {
     ${linha('Termo', v('rc-termo'))}
   </table>
   <p class="local">${esc(v('rc-local') || 'Salvador')}, ${esc(dataBr(v('rc-data')) || '____/____/______')}.</p>
-  <div class="assin"><div>Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
+  <div class="assin"><div>${currentUser.assinatura ? `<img src="${currentUser.assinatura}" style="display:block;margin:-60px auto 4px;height:56px;max-width:230px;object-fit:contain">` : ""}Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
   <div class="obs"><strong>Observação legal (ECA, art. 136):</strong> em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.</div>
   <script>window.print();<\/script></body></html>`
   const w = window.open('', '_blank')
@@ -8775,6 +8794,92 @@ document.addEventListener('keydown', function(e) {
   st.textContent = css
   document.head.appendChild(st)
 })()
+
+// ── ASSINATURA DO CONSELHEIRO ──
+// Recorta a margem em branco, torna o fundo transparente e limita o tamanho, para a imagem
+// caber no espaço normal de uma assinatura e pesar pouco no banco (data URL).
+function _tratarAssinatura(file) {
+  return new Promise((ok, err) => {
+    const fr = new FileReader()
+    fr.onerror = () => err(new Error('Não foi possível ler a imagem.'))
+    fr.onload = () => {
+      const img = new Image()
+      img.onerror = () => err(new Error('Arquivo de imagem inválido.'))
+      img.onload = () => {
+        const maxLado = 1000
+        const esc0 = Math.min(1, maxLado / Math.max(img.width, img.height))
+        const w = Math.max(1, Math.round(img.width * esc0)), hh = Math.max(1, Math.round(img.height * esc0))
+        const c = document.createElement('canvas'); c.width = w; c.height = hh
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0, w, hh)
+        const d = g.getImageData(0, 0, w, hh), px = d.data
+        let x0 = w, y0 = hh, x1 = -1, y1 = -1
+        for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4, r = px[i], gg = px[i + 1], b = px[i + 2], a = px[i + 3]
+          const clar = Math.min(r, gg, b)
+          if (a < 20 || clar > 235) { px[i + 3] = 0; continue }
+          if (clar > 200) px[i + 3] = Math.round(a * (235 - clar) / 35)
+          if (x < x0) x0 = x
+          if (x > x1) x1 = x
+          if (y < y0) y0 = y
+          if (y > y1) y1 = y
+        }
+        if (x1 < 0) return err(new Error('Não encontrei traços de assinatura na imagem.'))
+        g.putImageData(d, 0, 0)
+        const pad = 4
+        x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(hh - 1, y1 + pad)
+        const cw = x1 - x0 + 1, ch = y1 - y0 + 1
+        const o = document.createElement('canvas'); o.width = cw; o.height = ch
+        o.getContext('2d').drawImage(c, x0, y0, cw, ch, 0, 0, cw, ch)
+        ok(o.toDataURL('image/png'))
+      }
+      img.src = fr.result
+    }
+    fr.readAsDataURL(file)
+  })
+}
+async function _salvarAssinatura(valor) {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${currentUser.id}`, {
+      method: 'PATCH', headers: { ..._sbHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({ assinatura_url: valor })
+    })
+    if (!r.ok) return false
+    return (await r.json()).length > 0
+  } catch (e) { return false }
+}
+async function enviarAssinatura(ev) {
+  const f = ev.target.files?.[0]
+  if (!f) return
+  if (f.size > 5 * 1024 * 1024) { showToast('Imagem muito grande (máx. 5 MB).'); return }
+  let png
+  try { png = await _tratarAssinatura(f) } catch (e) { showToast(e.message); return }
+  if (!(await _salvarAssinatura(png))) { showToast('Não foi possível salvar. Rode a migração 013 no Supabase.'); return }
+  currentUser.assinatura = png
+  document.getElementById('content').innerHTML = renderProfile()
+  showToast('Assinatura salva.')
+}
+async function removerAssinatura() {
+  if (!(await _salvarAssinatura(null))) { showToast('Não foi possível remover.'); return }
+  currentUser.assinatura = null
+  document.getElementById('content').innerHTML = renderProfile()
+  showToast('Assinatura removida.')
+}
+// Coloca a assinatura sobre a linha "Conselheiro(a) Tutelar" de cada formulário aberto
+function _aplicarAssinaturaNaTela(raiz) {
+  const ass = currentUser?.assinatura
+  if (!ass) return
+  ;(raiz || document).querySelectorAll('.form-document div[style*="border-top:1px solid #333"]').forEach(linha => {
+    if (linha.textContent.trim() !== 'Conselheiro(a) Tutelar') return
+    const caixa = linha.parentElement
+    if (!caixa || caixa.querySelector('img.ass-img')) return
+    const im = document.createElement('img')
+    im.className = 'ass-img'; im.src = ass; im.alt = 'Assinatura'
+    im.setAttribute('style', 'display:block;margin:0 auto -4px auto;height:56px;max-width:240px;object-fit:contain')
+    caixa.style.marginTop = '10px'
+    caixa.insertBefore(im, caixa.firstChild)
+  })
+}
+new MutationObserver(m => { if (m.some(x => x.addedNodes.length)) _aplicarAssinaturaNaTela() }).observe(document.getElementById('content'), { childList: true, subtree: true })
 
 // ── CAIXAS DE TEXTO: sempre mostrar 100% do conteúdo, nunca cortar/rolar ──
 // Um <textarea> com altura fixa (rows="4" etc.) esconde o texto que passa da altura atrás de
