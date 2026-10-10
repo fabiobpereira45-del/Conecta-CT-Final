@@ -717,7 +717,7 @@ function _paraWord(el) {
     const sigDiv = d.querySelector('div[style*="border-top"]')
     if (sigDiv && sigDiv.textContent.includes('Conselheiro')) {
       const assImg = d.querySelector('img.ass-img')
-      const assHtml = assImg ? `<p data-sig-img="1" align="center" style="margin:6pt 0 -4pt 0;text-align:center"><img src="${assImg.src}" height="56" style="height:56px;max-width:240px" alt="Assinatura"></p>` : ''
+      const assHtml = assImg ? `<p data-sig-img="1" align="center" style="margin:6pt 0 -4pt 0;text-align:center"><img src="${assImg.src}" height="78" style="height:78px;max-width:336px" alt="Assinatura"></p>` : ''
       d.outerHTML = assHtml + `<table align="center" style="margin:18pt auto 0 auto;border:none;border-collapse:collapse;width:240pt;" border="0">
         <tr><td style="border:none;border-top:1pt solid #000;text-align:center;padding-top:4pt;font-family:'Times New Roman',serif;font-size:11pt;color:#111;">${sigDiv.innerHTML}</td></tr>
       </table>`
@@ -6112,7 +6112,7 @@ function gerarRequisicaoCertidaoPDF() {
     ${linha('Termo', v('rc-termo'))}
   </table>
   <p class="local">${esc(v('rc-local') || 'Salvador')}, ${esc(dataBr(v('rc-data')) || '____/____/______')}.</p>
-  <div class="assin"><div>${currentUser.assinatura ? `<img src="${currentUser.assinatura}" style="display:block;margin:-60px auto 4px;height:56px;max-width:230px;object-fit:contain">` : ""}Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
+  <div class="assin"><div>${currentUser.assinatura ? `<img src="${currentUser.assinatura}" style="display:block;margin:-82px auto 4px;height:78px;max-width:322px;object-fit:contain">` : ""}Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
   <div class="obs"><strong>Observação legal (ECA, art. 136):</strong> em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.</div>
   <script>window.print();<\/script></body></html>`
   const w = window.open('', '_blank')
@@ -8874,7 +8874,7 @@ function _aplicarAssinaturaNaTela(raiz) {
     if (!caixa || caixa.querySelector('img.ass-img')) return
     const im = document.createElement('img')
     im.className = 'ass-img'; im.src = ass; im.alt = 'Assinatura'
-    im.setAttribute('style', 'display:block;margin:0 auto -4px auto;height:56px;max-width:240px;object-fit:contain')
+    im.setAttribute('style', 'display:block;margin:0 auto -4px auto;height:78px;max-width:336px;object-fit:contain')
     caixa.style.marginTop = '10px'
     caixa.insertBefore(im, caixa.firstChild)
   })
