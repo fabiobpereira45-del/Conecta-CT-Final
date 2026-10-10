@@ -8765,6 +8765,11 @@ document.addEventListener('keydown', function(e) {
   }
   @media print{
     .form-document{background-size:34% auto,34% auto,66% auto !important}
+  }
+  /* campos transparentes: o branco opaco deles cobria partes da marca d'agua */
+  .form-document input,.form-document select,.form-document textarea,.form-document table,.form-document p,.form-document label{background-color:transparent !important}
+  @media print{
+    .form-document input,.form-document select,.form-document textarea{background:transparent !important}
   }`
   const st = document.createElement('style')
   st.textContent = css
