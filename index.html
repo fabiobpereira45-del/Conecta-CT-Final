@@ -3313,10 +3313,25 @@ async function enviarEmail() {
   })
 
   const subjectComProtocolo = `${subject} [${nova.protocolo}]`
+
+  // Gera o PDF da requisição e anexa ao e-mail — o texto já cita "documento em anexo".
+  let attachment
+  if (document.getElementById('rc-nome')) {
+    if (btn) btn.textContent = 'Gerando anexo…'
+    try {
+      const contentBase64 = await _gerarAnexoRequisicaoPDF()
+      attachment = { filename: `Requisicao_${nova.protocolo.replace(/\//g, '-')}.pdf`, contentBase64, mimeType: 'application/pdf' }
+    } catch (e) {
+      console.error('Erro ao gerar anexo:', e)
+      showToast('Não foi possível anexar o PDF (' + e.message + '). O e-mail será enviado sem anexo.')
+    }
+  }
+
+  if (btn) btn.textContent = 'Enviando…'
   try {
     await apiFetch('/api/send-email', {
       method: 'POST',
-      body: JSON.stringify({ to, cc: cc || undefined, subject: subjectComProtocolo, body, replyTo: senderConfig.email, fromName: senderConfig.name })
+      body: JSON.stringify({ to, cc: cc || undefined, subject: subjectComProtocolo, body, replyTo: senderConfig.email, fromName: senderConfig.name, attachment })
     })
     document.getElementById('email-sent-status').style.display = 'flex'
     showToast(`E-mail enviado! Protocolo: ${nova.protocolo}`)
@@ -6058,7 +6073,9 @@ function renderFormRequisicaoCertidao(form) {
 }
 
 // Documento limpo da requisição de certidão: lê só os campos do formulário
-function gerarRequisicaoCertidaoPDF() {
+// Monta o conteúdo do documento da Requisição de Certidão (reaproveitado pela impressão/PDF
+// na tela e pelo anexo em PDF de verdade enviado por e-mail, para os dois ficarem idênticos).
+function _requisicaoCorpoHtml() {
   const v = id => (document.getElementById(id)?.value || '').trim()
   const sel = name => document.querySelector('[name="' + name + '"]:checked')?.value || ''
   const tipo = sel('tipo-certidao')
@@ -6067,24 +6084,7 @@ function gerarRequisicaoCertidaoPDF() {
   const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
   const ct = v('rc-ct') || '—'
   const banner = _bannerParaWord(document.getElementById('council-banner'))
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Requisição de Certidão</title>
-  <style>
-    body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:28px}
-    .banner{margin-bottom:14px}
-    h1{font-size:15px;color:#1e3a5f;text-align:center;letter-spacing:.5px;margin:12px 0 14px}
-    .dest{border:1px solid #dde3ec;border-radius:6px;padding:10px 12px;margin-bottom:12px;line-height:1.7}
-    h2{font-size:12px;color:#1e3a5f;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.4px}
-    table{width:100%;border-collapse:collapse}
-    td{padding:6px 8px;border:1px solid #dde3ec;vertical-align:top}
-    td.rot{width:34%;background:#f4f6f9;font-weight:700;color:#334155}
-    td.val{font-size:12.5px}
-    .par{margin:12px 0;line-height:1.6;text-align:justify}
-    .obs{margin-top:12px;font-size:10.5px;color:#444;border-left:3px solid #1e3a5f;padding:6px 10px;background:#f8fafc}
-    .local{margin-top:22px;text-align:right}
-    .assin{display:flex;justify-content:space-around;margin-top:56px}
-    .assin div{width:42%;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}
-    @media print{body{margin:14mm}}
-  </style></head><body>
+  const corpo = `
   <div class="banner">${banner}</div>
   <h1>REQUISIÇÃO DE CERTIDÃO</h1>
   <div class="dest">
@@ -6114,13 +6114,75 @@ function gerarRequisicaoCertidaoPDF() {
     ${linha('Termo', v('rc-termo'))}
   </table>
   <p class="local">${esc(v('rc-local') || 'Salvador')}, ${esc(dataBr(v('rc-data')) || '____/____/______')}.</p>
-  <div class="assin"><div>${currentUser.assinatura ? `<img src="${currentUser.assinatura}" style="display:block;margin:-82px auto 4px;height:78px;max-width:322px;object-fit:contain">` : ""}Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
-  <div class="obs"><strong>Observação legal (ECA, art. 136):</strong> em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.</div>
+  <div class="assin"><div>${currentUser.assinatura ? `<img src="${currentUser.assinatura}" style="display:block;margin:-82px auto 4px;height:78px;max-width:322px;object-fit:contain">` : ''}Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
+  <div class="obs"><strong>Observação legal (ECA, art. 136):</strong> em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.</div>`
+  const estilo = `
+    body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:28px}
+    .banner{margin-bottom:14px}
+    h1{font-size:15px;color:#1e3a5f;text-align:center;letter-spacing:.5px;margin:12px 0 14px}
+    .dest{border:1px solid #dde3ec;border-radius:6px;padding:10px 12px;margin-bottom:12px;line-height:1.7}
+    h2{font-size:12px;color:#1e3a5f;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.4px}
+    table{width:100%;border-collapse:collapse}
+    td{padding:6px 8px;border:1px solid #dde3ec;vertical-align:top}
+    td.rot{width:34%;background:#f4f6f9;font-weight:700;color:#334155}
+    td.val{font-size:12.5px}
+    .par{margin:12px 0;line-height:1.6;text-align:justify}
+    .obs{margin-top:12px;font-size:10.5px;color:#444;border-left:3px solid #1e3a5f;padding:6px 10px;background:#f8fafc}
+    .local{margin-top:22px;text-align:right}
+    .assin{display:flex;justify-content:space-around;margin-top:56px}
+    .assin div{width:42%;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}
+    @media print{body{margin:14mm}}
+  `
+  return { corpo, estilo, tipo }
+}
+
+function gerarRequisicaoCertidaoPDF() {
+  const { corpo, estilo } = _requisicaoCorpoHtml()
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Requisição de Certidão</title>
+  <style>${estilo}</style></head><body>${corpo}
   <script>window.print();<\/script></body></html>`
   const w = window.open('', '_blank')
   if (w) { w.document.write(html); w.document.close() }
   else showToast('Permita pop-ups para gerar o PDF.')
 }
+
+// jsPDF + html2canvas, carregados sob demanda (só quando alguém manda um e-mail com anexo)
+function _carregarGeradorPdf() {
+  if (window.jspdf && window.html2canvas) return Promise.resolve()
+  const carregar = src => new Promise((ok, err) => {
+    const s = document.createElement('script')
+    s.src = src
+    s.onload = ok
+    s.onerror = () => err(new Error('Não foi possível carregar o gerador de PDF (verifique a internet).'))
+    document.head.appendChild(s)
+  })
+  return carregar('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js')
+    .then(() => carregar('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'))
+}
+
+// Gera o mesmo documento da Requisição como um PDF de verdade (bytes em base64), para anexar
+// ao e-mail enviado ao cartório — sem isso, o e-mail saía sem o "documento em anexo" citado no texto.
+async function _gerarAnexoRequisicaoPDF() {
+  await _carregarGeradorPdf()
+  const { corpo, estilo } = _requisicaoCorpoHtml()
+  const largura = 780
+  const container = document.createElement('div')
+  container.style.cssText = `position:fixed;left:-9999px;top:0;width:${largura}px;background:#fff`
+  container.innerHTML = `<style>${estilo}</style>${corpo}`
+  document.body.appendChild(container)
+  try {
+    const { jsPDF } = window.jspdf
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
+    await pdf.html(container, {
+      x: 28, y: 28, width: 539, windowWidth: largura,
+      html2canvas: { scale: 2, useCORS: true },
+    })
+    return pdf.output('datauristring').split(',')[1]
+  } finally {
+    container.remove()
+  }
+}
+
 
 // ── REQUISIÇÕES DE CERTIDÃO ──
 const STATUS_REQUISICAO = ['Enviada','Em andamento','Concluída','Cancelada']

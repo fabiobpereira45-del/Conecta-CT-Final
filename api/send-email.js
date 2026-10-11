@@ -14,13 +14,16 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' })
   }
 
-  const { to, cc, subject, body, replyTo, fromName } = req.body || {}
+  const { to, cc, subject, body, replyTo, fromName, attachment } = req.body || {}
   if (!to || !subject || !body) {
     return res.status(400).json({ error: 'Informe destinatário (to), assunto (subject) e mensagem (body).' })
   }
+  if (attachment && (!attachment.filename || !attachment.contentBase64)) {
+    return res.status(400).json({ error: 'Anexo inválido: informe filename e contentBase64.' })
+  }
 
   try {
-    const data = await enviarEmail({ to, cc, subject, body, replyTo, fromName })
+    const data = await enviarEmail({ to, cc, subject, body, replyTo, fromName, attachment })
     return res.status(200).json({ ok: true, id: data.id })
   } catch (e) {
     console.error('send-email error:', e)
