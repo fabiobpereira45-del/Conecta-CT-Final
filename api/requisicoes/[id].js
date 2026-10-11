@@ -1,8 +1,9 @@
 /**
- * GET   /api/requisicoes/:id            → detalhes + mensagens
- * PATCH /api/requisicoes/:id            → atualizar status
- * GET   /api/requisicoes/:id/mensagens  → listar mensagens
- * POST  /api/requisicoes/:id/mensagens  → adicionar mensagem (leitura manual)
+ * GET    /api/requisicoes/:id            → detalhes + mensagens
+ * PATCH  /api/requisicoes/:id            → atualizar status
+ * DELETE /api/requisicoes/:id            → excluir a requisição e suas mensagens
+ * GET    /api/requisicoes/:id/mensagens  → listar mensagens
+ * POST   /api/requisicoes/:id/mensagens  → adicionar mensagem (leitura manual)
  */
 const supabase = require('../../lib/supabase')
 const cors     = require('../../lib/cors')
@@ -59,6 +60,14 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(data)
   }
 
+  // ── DELETE /api/requisicoes/:id ─────────────────────────────────────────
+  if (req.method === 'DELETE' && !subpath) {
+    await supabase.from('requisicao_mensagens').delete().eq('requisicao_id', id)
+    const { error } = await supabase.from('requisicoes').delete().eq('id', id)
+    if (error) return res.status(500).json({ error: error.message })
+    return res.status(204).end()
+  }
+
   // ── GET /api/requisicoes/:id/mensagens ──────────────────────────────────
   if (req.method === 'GET' && subpath === 'mensagens') {
     const { data, error } = await supabase
@@ -103,6 +112,6 @@ module.exports = async function handler(req, res) {
     return res.status(201).json(data)
   }
 
-  res.setHeader('Allow', 'GET, PATCH, POST')
+  res.setHeader('Allow', 'GET, PATCH, DELETE, POST')
   return res.status(405).json({ error: 'Método não permitido' })
 }
