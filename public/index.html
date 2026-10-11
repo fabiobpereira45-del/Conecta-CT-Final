@@ -3198,12 +3198,12 @@ function openEmailModal(tipoCertidao) {
 
       <div id="email-sent-status" style="display:none" class="email-sent-badge">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-        E-mail preparado no cliente de e-mail!
+        E-mail enviado com sucesso!
       </div>
 
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="enviarEmail()">
+        <button class="btn btn-primary" id="email-send-btn" onclick="enviarEmail()">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           Enviar E-mail
         </button>
@@ -3258,13 +3258,13 @@ async function enviarEmail() {
   const subject = document.getElementById('email-subject').value.trim()
   const body = document.getElementById('email-body').value.trim()
   if (!to) { showToast('Informe o e-mail do destinatário.'); return }
-  let mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-  if (cc) mailto += `&cc=${encodeURIComponent(cc)}`
-  window.open(mailto, '_blank')
-  document.getElementById('email-sent-status').style.display = 'flex'
-  showToast('Abrindo cliente de e-mail…')
+  if (!subject || !body) { showToast('Preencha o assunto e a mensagem.'); return }
 
-  // Registrar requisição no backend
+  const btn = document.getElementById('email-send-btn')
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…' }
+
+  // Registrar a requisição primeiro, para ter o protocolo (entra no assunto: o polling do
+  // Gmail usa esse protocolo para casar a resposta do cartório com esta requisição).
   const cartorioSel = document.getElementById('email-cartorio')?.value || ''
   let cartorioNome = to
   let subdistrito = ''
@@ -3276,8 +3276,9 @@ async function enviarEmail() {
   const tipoMatch = subject.match(/Certidão de (\w+)/i)
   const tipoCertidao = tipoMatch ? tipoMatch[1] : 'Nascimento'
 
+  let nova
   try {
-    const nova = await apiFetch('/api/requisicoes', {
+    nova = await apiFetch('/api/requisicoes', {
       method: 'POST',
       body: JSON.stringify({
         solicitante: currentUser.name,
@@ -3289,40 +3290,41 @@ async function enviarEmail() {
         assunto: subject,
       })
     })
-    // Adiciona localmente para feedback imediato
-    requisicoes.unshift({
-      protocolo: nova.protocolo,
-      data: new Date(nova.created_at).toLocaleDateString('pt-BR'),
-      hora: new Date(nova.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      solicitante: nova.solicitante,
-      solicitanteCt: nova.solicitante_ct,
-      cartorio: nova.cartorio,
-      subdistrito: nova.subdistrito || '',
-      emailDestino: nova.email_destino,
-      tipo: nova.tipo,
-      status: nova.status,
-      id: nova.id,
-      tem_mensagem_nao_lida: false,
+  } catch (e) {
+    console.error('Erro ao registrar requisição:', e)
+    showToast('Não foi possível registrar a requisição. Verifique a conexão e tente novamente.')
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar E-mail' }
+    return
+  }
+
+  requisicoes.unshift({
+    protocolo: nova.protocolo,
+    data: new Date(nova.created_at).toLocaleDateString('pt-BR'),
+    hora: new Date(nova.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    solicitante: nova.solicitante,
+    solicitanteCt: nova.solicitante_ct,
+    cartorio: nova.cartorio,
+    subdistrito: nova.subdistrito || '',
+    emailDestino: nova.email_destino,
+    tipo: nova.tipo,
+    status: nova.status,
+    id: nova.id,
+    tem_mensagem_nao_lida: false,
+  })
+
+  const subjectComProtocolo = `${subject} [${nova.protocolo}]`
+  try {
+    await apiFetch('/api/send-email', {
+      method: 'POST',
+      body: JSON.stringify({ to, cc: cc || undefined, subject: subjectComProtocolo, body, replyTo: senderConfig.email, fromName: senderConfig.name })
     })
-    showToast(`Requisição registrada – Protocolo: ${nova.protocolo}`)
-  } catch(e) {
-    console.error('Erro ao salvar requisição:', e)
-    // Fallback local se API falhar
-    const protocolo = gerarProtocoloRequisicao()
-    const now = new Date()
-    requisicoes.unshift({
-      protocolo,
-      data: now.toLocaleDateString('pt-BR'),
-      hora: now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      solicitante: currentUser.name,
-      solicitanteCt: currentUser.ct,
-      cartorio: cartorioNome,
-      subdistrito,
-      emailDestino: to,
-      tipo: tipoCertidao,
-      status: 'Enviada',
-    })
-    showToast('Requisição salva localmente (sem conexão com servidor)')
+    document.getElementById('email-sent-status').style.display = 'flex'
+    showToast(`E-mail enviado! Protocolo: ${nova.protocolo}`)
+    closeModal()
+  } catch (e) {
+    console.error('Erro ao enviar e-mail:', e)
+    showToast(`Requisição ${nova.protocolo} registrada, mas o envio falhou: ${e.message || 'erro desconhecido'}. Tente novamente ou use um e-mail manual.`)
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar E-mail' }
   }
 }
 // CT do cabeçalho: o da ficha aberta (quando houver) ou o do usuário logado
