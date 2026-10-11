@@ -818,6 +818,28 @@ function _bannerParaWord(banner, ctOverride) {
   </table>`
 }
 
+// ── COMPARTILHAR POR WHATSAPP ──
+// O WhatsApp Web/app não aceita receber um arquivo por link direto (sem o usuário escolher
+// o arquivo na conversa); por isso o botão abre uma conversa já com uma mensagem pronta,
+// identificando o documento, e orienta a anexar o PDF já baixado/impresso.
+function compartilharWhatsApp(titulo, protocolo) {
+  const ct = currentUser?.ctFull || currentUser?.ct || ''
+  const linhas = [
+    `📄 *${(titulo || 'Documento').trim()}*${protocolo ? ' – Protocolo ' + protocolo : ''}`,
+    ct ? `Conselho Tutelar: ${ct}` : '',
+    'Documento gerado pelo Conecta-CT.',
+    '',
+    'Para enviar o arquivo: toque em "Imprimir"/"Baixar PDF" no sistema, salve o arquivo e anexe aqui nesta conversa.',
+  ].filter(Boolean)
+  const url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(linhas.join('\n'))
+  window.open(url, '_blank')
+}
+// Botão pronto (HTML), pega o título do formulário aberto automaticamente quando não informado
+function _btnWhatsApp(titulo, protocolo) {
+  const args = `${titulo ? `'${String(titulo).replace(/'/g,"\\'")}'` : "document.querySelector('.fill-header h2')?.textContent || document.querySelector('h2')?.textContent || 'Documento'"}${protocolo ? `, '${String(protocolo).replace(/'/g,"\\'")}'` : ''}`
+  return `<button class="btn btn-outline" onclick="compartilharWhatsApp(${args})" style="display:flex;align-items:center;gap:6px;color:#16a34a;border-color:#86efac">💬 WhatsApp</button>`
+}
+
 function exportarWord() {
   const formName = (document.querySelector('.fill-header h2')?.textContent || 'Formulario').replace(/[^a-zA-Z0-9À-ÿ\s]/g,'').trim()
   const banner   = document.getElementById('council-banner')
@@ -2507,7 +2529,7 @@ function _statsRenderComFiltros() {
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div><h2>${title}</h2><p>${esc(_statsEscopoLabel())}</p></div>
-    <button class="btn btn-outline" onclick="downloadMinhasEstatisticasPDF()">${I.download} Exportar PDF</button>
+    ${_btnWhatsApp("Minhas Estatísticas")}<button class="btn btn-outline" onclick="downloadMinhasEstatisticasPDF()">${I.download} Exportar PDF</button>
   </div>
   ${filtrosHtml}
   ${ag.total === 0 ? emptyMsg : `
@@ -3769,7 +3791,7 @@ function _docWrap(content) {
   if (ctNomeProprio) {
     content = content.replace(/Conselho Tutelar\s+XXXXX?/g, `Conselho Tutelar – ${ctNomeProprio}`)
   }
-  return `<div class="card card-pad form-document"><div style="font-size:13px;line-height:1.6;font-family:'Times New Roman',serif;text-align:justify">${content}</div><div style="margin-top:24px;text-align:right;display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-outline" onclick="exportarWord()" style="display:flex;align-items:center;gap:6px">📄 Word</button><button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button></div></div>`
+  return `<div class="card card-pad form-document"><div style="font-size:13px;line-height:1.6;font-family:'Times New Roman',serif;text-align:justify">${content}</div><div style="margin-top:24px;text-align:right;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">${_btnWhatsApp()}<button class="btn btn-outline" onclick="exportarWord()" style="display:flex;align-items:center;gap:6px">📄 Word</button><button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button></div></div>`
 }
 
 // ── ID 2: Remessa de Atendimento ──
@@ -4348,6 +4370,7 @@ function renderForm03(form) {
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;flex-wrap:wrap">
         <button class="btn btn-outline" onclick="_f03Historico()">📜 Histórico</button>
+        ${_btnWhatsApp('Ficha de Atendimento', _f03Ficha?.protocolo)}
         <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
         <button class="btn btn-outline" onclick="_f03Salvar()">💾 Salvar</button>
         <button class="btn btn-primary" onclick="_f03Salvar().then(ok => { if (ok !== false) window.print() })">${I.download} Salvar e Imprimir</button>
@@ -5651,7 +5674,8 @@ function renderFormGenerico(form) {
         </div>
       </div>
     </div>
-    <div style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end">
+    <div style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+      ${_btnWhatsApp()}
       <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
       <button class="btn btn-primary" onclick="gerarFormGenericoPDF()">${I.download} Gerar e Baixar</button>
     </div>
@@ -6063,6 +6087,7 @@ function renderFormRequisicaoCertidao(form) {
 
     </div>
     <div style="margin-top:24px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+      ${_btnWhatsApp('Requisição de Certidão')}
       <button class="btn btn-outline" onclick="backToForms()">Cancelar</button>
       <button class="btn btn-outline" onclick="openEmailModal(document.querySelector('[name=tipo-certidao]:checked')?.value||'Nascimento')" style="color:var(--accent);border-color:var(--accent)">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
@@ -8052,7 +8077,7 @@ function _escalaTela() {
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${podeEditar ? `<button class="btn btn-outline" onclick="abrirEditorEscala()">✏️ Editar nomes</button>` : ''}
-      <button class="btn btn-primary" onclick="exportDutyRoster()">${I.download} Imprimir / PDF</button>
+      ${_btnWhatsApp("Escala de Plantões")}<button class="btn btn-primary" onclick="exportDutyRoster()">${I.download} Imprimir / PDF</button>
     </div>
   </div>
 
@@ -8406,7 +8431,7 @@ function _dashTela() {
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div><h2>Painel de Gráficos</h2><p>${esc(d.escopo)} · ${esc(d.rotulo)}${d.filtros.length ? ' · ' + esc(d.filtros.join(' · ')) : ''}</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-outline" onclick="dashExportarPDF()">${I.download} PDF</button>
+      ${_btnWhatsApp("Painel de Gráficos")}<button class="btn btn-outline" onclick="dashExportarPDF()">${I.download} PDF</button>
       <button class="btn btn-primary" onclick="dashExportarPPTX()">📽️ Apresentação (PPTX)</button>
     </div>
   </div>
