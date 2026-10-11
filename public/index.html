@@ -3133,7 +3133,7 @@ function openEmailModal(tipoCertidao) {
       <!-- Remetente -->
       <div style="background:var(--primary-subtle);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px">
         <div style="font-weight:700;color:var(--primary);margin-bottom:4px">De: ${senderConfig.name} &lt;${senderConfig.email}&gt;</div>
-        <div style="color:var(--text-muted)">${senderConfig.cargo} · Conselho Tutelar I – CT 01</div>
+        <div style="color:var(--text-muted)">${senderConfig.cargo} · ${esc(currentUser.ctFull || currentUser.ct || "Conselho Tutelar")}</div>
         <button onclick="openSenderConfig()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;margin-top:4px;padding:0">Alterar remetente</button>
       </div>
 
@@ -3187,7 +3187,7 @@ function openEmailModal(tipoCertidao) {
       <!-- Assunto -->
       <div style="margin-bottom:14px">
         <label class="field-label">Assunto</label>
-        <input id="email-subject" value="Requisição de Certidão de ${tipoCertidao || 'Nascimento'} – Conselho Tutelar I" style="margin-top:4px" />
+        <input id="email-subject" value="Requisição de Certidão de ${tipoCertidao || 'Nascimento'} – ${esc(currentUser.ctFull || currentUser.ct || "Conselho Tutelar")}" style="margin-top:4px" />
       </div>
 
       <!-- Corpo do e-mail -->
@@ -3230,14 +3230,14 @@ function gerarCorpoEmail(tipoCertidao) {
   const data = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})
   return `Ilmo.(a). Sr.(a). Oficial de Registro,
 
-O Conselho Tutelar I da Criança e do Adolescente do Município de Salvador, no uso de suas atribuições legais (Art. 136 do ECA – Lei 8.069/1990), vem por meio deste REQUISITAR a expedição de Certidão de ${tipoCertidao||'Nascimento'}, conforme documento em anexo.
+O Conselho Tutelar ${(currentUser.ct||"").replace(/^CT/i,"") || "de Salvador"} da Criança e do Adolescente do Município de Salvador, no uso de suas atribuições legais (Art. 136 do ECA – Lei 8.069/1990), vem por meio deste REQUISITAR a expedição de Certidão de ${tipoCertidao||'Nascimento'}, conforme documento em anexo.
 
 Solicitamos a gentileza de processar a requisição com brevidade, tendo em vista a natureza urgente da proteção dos direitos da criança/adolescente envolvido(a).
 
 Atenciosamente,
 ${senderConfig.name}
 ${senderConfig.cargo}
-Conselho Tutelar I – CT 01 · Salvador/BA
+Conselho Tutelar ${(currentUser.ct||"").replace(/^CT/i,"") || "de Salvador"} · Salvador/BA
 ${senderConfig.email}
 
 Salvador, ${data}.`
