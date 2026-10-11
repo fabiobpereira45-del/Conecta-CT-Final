@@ -6146,41 +6146,126 @@ function gerarRequisicaoCertidaoPDF() {
   else showToast('Permita pop-ups para gerar o PDF.')
 }
 
-// jsPDF + html2canvas, carregados sob demanda (só quando alguém manda um e-mail com anexo)
+// jsPDF, carregado sob demanda (só quando alguém manda um e-mail com anexo)
 function _carregarGeradorPdf() {
-  if (window.jspdf && window.html2canvas) return Promise.resolve()
-  const carregar = src => new Promise((ok, err) => {
+  if (window.jspdf) return Promise.resolve()
+  return new Promise((ok, err) => {
     const s = document.createElement('script')
-    s.src = src
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'
     s.onload = ok
     s.onerror = () => err(new Error('Não foi possível carregar o gerador de PDF (verifique a internet).'))
     document.head.appendChild(s)
   })
-  return carregar('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js')
-    .then(() => carregar('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'))
 }
 
-// Gera o mesmo documento da Requisição como um PDF de verdade (bytes em base64), para anexar
-// ao e-mail enviado ao cartório — sem isso, o e-mail saía sem o "documento em anexo" citado no texto.
+// Gera o mesmo documento da Requisição como um PDF de verdade, desenhado direto com texto
+// (não é uma "foto" da tela) — fica leve o bastante para anexar ao e-mail. Uma captura de tela
+// em imagem (como fizemos antes) pesava demais e o servidor recusava o anexo (HTTP 413).
 async function _gerarAnexoRequisicaoPDF() {
   await _carregarGeradorPdf()
-  const { corpo, estilo } = _requisicaoCorpoHtml()
-  const largura = 780
-  const container = document.createElement('div')
-  container.style.cssText = `position:fixed;left:-9999px;top:0;width:${largura}px;background:#fff`
-  container.innerHTML = `<style>${estilo}</style>${corpo}`
-  document.body.appendChild(container)
-  try {
-    const { jsPDF } = window.jspdf
-    const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
-    await pdf.html(container, {
-      x: 28, y: 28, width: 539, windowWidth: largura,
-      html2canvas: { scale: 2, useCORS: true },
+  const v = id => (document.getElementById(id)?.value || '').trim()
+  const sel = name => document.querySelector('[name="' + name + '"]:checked')?.value || ''
+  const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
+  const ct = v('rc-ct') || '—'
+  const ctNome = currentUser.ctFull || currentUser.ct || 'Conselho Tutelar'
+
+  const { jsPDF } = window.jspdf
+  const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
+  const pageW = pdf.internal.pageSize.getWidth()
+  const margem = 48
+  const larguraUtil = pageW - margem * 2
+  let y = margem
+
+  // Cabeçalho: logo + nome do conselho
+  try { pdf.addImage(_CT_LOGO_SRC, 'PNG', margem, y, 48, 44) } catch (e) {}
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(12); pdf.setTextColor(30, 58, 95)
+  pdf.text(ctNome, margem + 58, y + 16)
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(90, 100, 115)
+  pdf.text('Lei Federal 8.069/90 · Lei Municipal 6.266 · Salvador/BA', margem + 58, y + 30)
+  y += 60
+  pdf.setDrawColor(221, 227, 236); pdf.line(margem, y, margem + larguraUtil, y)
+  y += 24
+
+  // Título
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(30, 58, 95)
+  pdf.text('REQUISIÇÃO DE CERTIDÃO', pageW / 2, y, { align: 'center' })
+  y += 22
+
+  // Destinatário
+  pdf.setDrawColor(221, 227, 236); pdf.setFillColor(248, 250, 252)
+  pdf.roundedRect(margem, y, larguraUtil, 44, 3, 3, 'FD')
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.setTextColor(30, 35, 45)
+  pdf.text('Ao Cartório de Registro Civil das Pessoas Naturais', margem + 10, y + 16)
+  pdf.setFont('helvetica', 'normal')
+  pdf.text(`Comarca de ${v('rc-comarca') || '________________'}   Subdistrito de ${v('rc-subdistrito') || '________________'}   NESTA`, margem + 10, y + 32)
+  y += 60
+
+  // Parágrafo legal
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10.5); pdf.setTextColor(26, 35, 50)
+  const tipo = sel('tipo-certidao') || 'Nascimento'
+  const paragrafo = `O Conselho Tutelar nº ${ct}, por meio do(a) Conselheiro(a) ${v('rc-conselheiro')}, no uso de suas atribuições legais (art. 136 da Lei nº 8.069/1990 – ECA), REQUISITA a expedição da certidão abaixo especificada.`
+  const linhasPar = pdf.splitTextToSize(paragrafo, larguraUtil)
+  pdf.text(linhasPar, margem, y)
+  y += linhasPar.length * 14 + 14
+
+  // Seções em tabela simples (rótulo em negrito + valor)
+  const secao = (titulo, linhas) => {
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.setTextColor(30, 58, 95)
+    pdf.text(titulo.toUpperCase(), margem, y)
+    y += 14
+    linhas.forEach(([rot, val]) => {
+      pdf.setFillColor(244, 246, 249)
+      pdf.rect(margem, y - 9, larguraUtil, 18, 'F')
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5); pdf.setTextColor(51, 65, 85)
+      pdf.text(rot, margem + 6, y + 3)
+      pdf.setFont('helvetica', 'normal'); pdf.setTextColor(26, 35, 50)
+      pdf.text(val || '—', margem + 170, y + 3)
+      y += 18
     })
-    return pdf.output('datauristring').split(',')[1]
-  } finally {
-    container.remove()
+    y += 14
   }
+  secao('1. Dados da pessoa requerida', [
+    ['Nome completo', v('rc-nome')],
+    ['Data de nascimento', dataBr(v('rc-nasc'))],
+    ['CPF', v('rc-cpf')],
+    ['Filiação – mãe', v('rc-mae')],
+    ['Filiação – pai', v('rc-pai')],
+  ])
+  secao('2. Certidão requerida', [
+    ['Tipo', tipo],
+    ['Modalidade', sel('modalidade-certidao') || 'Simples'],
+    ['Número de vias', v('rc-vias') ? v('rc-vias') + 'ª via' : ''],
+  ])
+  secao('3. Dados do registro', [
+    ['Data do evento', dataBr(v('rc-evento'))],
+    ['Livro', v('rc-livro')],
+    ['Folha', v('rc-folha')],
+    ['Termo', v('rc-termo')],
+  ])
+
+  // Local e data
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10.5); pdf.setTextColor(26, 35, 50)
+  pdf.text(`${v('rc-local') || 'Salvador'}, ${dataBr(v('rc-data')) || '____/____/______'}.`, margem + larguraUtil, y, { align: 'right' })
+  y += 70
+
+  // Assinatura
+  if (currentUser.assinatura) {
+    try { pdf.addImage(currentUser.assinatura, margem + larguraUtil / 2 - 70, y - 54, 140, 44) } catch (e) {}
+  }
+  pdf.setDrawColor(51, 51, 51)
+  pdf.line(margem + 30, y, margem + larguraUtil / 2 - 10, y)
+  pdf.line(margem + larguraUtil / 2 + 10, y, margem + larguraUtil - 30, y)
+  pdf.setFontSize(9)
+  pdf.text('Conselheiro(a) Tutelar Requisitante', margem + larguraUtil / 4 + 10, y + 12, { align: 'center' })
+  pdf.text('Assinatura do Responsável / Representante', margem + larguraUtil * 3 / 4 - 10, y + 12, { align: 'center' })
+  y += 36
+
+  // Observação legal
+  pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8.5); pdf.setTextColor(68, 68, 68)
+  const obs = 'Observação legal (ECA, art. 136): em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.'
+  pdf.text(pdf.splitTextToSize(obs, larguraUtil), margem, y)
+
+  return pdf.output('datauristring').split(',')[1]
 }
 
 
