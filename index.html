@@ -6161,8 +6161,31 @@ function _carregarGeradorPdf() {
 // Gera o mesmo documento da Requisição como um PDF de verdade, desenhado direto com texto
 // (não é uma "foto" da tela) — fica leve o bastante para anexar ao e-mail. Uma captura de tela
 // em imagem (como fizemos antes) pesava demais e o servidor recusava o anexo (HTTP 413).
+// Reduz uma imagem (logo, assinatura) a um JPEG pequeno antes de embutir no PDF do anexo —
+// sem isso, uma imagem grande (ex.: assinatura enviada em alta resolução) deixa o PDF pesado
+// e o servidor recusa o e-mail (HTTP 413, anexo grande demais).
+function _comprimirParaAnexo(dataUrl, larguraMax) {
+  return new Promise(resolve => {
+    if (!dataUrl) return resolve(null)
+    const img = new Image()
+    img.onerror = () => resolve(null)
+    img.onload = () => {
+      const esc0 = Math.min(1, larguraMax / img.width)
+      const w = Math.max(1, Math.round(img.width * esc0)), h = Math.max(1, Math.round(img.height * esc0))
+      const c = document.createElement('canvas'); c.width = w; c.height = h
+      const g = c.getContext('2d')
+      g.fillStyle = '#fff'; g.fillRect(0, 0, w, h)   // JPEG não tem transparência
+      g.drawImage(img, 0, 0, w, h)
+      resolve({ dataUrl: c.toDataURL('image/jpeg', 0.75), w, h })
+    }
+    img.src = dataUrl
+  })
+}
+
 async function _gerarAnexoRequisicaoPDF() {
   await _carregarGeradorPdf()
+  const logo = await _comprimirParaAnexo(_CT_LOGO_SRC, 160)
+  const assinaturaImg = await _comprimirParaAnexo(currentUser.assinatura, 400)
   const v = id => (document.getElementById(id)?.value || '').trim()
   const sel = name => document.querySelector('[name="' + name + '"]:checked')?.value || ''
   const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
@@ -6177,7 +6200,7 @@ async function _gerarAnexoRequisicaoPDF() {
   let y = margem
 
   // Cabeçalho: logo + nome do conselho
-  try { pdf.addImage(_CT_LOGO_SRC, 'PNG', margem, y, 48, 44) } catch (e) {}
+  if (logo) { try { pdf.addImage(logo.dataUrl, 'JPEG', margem, y, 48, 48 * logo.h / logo.w) } catch (e) {} }
   pdf.setFont('helvetica', 'bold'); pdf.setFontSize(12); pdf.setTextColor(30, 58, 95)
   pdf.text(ctNome, margem + 58, y + 16)
   pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(90, 100, 115)
@@ -6249,8 +6272,8 @@ async function _gerarAnexoRequisicaoPDF() {
   y += 70
 
   // Assinatura
-  if (currentUser.assinatura) {
-    try { pdf.addImage(currentUser.assinatura, margem + larguraUtil / 2 - 70, y - 54, 140, 44) } catch (e) {}
+  if (assinaturaImg) {
+    try { pdf.addImage(assinaturaImg.dataUrl, 'JPEG', margem + larguraUtil / 2 - 70, y - 54, 140, 140 * assinaturaImg.h / assinaturaImg.w) } catch (e) {}
   }
   pdf.setDrawColor(51, 51, 51)
   pdf.line(margem + 30, y, margem + larguraUtil / 2 - 10, y)
