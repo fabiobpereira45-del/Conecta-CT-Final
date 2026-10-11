@@ -3338,7 +3338,8 @@ async function enviarEmail() {
     closeModal()
   } catch (e) {
     console.error('Erro ao enviar e-mail:', e)
-    showToast(`Requisição ${nova.protocolo} registrada, mas o envio falhou: ${e.message || 'erro desconhecido'}. Tente novamente ou use um e-mail manual.`)
+    const msg = /413/.test(e.message || '') ? 'o anexo ficou grande demais para o servidor aceitar' : (e.message || 'erro desconhecido')
+    showToast(`Requisição ${nova.protocolo} registrada, mas o envio falhou: ${msg}. Tente novamente ou use um e-mail manual.`)
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar E-mail' }
   }
 }
