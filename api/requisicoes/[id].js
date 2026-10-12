@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
     await supabase.from('requisicao_mensagens').delete().eq('requisicao_id', id)
     const { error } = await supabase.from('requisicoes').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
-    return res.status(204).end()
+    return res.status(200).json({ ok: true })
   }
 
   // ── GET /api/requisicoes/:id/mensagens ──────────────────────────────────
