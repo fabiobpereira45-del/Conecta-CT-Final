@@ -1865,6 +1865,7 @@ function _fichaToRow(ficha) {
     campos_snapshot: ficha.camposSnapshot || {},
     dados:           ficha.dados || {},
     lida:            ficha.lida || false,
+    arquivada:       ficha.arquivada || false,
     created_at:      ficha.createdAt || new Date().toISOString()
   }
 }
@@ -1883,6 +1884,7 @@ function _rowToFicha(row) {
     camposSnapshot:  row.campos_snapshot || {},
     dados:           row.dados || {},
     lida:            row.lida,
+    arquivada:       row.arquivada || false,
     createdAt:       row.created_at
   }
 }
@@ -1933,6 +1935,26 @@ async function _db_listarFichas(ctDestino) {
     }
   } catch(e) { console.warn('_db_listarFichas network error', e) }
   return _db_listarFichasLocal(ctDestino)
+}
+
+async function _db_arquivarFicha(protocolo, arquivada) {
+  try {
+    await fetch(
+      `${_SB_URL}/rest/v1/fichas?protocolo=eq.${encodeURIComponent(protocolo)}`,
+      {
+        method: 'PATCH',
+        headers: _sbHeaders(),
+        body: JSON.stringify({ arquivada })
+      }
+    )
+  } catch(e) { console.warn('_db_arquivarFicha error', e) }
+  try {
+    let fichas = JSON.parse(localStorage.getItem('cct_fichasDB') || '[]')
+    const f = fichas.find(x => x.protocolo === protocolo)
+    if (f) { f.arquivada = arquivada; localStorage.setItem('cct_fichasDB', JSON.stringify(fichas)) }
+  } catch(e){}
+  const mem = fichasEnviadas.find(f => f.protocolo === protocolo)
+  if (mem) mem.arquivada = arquivada
 }
 
 async function _db_marcarLida(protocolo) {
@@ -2014,9 +2036,12 @@ function _db_marcarLidaLocal(protocolo) {
 }
 
 // ── FICHAS INBOX ──
+let _inboxMostrarArquivadas = false
+
 function renderFichasInbox() {
   // Renderiza esqueleto imediatamente, carrega dados async
   const ct = _vêTudo() ? null : currentUser.ct
+  _inboxMostrarArquivadas = false
   setTimeout(() => _carregarInbox(ct), 0)
 
   return `
@@ -2024,6 +2049,9 @@ function renderFichasInbox() {
     <div>
       <h2>Fichas Recebidas</h2>
       <p id="inbox-count-label" style="color:var(--text-muted)">Carregando fichas...</p>
+    </div>
+    <div>
+      <button id="inbox-toggle-arquivadas" class="btn btn-outline btn-sm" onclick="_toggleInboxArquivadas()">📦 Ver arquivadas</button>
     </div>
   </div>
 
@@ -2053,7 +2081,11 @@ function renderFichasInbox() {
   </div>`
 }
 
+let _inboxCache = []
+let _inboxCt = null
+
 async function _carregarInbox(ct) {
+  _inboxCt = ct
   const fichas = await _db_listarFichas(ct)
 
   // Merge fichas em memória para compatibilidade offline
@@ -2064,18 +2096,35 @@ async function _carregarInbox(ct) {
   if (currentUser.role === 'conselheiro') {
     todas = todas.filter(f => !f.conselheiroDest || f.conselheiroDest === currentUser.name)
   }
+  _inboxCache = todas
+  _renderInboxLista()
+}
 
+function _toggleInboxArquivadas() {
+  _inboxMostrarArquivadas = !_inboxMostrarArquivadas
+  _renderInboxLista()
+}
+
+function _renderInboxLista() {
+  const todas = _inboxCache.filter(f => !!f.arquivada === _inboxMostrarArquivadas)
   const unread = todas.filter(f => !f.lida).length
 
+  const btnToggle = document.getElementById('inbox-toggle-arquivadas')
+  if (btnToggle) btnToggle.textContent = _inboxMostrarArquivadas ? '📥 Ver fichas ativas' : '📦 Ver arquivadas'
+
   const label = document.getElementById('inbox-count-label')
-  if (label) label.innerHTML = `${todas.length} ficha(s)${unread > 0
-    ? ` · <strong style="color:var(--danger)">${unread} nova(s)</strong>` : ' · Tudo em dia'}`
+  if (label) label.innerHTML = _inboxMostrarArquivadas
+    ? `${todas.length} ficha(s) arquivada(s)`
+    : `${todas.length} ficha(s)${unread > 0 ? ` · <strong style="color:var(--danger)">${unread} nova(s)</strong>` : ' · Tudo em dia'}`
 
   const lista = document.getElementById('inbox-lista')
   if (!lista) return
 
   if (todas.length === 0) {
-    lista.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
+    lista.innerHTML = _inboxMostrarArquivadas ? `<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
+      <div style="font-size:48px;margin-bottom:16px">📦</div>
+      <p style="font-weight:600;margin-bottom:6px">Nenhuma ficha arquivada</p>
+    </div>` : `<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
       <div style="font-size:48px;margin-bottom:16px">📥</div>
       <p style="font-weight:600;margin-bottom:6px">Nenhuma ficha recebida</p>
       <p style="font-size:12px">O atendente salva a ficha e você recebe o protocolo para abri-la aqui.</p>
@@ -2105,6 +2154,10 @@ async function _carregarInbox(ct) {
       <td>
         <div style="display:flex;gap:6px;align-items:center">
           <button class="btn btn-primary btn-sm" onclick="abrirFichaInboxDireto('${esc(f.protocolo)}')">Abrir</button>
+          <button title="${f.arquivada?'Desarquivar':'Arquivar'} ficha" onclick="_toggleArquivarFicha('${esc(f.protocolo)}',${!f.arquivada})"
+            style="background:#f1f5f9;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:#334155;font-weight:600;white-space:nowrap">
+            ${f.arquivada ? '📤' : '📦'}
+          </button>
           ${_podeEditar(f.ctDestino)?`<button title="Excluir ficha" onclick="confirmarExcluirFicha('${esc(f.protocolo)}','${esc(f.nomeCrianca||'')}')"
             style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:#dc2626;font-weight:600;white-space:nowrap">
             🗑️
@@ -2113,6 +2166,14 @@ async function _carregarInbox(ct) {
       </td>
     </tr>`).join('')}</tbody>
   </table></div></div>`
+}
+
+async function _toggleArquivarFicha(protocolo, arquivar) {
+  const f = _inboxCache.find(x => x.protocolo === protocolo)
+  if (f) f.arquivada = arquivar
+  _renderInboxLista()
+  await _db_arquivarFicha(protocolo, arquivar)
+  showToast(arquivar ? '📦 Ficha arquivada.' : '📤 Ficha desarquivada.')
 }
 
 function confirmarExcluirFicha(protocolo, nomeCrianca) {
