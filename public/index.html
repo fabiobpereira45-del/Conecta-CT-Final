@@ -3310,6 +3310,7 @@ async function enviarEmail() {
         email_destino: to,
         tipo: tipoCertidao,
         assunto: subject,
+        nome_assistido: document.getElementById('rc-nome')?.value.trim() || '',
       })
     })
   } catch (e) {
@@ -3331,6 +3332,7 @@ async function enviarEmail() {
     tipo: nova.tipo,
     status: nova.status,
     id: nova.id,
+    nomeAssistido: nova.nome_assistido || '',
     tem_mensagem_nao_lida: false,
   })
 
@@ -6334,6 +6336,7 @@ async function carregarRequisicoes() {
       hora: new Date(r.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
       solicitante: r.solicitante,
       solicitanteCt: r.solicitante_ct,
+      nomeAssistido: r.nome_assistido || '',
       cartorio: r.cartorio,
       subdistrito: r.subdistrito || '',
       emailDestino: r.email_destino,
@@ -6515,6 +6518,7 @@ async function visualizarRequisicao(idxFiltered) {
       <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px">
         ${linha('Protocolo', d.protocolo)}
         ${linha('Data/Hora', new Date(d.created_at).toLocaleString('pt-BR'))}
+        ${linha('Nome do assistido', d.nome_assistido)}
         ${linha('Solicitante', `${d.solicitante || ''}${d.solicitante_ct?' · '+d.solicitante_ct:''}`)}
         ${linha('Cartório', `${d.cartorio || ''}${d.subdistrito?' · '+d.subdistrito:''}`)}
         ${linha('Tipo', d.tipo)}

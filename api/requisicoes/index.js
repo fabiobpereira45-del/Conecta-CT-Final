@@ -44,7 +44,7 @@ module.exports = async function handler(req, res) {
 
   // ── POST ─────────────────────────────────────────────────────────────────
   if (req.method === 'POST') {
-    const { solicitante, solicitante_ct, cartorio, subdistrito, email_destino, tipo } = req.body
+    const { solicitante, solicitante_ct, cartorio, subdistrito, email_destino, tipo, nome_assistido } = req.body
 
     if (!solicitante || !cartorio || !email_destino || !tipo) {
       return res.status(400).json({ error: 'Campos obrigatórios: solicitante, cartorio, email_destino, tipo' })
@@ -67,6 +67,7 @@ module.exports = async function handler(req, res) {
         subdistrito: subdistrito || null,
         email_destino,
         tipo,
+        nome_assistido: nome_assistido || null,
         status: 'Enviada',
       })
       .select()
