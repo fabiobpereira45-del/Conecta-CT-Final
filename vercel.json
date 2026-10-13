@@ -5,6 +5,11 @@
     { "source": "/api/requisicoes/:id",           "destination": "/api/requisicoes/[id]" },
     { "source": "/api/requisicoes",               "destination": "/api/requisicoes/index" },
     { "source": "/api/atendimentos",              "destination": "/api/atendimentos/index" },
+    { "source": "/manifest.json",                 "destination": "/public/manifest.json" },
+    { "source": "/favicon.ico",                   "destination": "/public/favicon.ico" },
+    { "source": "/favicon-:size.png",             "destination": "/public/favicon-:size.png" },
+    { "source": "/apple-touch-icon.png",          "destination": "/public/apple-touch-icon.png" },
+    { "source": "/icons/:file",                   "destination": "/public/icons/:file" },
     { "source": "/((?!api/).*)",                  "destination": "/public/index.html" }
   ],
   "headers": [
