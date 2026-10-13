@@ -222,6 +222,8 @@ nav{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:2px;overflow
   .fill-header{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:16px}
   .fill-header > div{flex-wrap:wrap;gap:8px;min-width:0}
   .fill-header h2{font-size:16px;word-break:break-word}
+
+  .mic-btn{width:30px;height:30px;font-size:14px}
 }
 
 /* Telas bem pequenas (a maioria dos celulares em pé) */
@@ -394,6 +396,9 @@ tr:hover td{background:var(--sidebar-hover)}
 .email-sent-badge{display:inline-flex;align-items:center;gap:6px;background:#dcfce7;color:#16a34a;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;border:1px solid #bbf7d0}
 
 #toast{position:fixed;bottom:24px;right:24px;background:#1a2332;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.25);transform:translateY(120%);transition:transform .3s ease;z-index:999;max-width:320px}
+.mic-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px;vertical-align:middle;margin:0 2px;padding:0;line-height:1;flex-shrink:0}
+.mic-btn.ouvindo{background:#fee2e2;border-color:#fca5a5;color:#dc2626;animation:micPulse 1s infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.35)}50%{box-shadow:0 0 0 6px rgba(220,38,38,0)}}
 #toast{opacity:0;visibility:hidden;pointer-events:none;transition:transform .3s ease,opacity .3s ease,visibility .3s}
 #toast.show{transform:translateY(0);opacity:1;visibility:visible;pointer-events:auto}
 
@@ -408,6 +413,7 @@ tr:hover td{background:var(--sidebar-hover)}
   #toast,
   #modal-root,
   .no-print,
+  .mic-btn,
   button,
   .btn,
   .dark-toggle,
@@ -9299,6 +9305,96 @@ new MutationObserver(muts => {
 }).observe(document.getElementById('content'), { childList: true, subtree: true })
 // Reforço para a impressão: garante altura correta mesmo se algo escapou dos casos acima.
 window.addEventListener('beforeprint', () => document.querySelectorAll('textarea').forEach(_autosizeTextarea))
+
+// ── DITADO POR VOZ NOS CAMPOS DOS FORMULÁRIOS ──
+// Web Speech API (suportada em Chrome/Edge/Safari). Em navegadores sem suporte, os botões
+// de microfone simplesmente não são inseridos — o preenchimento por teclado continua normal.
+const _SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition
+let _micAtual = null // { btn, rec } — reconhecimento em andamento, só um por vez
+
+function _pararDitadoAtual() {
+  if (!_micAtual) return
+  const { btn, rec } = _micAtual
+  _micAtual = null
+  try { rec.stop() } catch(e) {}
+  btn.classList.remove('ouvindo')
+  btn.textContent = '🎤'
+}
+
+function _micDitado(btn) {
+  const campo = btn.previousElementSibling
+  if (!campo) return
+
+  if (_micAtual && _micAtual.btn === btn) { _pararDitadoAtual(); return }
+  _pararDitadoAtual()
+
+  const rec = new _SpeechRecognitionCtor()
+  rec.lang = 'pt-BR'
+  rec.continuous = true
+  rec.interimResults = true
+
+  let base = campo.value ? campo.value.trim() + ' ' : ''
+
+  rec.onresult = (e) => {
+    let final = '', interim = ''
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript
+      if (e.results[i].isFinal) final += t
+      else interim += t
+    }
+    campo.value = base + final + interim
+    if (final) base += final.trim() + ' '
+    if (campo.tagName === 'TEXTAREA') _autosizeTextarea(campo)
+    campo.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+  rec.onerror = (e) => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      showToast('Permissão de microfone negada. Habilite o microfone para usar o ditado por voz.')
+    } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      showToast('Erro no ditado por voz: ' + e.error)
+    }
+  }
+  rec.onend = () => { if (_micAtual && _micAtual.btn === btn) _pararDitadoAtual() }
+
+  try {
+    rec.start()
+    _micAtual = { btn, rec }
+    btn.classList.add('ouvindo')
+    btn.textContent = '⏹'
+  } catch(e) {
+    showToast('Não foi possível iniciar o microfone: ' + e.message)
+  }
+}
+
+const _SELETOR_DITADO = '.form-document input[type="text"], .form-document input:not([type]), .form-document textarea'
+
+function _ativarDitadoCampo(campo) {
+  if (campo.dataset.ditado) return
+  campo.dataset.ditado = '1'
+  const btn = document.createElement('button')
+  btn.type = 'button'
+  btn.className = 'mic-btn'
+  btn.title = 'Ditar por voz'
+  btn.textContent = '🎤'
+  btn.onclick = (ev) => { ev.preventDefault(); _micDitado(btn) }
+  campo.insertAdjacentElement('afterend', btn)
+}
+
+function _injetarBotoesDitado(root) {
+  if (!_SpeechRecognitionCtor) return
+  const raiz = root || document
+  if (raiz.matches?.(_SELETOR_DITADO)) _ativarDitadoCampo(raiz)
+  raiz.querySelectorAll?.(_SELETOR_DITADO).forEach(_ativarDitadoCampo)
+}
+if (_SpeechRecognitionCtor) {
+  new MutationObserver(muts => {
+    muts.forEach(m => m.addedNodes.forEach(n => {
+      if (n.nodeType !== 1) return
+      _injetarBotoesDitado(n)
+    }))
+  }).observe(document.getElementById('content'), { childList: true, subtree: true })
+  _injetarBotoesDitado(document)
+}
 
 // Ajusta o título da página antes de imprimir/"Salvar como PDF", para o navegador sugerir
 // um nome de arquivo com o nome do formulário + da pessoa assistida (em vez de repetir sempre o
