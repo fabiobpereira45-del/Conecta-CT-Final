@@ -37,7 +37,7 @@
   --shadow:0 1px 4px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.2);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text)}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text);overflow-x:hidden}
 button{cursor:pointer;border:none;background:none;font:inherit;color:inherit}
 input,textarea,select{font:inherit;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;outline:none;width:100%}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
@@ -215,6 +215,13 @@ nav{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:2px;overflow
 
   .auth-card{padding:28px 20px}
   .modal-title{font-size:16px}
+
+  /* Cabeçalho de formulário (Voltar / título / navegação / Word+Imprimir): empilha em
+     coluna e permite que cada grupo quebre linha, em vez de forçar rolagem horizontal
+     da tela inteira quando um formulário é aberto. */
+  .fill-header{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:16px}
+  .fill-header > div{flex-wrap:wrap;gap:8px;min-width:0}
+  .fill-header h2{font-size:16px;word-break:break-word}
 }
 
 /* Telas bem pequenas (a maioria dos celulares em pé) */
