@@ -840,8 +840,47 @@ function _btnWhatsApp(titulo, protocolo) {
   return `<button class="btn btn-outline" onclick="compartilharWhatsApp(${args})" style="display:flex;align-items:center;gap:6px;color:#16a34a;border-color:#86efac">💬 WhatsApp</button>`
 }
 
+// Varre o(s) .form-document aberto(s) e tenta achar o nome da pessoa assistida
+// (criança, adolescente, pai/mãe/responsável) preenchido em algum campo "Nome...",
+// para usar no nome do arquivo baixado e evitar que todo Word saia com o mesmo nome.
+function _extrairNomeAssistido() {
+  const docs = document.querySelectorAll('.form-document')
+  if (!docs.length) return ''
+  const candidatos = []
+  docs.forEach(doc => {
+    doc.querySelectorAll('input[type="text"], input:not([type]), textarea').forEach(inp => {
+      const val = (inp.value || '').trim()
+      if (!val) return
+      let contexto = ''
+      const label = inp.closest('div')?.querySelector('label')
+      if (label) contexto += ' ' + label.textContent
+      if (inp.placeholder) contexto += ' ' + inp.placeholder
+      const p = inp.closest('p')
+      if (p) {
+        let antes = ''
+        for (const node of p.childNodes) {
+          if (node === inp) break
+          antes += node.textContent || ''
+        }
+        contexto += ' ' + antes
+      }
+      contexto = contexto.toLowerCase()
+      if (!contexto.includes('nome')) return
+      let score = 1
+      if (/criança|adolescente|assistid|requerid|requerent/.test(contexto)) score = 3
+      else if (/respons[aá]vel|mãe|pai\b|genitor/.test(contexto)) score = 2
+      candidatos.push({ score, val })
+    })
+  })
+  if (!candidatos.length) return ''
+  candidatos.sort((a, b) => b.score - a.score)
+  return candidatos[0].val
+}
+
 function exportarWord() {
   const formName = (document.querySelector('.fill-header h2')?.textContent || 'Formulario').replace(/[^a-zA-Z0-9À-ÿ\s]/g,'').trim()
+  const nomeAssistido = _extrairNomeAssistido()
+  const primeiroNome = nomeAssistido ? nomeAssistido.split(/\s+/)[0].replace(/[^a-zA-Z0-9À-ÿ]/g,'') : ''
   const banner   = document.getElementById('council-banner')
   const formDocs = document.querySelectorAll('.form-document')
 
@@ -913,7 +952,7 @@ function exportarWord() {
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
     a.href     = url
-    a.download = formName + '.docx'
+    a.download = formName + (primeiroNome ? ' - ' + primeiroNome : '') + '.docx'
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 2000)
   } catch(e) {
@@ -9243,6 +9282,20 @@ new MutationObserver(muts => {
 }).observe(document.getElementById('content'), { childList: true, subtree: true })
 // Reforço para a impressão: garante altura correta mesmo se algo escapou dos casos acima.
 window.addEventListener('beforeprint', () => document.querySelectorAll('textarea').forEach(_autosizeTextarea))
+
+// Ajusta o título da página antes de imprimir/"Salvar como PDF", para o navegador sugerir
+// um nome de arquivo com o nome do formulário + da pessoa assistida (em vez de repetir sempre o
+// mesmo nome e gerar o aviso de "já existe um arquivo com esse nome").
+let _tituloOriginal = document.title
+window.addEventListener('beforeprint', () => {
+  _tituloOriginal = document.title
+  const formName = (document.querySelector('.fill-header h2')?.textContent || '').replace(/[^a-zA-Z0-9À-ÿ\s]/g,'').trim()
+  if (!formName) return
+  const nomeAssistido = _extrairNomeAssistido()
+  const primeiroNome = nomeAssistido ? nomeAssistido.split(/\s+/)[0].replace(/[^a-zA-Z0-9À-ÿ]/g,'') : ''
+  document.title = formName + (primeiroNome ? ' - ' + primeiroNome : '')
+})
+window.addEventListener('afterprint', () => { document.title = _tituloOriginal })
 
 // ── INIT: show auth ──
 document.getElementById('app').style.display = 'none'
