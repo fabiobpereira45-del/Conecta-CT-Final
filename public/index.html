@@ -717,7 +717,7 @@ function _paraWord(el) {
     const sigDiv = d.querySelector('div[style*="border-top"]')
     if (sigDiv && sigDiv.textContent.includes('Conselheiro')) {
       const assImg = d.querySelector('img.ass-img')
-      const assHtml = assImg ? `<p data-sig-img="1" align="center" style="margin:6pt 0 -4pt 0;text-align:center"><img src="${assImg.src}" height="78" style="height:78px;max-width:336px" alt="Assinatura"></p>` : ''
+      const assHtml = assImg ? `<p data-sig-img="1" align="center" style="margin:6pt 0 -4pt 0;text-align:center"><img src="${assImg.src}" height="117" style="height:117px;max-width:504px" alt="Assinatura"></p>` : ''
       d.outerHTML = assHtml + `<table align="center" style="margin:18pt auto 0 auto;border:none;border-collapse:collapse;width:240pt;" border="0">
         <tr><td style="border:none;border-top:1pt solid #000;text-align:center;padding-top:4pt;font-family:'Times New Roman',serif;font-size:11pt;color:#111;">${sigDiv.innerHTML}</td></tr>
       </table>`
@@ -6242,7 +6242,7 @@ function _requisicaoCorpoHtml() {
     ${linha('Termo', v('rc-termo'))}
   </table>
   <p class="local">${esc(v('rc-local') || 'Salvador')}, ${esc(dataBr(v('rc-data')) || '____/____/______')}.</p>
-  <div class="assin"><div>${currentUser.assinatura ? `<img src="${currentUser.assinatura}" style="display:block;margin:-82px auto 4px;height:78px;max-width:322px;object-fit:contain">` : ''}Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
+  <div class="assin"><div>${currentUser.assinatura ? `<img src="${currentUser.assinatura}" style="display:block;margin:-100px auto 4px;max-height:117px;width:100%;object-fit:contain">` : ''}Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
   <div class="obs"><strong>Observação legal (ECA, art. 136):</strong> em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.</div>`
   const estilo = `
     body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:28px}
@@ -6258,7 +6258,7 @@ function _requisicaoCorpoHtml() {
     .obs{margin-top:12px;font-size:10.5px;color:#444;border-left:3px solid #1e3a5f;padding:6px 10px;background:#f8fafc}
     .local{margin-top:22px;text-align:right}
     .assin{display:flex;justify-content:space-around;margin-top:56px}
-    .assin div{width:42%;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}
+    .assin div{width:46%;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}
     @media print{body{margin:14mm}}
   `
   return { corpo, estilo, tipo }
@@ -9252,7 +9252,7 @@ function _aplicarAssinaturaNaTela(raiz) {
     if (!caixa || caixa.querySelector('img.ass-img')) return
     const im = document.createElement('img')
     im.className = 'ass-img'; im.src = ass; im.alt = 'Assinatura'
-    im.setAttribute('style', 'display:block;margin:0 auto -4px auto;height:78px;max-width:336px;object-fit:contain')
+    im.setAttribute('style', 'display:block;margin:0 auto -4px auto;height:117px;max-width:504px;object-fit:contain')
     caixa.style.marginTop = '10px'
     caixa.insertBefore(im, caixa.firstChild)
   })
