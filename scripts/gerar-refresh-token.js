@@ -3,33 +3,44 @@
  * Gera um novo GMAIL_REFRESH_TOKEN para a conta Gmail do Conselho.
  *
  * Uso:
- *   GMAIL_CLIENT_ID=xxx GMAIL_CLIENT_SECRET=yyy node scripts/gerar-refresh-token.js
- *
- * O fluxo antigo (urn:ietf:wg:oauth:2.0:oob) foi desativado pelo Google em 2023.
- * Este script usa o fluxo atual recomendado para "apps instalados": abre uma porta
- * local (loopback) para receber o código de autorização depois que você faz login
- * e autoriza no navegador.
- *
- * Se o seu Client ID no Google Cloud Console for do tipo "Desktop app", isto
- * funciona sem nenhuma configuração extra. Se for do tipo "Web application",
- * você precisa adicionar http://localhost:53682 em "Authorized redirect URIs"
- * desse client, em https://console.cloud.google.com/apis/credentials
+ *   node scripts/gerar-refresh-token.js
+ * (Lê automaticamente de client_secret.json ou das variáveis de ambiente GMAIL_CLIENT_ID / SECRET)
  */
 'use strict'
 
 const http = require('http')
+const fs = require('fs')
+const path = require('path')
 const { google } = require('googleapis')
 
 const PORT = 53682
 const REDIRECT_URI = `http://localhost:${PORT}`
 
-const CLIENT_ID = process.env.GMAIL_CLIENT_ID
-const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET
+let CLIENT_ID = process.env.GMAIL_CLIENT_ID
+let CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET
+
+// Tenta ler do arquivo JSON se não estiver definido ou se for valor manual
+const jsonCandidates = [
+  path.join(__dirname, '..', 'client_secret.json'),
+  path.join(__dirname, '..', 'client_secret.json.json')
+]
+for (const f of jsonCandidates) {
+  if (fs.existsSync(f)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(f, 'utf8'))
+      const creds = data.web || data.installed
+      if (creds && creds.client_id && creds.client_secret) {
+        CLIENT_ID = creds.client_id
+        CLIENT_SECRET = creds.client_secret
+        console.log(`📁 Credenciais carregadas automaticamente do arquivo: ${path.basename(f)}`)
+        break
+      }
+    } catch (_) {}
+  }
+}
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
-  console.error('❌ Defina GMAIL_CLIENT_ID e GMAIL_CLIENT_SECRET como variáveis de ambiente antes de rodar.')
-  console.error('   Exemplo (PowerShell):')
-  console.error('   $env:GMAIL_CLIENT_ID="seu-client-id"; $env:GMAIL_CLIENT_SECRET="seu-client-secret"; node scripts/gerar-refresh-token.js')
+  console.error('❌ Defina GMAIL_CLIENT_ID e GMAIL_CLIENT_SECRET como variáveis de ambiente ou coloque o arquivo client_secret.json na raiz.')
   process.exit(1)
 }
 
@@ -47,9 +58,14 @@ const authUrl = oauth2Client.generateAuthUrl({
   scope: SCOPES,
 })
 
+console.log('\n======================================================')
+console.log('📌 Dados das Credenciais Detectados:')
+console.log(`• GMAIL_CLIENT_ID:     ${CLIENT_ID}`)
+console.log(`• GMAIL_CLIENT_SECRET: ${CLIENT_SECRET}`)
+console.log('======================================================')
 console.log('\n1) Abra este link no navegador, usando a conta Gmail do Conselho:\n')
 console.log(authUrl)
-console.log('\n2) Faça login, aceite as permissões e aguarde esta janela do terminal.\n')
+console.log('\n2) Faça login com conselho.narandiba@salvador.ba.gov.br, aceite as permissões e aguarde.')
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -77,10 +93,16 @@ const server = http.createServer(async (req, res) => {
       process.exit(1)
     }
 
-    console.log('\n✅ Novo GMAIL_REFRESH_TOKEN gerado:\n')
+    console.log('\n======================================================')
+    console.log('✅ SUCESSO! Novo GMAIL_REFRESH_TOKEN gerado:')
+    console.log('======================================================\n')
     console.log(tokens.refresh_token)
-    console.log('\nCole esse valor no secret GMAIL_REFRESH_TOKEN (GitHub Actions) e na variável de')
-    console.log('ambiente GMAIL_REFRESH_TOKEN (Vercel). Não compartilhe esse valor com mais ninguém.\n')
+    console.log('\nCopie esse valor e configure na Vercel:')
+    console.log(`• GMAIL_USER: conselho.narandiba@salvador.ba.gov.br`)
+    console.log(`• GMAIL_CLIENT_ID: ${CLIENT_ID}`)
+    console.log(`• GMAIL_CLIENT_SECRET: ${CLIENT_SECRET}`)
+    console.log(`• GMAIL_REFRESH_TOKEN: ${tokens.refresh_token}`)
+    console.log('======================================================\n')
     process.exit(0)
   } catch (e) {
     console.error('❌ Erro ao trocar o código por tokens:', e.message)

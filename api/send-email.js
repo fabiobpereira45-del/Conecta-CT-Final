@@ -1,7 +1,8 @@
 /**
  * POST /api/send-email
- * Envia um e-mail de verdade pela conta Gmail do Conselho (GMAIL_USER), via Gmail API.
- * Body: { to, cc?, subject, body, replyTo? }
+ * Envia um e-mail oficial via Gmail API pelo e-mail do Conselho correspondente.
+ * Se for o CT XIII Narandiba, usa conselho.narandiba@salvador.ba.gov.br.
+ * Body: { to, cc?, subject, body, replyTo?, fromName?, attachment?, councilNum?, councilNome?, senderCt? }
  */
 const cors = require('../lib/cors')
 const { enviarEmail } = require('../lib/gmail')
@@ -14,7 +15,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' })
   }
 
-  const { to, cc, subject, body, replyTo, fromName, attachment } = req.body || {}
+  const { to, cc, subject, body, replyTo, fromName, attachment, councilNum, councilNome, senderCt } = req.body || {}
   if (!to || !subject || !body) {
     return res.status(400).json({ error: 'Informe destinatário (to), assunto (subject) e mensagem (body).' })
   }
@@ -22,8 +23,20 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Anexo inválido: informe filename e contentBase64.' })
   }
 
+  const resolvedCouncil = councilNum || senderCt
+
   try {
-    const data = await enviarEmail({ to, cc, subject, body, replyTo, fromName, attachment })
+    const data = await enviarEmail({
+      to,
+      cc,
+      subject,
+      body,
+      replyTo,
+      fromName,
+      attachment,
+      councilNum: resolvedCouncil,
+      councilNome
+    })
     return res.status(200).json({ ok: true, id: data.id })
   } catch (e) {
     console.error('send-email error:', e)
