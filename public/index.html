@@ -6470,7 +6470,22 @@ function downloadFormDocx() {
   w.document.close()
 }
 
+function _formatarNomeCt(ct) {
+  if (!ct) return 'Conselho Tutelar'
+  const limpo = ct.trim()
+  if (/^conselho tutelar/i.test(limpo)) return limpo
+  if (/^ct\s+/i.test(limpo)) return 'Conselho Tutelar ' + limpo.replace(/^ct\s+/i, '')
+  if (/^[0-9ivxlcdm]+$/i.test(limpo)) return 'Conselho Tutelar nº ' + limpo
+  return 'Conselho Tutelar ' + limpo
+}
+
 function renderFormRequisicaoCertidao(form) {
+  const ctInfo = _getActiveCtInfo()
+  const ctPadrao = ctInfo?.nome || currentUser?.ctFull || currentUser?.ct || ''
+  const conselheiroPadrao = currentUser?.name || ''
+  const agora = new Date()
+  const hojeIso = agora.getFullYear() + '-' + String(agora.getMonth() + 1).padStart(2, '0') + '-' + String(agora.getDate()).padStart(2, '0')
+
   const header = `
   <div class="fill-header">
     <button onclick="backToForms()">${I.arrowleft} Voltar</button>
@@ -6494,15 +6509,15 @@ function renderFormRequisicaoCertidao(form) {
         &nbsp;<strong>NESTA</strong>
       </div>
 
-      <!-- Número do CT -->
+      <!-- Conselho e Conselheiro Requisitante -->
       <div class="field-row cols-2">
         <div>
-          <label class="field-label">Nº do Conselho Tutelar</label>
-          <input id="rc-ct" placeholder="Ex: I, IV, XII…" value="I" />
+          <label class="field-label">Conselho Tutelar</label>
+          <input id="rc-ct" placeholder="Ex: CT XIII – Narandiba" value="${esc(ctPadrao)}" />
         </div>
         <div>
           <label class="field-label">Conselheiro(a) Requisitante</label>
-          <input id="rc-conselheiro" value="${currentUser.name}" />
+          <input id="rc-conselheiro" placeholder="Nome do(a) conselheiro(a)" value="${esc(conselheiroPadrao)}" />
         </div>
       </div>
 
@@ -6516,9 +6531,15 @@ function renderFormRequisicaoCertidao(form) {
       </div>
       <div class="field-row cols-2">
         <div><label class="field-label">CPF</label><input id="rc-cpf" placeholder="000.000.000-00" /></div>
-        <div><label class="field-label">Filiação – Mãe</label><input id="rc-mae" placeholder="Nome da mãe" /></div>
+        <div><label class="field-label">Nome do(a) Responsável</label><input id="rc-responsavel" placeholder="Nome do(a) responsável" /></div>
       </div>
-      <div><label class="field-label">Filiação – Pai</label><input id="rc-pai" placeholder="Nome do pai" /></div>
+      <div class="field-row cols-2">
+        <div><label class="field-label">Filiação – Genitor (Pai)</label><input id="rc-pai" placeholder="Nome do pai / genitor" /></div>
+        <div><label class="field-label">Filiação – Genitora (Mãe)</label><input id="rc-mae" placeholder="Nome da mãe / genitora" /></div>
+      </div>
+      <div class="field-row cols-2">
+        <div><label class="field-label">Número de Contato / Telefone</label><input id="rc-contato" placeholder="(71) 99999-9999" /></div>
+      </div>
 
       <div class="divider"></div>
       <strong style="font-size:13px">Especificações da certidão</strong>
@@ -6560,7 +6581,7 @@ function renderFormRequisicaoCertidao(form) {
         <label class="field-label">Número de vias</label>
         <select id="rc-vias">
           <option value="1">1ª via</option>
-          <option value="2">2ª via</option>
+          <option value="2" selected>2ª via</option>
           <option value="3">3ª via</option>
         </select>
       </div>
@@ -6579,11 +6600,18 @@ function renderFormRequisicaoCertidao(form) {
       </div>
 
       <div class="divider"></div>
+      <strong style="font-size:13px">Anotações e Observações</strong>
+      <div>
+        <label class="field-label">Observações / Anotações Pertinentes</label>
+        <textarea id="rc-obs" rows="3" placeholder="Anotações, histórico ou observações para o Cartório…" style="width:100%;resize:vertical"></textarea>
+      </div>
+
+      <div class="divider"></div>
 
       <!-- Data e local -->
       <div class="field-row cols-2">
         <div><label class="field-label">Local</label><input id="rc-local" value="Salvador" /></div>
-        <div><label class="field-label">Data</label><input id="rc-data" type="date" value="2026-09-18" /></div>
+        <div><label class="field-label">Data</label><input id="rc-data" type="date" value="${hojeIso}" /></div>
       </div>
 
       <div style="margin-top:8px;padding:12px;background:var(--primary-subtle);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.6">
@@ -6615,6 +6643,11 @@ function _requisicaoCorpoHtml() {
   const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
   const ct = v('rc-ct') || '—'
   const banner = _bannerParaWord(document.getElementById('council-banner'))
+  const ctFormatado = _formatarNomeCt(ct)
+  const obsTexto = v('rc-obs')
+  const respNome = v('rc-responsavel')
+  const respAssinTexto = respNome ? 'Assinatura do(a) Responsável (' + esc(respNome) + ')' : 'Assinatura do Responsável / Representante'
+
   const corpo = `
   <div class="banner">${banner}</div>
   <h1>REQUISIÇÃO DE CERTIDÃO</h1>
@@ -6622,14 +6655,16 @@ function _requisicaoCorpoHtml() {
     <strong>Ao Cartório de Registro Civil das Pessoas Naturais</strong><br>
     Comarca de <strong>${esc(v('rc-comarca') || '________________')}</strong> &nbsp; Subdistrito de <strong>${esc(v('rc-subdistrito') || '________________')}</strong> &nbsp; <strong>NESTA</strong>
   </div>
-  <p class="par">O Conselho Tutelar nº <strong>${esc(ct)}</strong>, por meio do(a) Conselheiro(a) <strong>${esc(v('rc-conselheiro'))}</strong>, no uso de suas atribuições legais (art. 136 da Lei nº 8.069/1990 – ECA), REQUISITA a expedição da certidão abaixo especificada.</p>
+  <p class="par">O <strong>${esc(ctFormatado)}</strong>, por meio do(a) Conselheiro(a) <strong>${esc(v('rc-conselheiro'))}</strong>, no uso de suas atribuições legais (art. 136 da Lei nº 8.069/1990 – ECA), REQUISITA a expedição da certidão abaixo especificada.</p>
   <h2>1. Dados da pessoa requerida</h2>
   <table>
     ${linha('Nome completo', v('rc-nome'))}
     ${linha('Data de nascimento', dataBr(v('rc-nasc')))}
     ${linha('CPF', v('rc-cpf'))}
-    ${linha('Filiação – mãe', v('rc-mae'))}
-    ${linha('Filiação – pai', v('rc-pai'))}
+    ${linha('Filiação – Genitor (Pai)', v('rc-pai'))}
+    ${linha('Filiação – Genitora (Mãe)', v('rc-mae'))}
+    ${linha('Nome do(a) Responsável', v('rc-responsavel'))}
+    ${linha('Número de Contato / Telefone', v('rc-contato'))}
   </table>
   <h2>2. Certidão requerida</h2>
   <table>
@@ -6644,8 +6679,20 @@ function _requisicaoCorpoHtml() {
     ${linha('Folha', v('rc-folha'))}
     ${linha('Termo', v('rc-termo'))}
   </table>
+  ${obsTexto ? `<h2>4. Anotações e Observações</h2><div class="anotacoes">${esc(obsTexto).replace(/\n/g, '<br>')}</div>` : ''}
   <p class="local">${esc(v('rc-local') || 'Salvador')}, ${esc(dataBr(v('rc-data')) || '____/____/______')}.</p>
-  <div class="assin"><div>${currentUser.assinatura ? `<img src="${currentUser.assinatura}" style="display:block;margin:-100px auto 4px;max-height:117px;width:100%;object-fit:contain">` : ''}Conselheiro(a) Tutelar Requisitante</div><div>Assinatura do Responsável / Representante</div></div>
+  <div class="assin">
+    <div>
+      <div style="height:70px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px">
+        ${currentUser?.assinatura ? `<img src="${currentUser.assinatura}" alt="Assinatura" style="max-height:70px;max-width:220px;object-fit:contain;display:block">` : ''}
+      </div>
+      <div style="border-top:1px solid #333;padding-top:6px;font-size:11px">Conselheiro(a) Tutelar Requisitante</div>
+    </div>
+    <div>
+      <div style="height:70px;margin-bottom:4px"></div>
+      <div style="border-top:1px solid #333;padding-top:6px;font-size:11px">${respAssinTexto}</div>
+    </div>
+  </div>
   <div class="obs"><strong>Observação legal (ECA, art. 136):</strong> em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.</div>`
   const estilo = `
     body{font-family:Arial,sans-serif;font-size:12px;color:#1a2332;margin:28px}
@@ -6658,20 +6705,68 @@ function _requisicaoCorpoHtml() {
     td.rot{width:34%;background:#f4f6f9;font-weight:700;color:#334155}
     td.val{font-size:12.5px}
     .par{margin:12px 0;line-height:1.6;text-align:justify}
+    .anotacoes{border:1px solid #dde3ec;border-radius:4px;padding:8px 10px;font-size:12px;line-height:1.6;background:#fafbfc;margin-top:6px}
     .obs{margin-top:12px;font-size:10.5px;color:#444;border-left:3px solid #1e3a5f;padding:6px 10px;background:#f8fafc}
     .local{margin-top:22px;text-align:right}
-    .assin{display:flex;justify-content:space-around;margin-top:56px}
-    .assin div{width:46%;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}
+    .assin{display:flex;justify-content:space-around;margin-top:36px}
+    .assin > div{width:46%;text-align:center}
     @media print{body{margin:14mm}}
   `
   return { corpo, estilo, tipo }
 }
 
-function gerarRequisicaoCertidaoPDF() {
+async function gerarRequisicaoCertidaoPDF() {
+  // Sincroniza a assinatura com o Supabase caso o objeto currentUser ainda não a tenha em memória
+  if (!currentUser?.assinatura && currentUser?.id) {
+    try {
+      const res = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${currentUser.id}&select=assinatura_url`, {
+        headers: _sbHeaders()
+      })
+      if (res.ok) {
+        const rows = await res.json()
+        if (rows?.[0]?.assinatura_url) currentUser.assinatura = rows[0].assinatura_url
+      }
+    } catch(e) {}
+  }
+
+  // Pré-carrega a imagem na janela atual para que o navegador baixe os bytes e armazene no cache
+  if (currentUser?.assinatura) {
+    await new Promise(resolve => {
+      const im = new Image()
+      im.onload = im.onerror = resolve
+      im.src = currentUser.assinatura
+      if (im.complete) resolve()
+    })
+  }
+
   const { corpo, estilo } = _requisicaoCorpoHtml()
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Requisição de Certidão</title>
   <style>${estilo}</style></head><body>${corpo}
-  <script>window.print();<\/script></body></html>`
+  <script>
+    async function dispararImpressao() {
+      try {
+        const imgs = Array.from(document.images);
+        await Promise.all(imgs.map(img => {
+          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+          return new Promise(res => {
+            img.onload = img.onerror = () => {
+              if (img.decode) { img.decode().then(res).catch(res); }
+              else { res(); }
+            };
+          });
+        }));
+      } catch(e) {}
+      setTimeout(() => {
+        window.focus();
+        window.print();
+      }, 250);
+    }
+    if (document.readyState === 'complete') {
+      dispararImpressao();
+    } else {
+      window.addEventListener('load', dispararImpressao);
+    }
+  <\/script></body></html>`
   const w = window.open('', '_blank')
   if (w) { w.document.write(html); w.document.close() }
   else showToast('Permita pop-ups para gerar o PDF.')
@@ -6699,6 +6794,7 @@ function _comprimirParaAnexo(dataUrl, larguraMax) {
   return new Promise(resolve => {
     if (!dataUrl) return resolve(null)
     const img = new Image()
+    img.crossOrigin = 'anonymous'
     img.onerror = () => resolve(null)
     img.onload = () => {
       const esc0 = Math.min(1, larguraMax / img.width)
@@ -6722,6 +6818,7 @@ async function _gerarAnexoRequisicaoPDF() {
   const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
   const ct = v('rc-ct') || '—'
   const ctNome = currentUser.ctFull || currentUser.ct || 'Conselho Tutelar'
+  const ctFormatado = _formatarNomeCt(ct)
 
   const { jsPDF } = window.jspdf
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
@@ -6757,7 +6854,7 @@ async function _gerarAnexoRequisicaoPDF() {
   // Parágrafo legal
   pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10.5); pdf.setTextColor(26, 35, 50)
   const tipo = sel('tipo-certidao') || 'Nascimento'
-  const paragrafo = `O Conselho Tutelar nº ${ct}, por meio do(a) Conselheiro(a) ${v('rc-conselheiro')}, no uso de suas atribuições legais (art. 136 da Lei nº 8.069/1990 – ECA), REQUISITA a expedição da certidão abaixo especificada.`
+  const paragrafo = `O ${ctFormatado}, por meio do(a) Conselheiro(a) ${v('rc-conselheiro')}, no uso de suas atribuições legais (art. 136 da Lei nº 8.069/1990 – ECA), REQUISITA a expedição da certidão abaixo especificada.`
   const linhasPar = pdf.splitTextToSize(paragrafo, larguraUtil)
   pdf.text(linhasPar, margem, y)
   y += linhasPar.length * 14 + 14
@@ -6782,8 +6879,10 @@ async function _gerarAnexoRequisicaoPDF() {
     ['Nome completo', v('rc-nome')],
     ['Data de nascimento', dataBr(v('rc-nasc'))],
     ['CPF', v('rc-cpf')],
-    ['Filiação – mãe', v('rc-mae')],
-    ['Filiação – pai', v('rc-pai')],
+    ['Filiação – Genitor (Pai)', v('rc-pai')],
+    ['Filiação – Genitora (Mãe)', v('rc-mae')],
+    ['Nome do(a) Responsável', v('rc-responsavel')],
+    ['Número de Contato / Tel.', v('rc-contato')],
   ])
   secao('2. Certidão requerida', [
     ['Tipo', tipo],
@@ -6796,6 +6895,11 @@ async function _gerarAnexoRequisicaoPDF() {
     ['Folha', v('rc-folha')],
     ['Termo', v('rc-termo')],
   ])
+  if (v('rc-obs')) {
+    secao('4. Anotações e Observações', [
+      ['Observações', v('rc-obs')],
+    ])
+  }
 
   // Local e data
   pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10.5); pdf.setTextColor(26, 35, 50)
@@ -6803,15 +6907,25 @@ async function _gerarAnexoRequisicaoPDF() {
   y += 70
 
   // Assinatura
+  const conselheiroLinhaX1 = margem + 30
+  const conselheiroLinhaX2 = margem + larguraUtil / 2 - 10
+  const conselheiroCentroX = (conselheiroLinhaX1 + conselheiroLinhaX2) / 2
+
   if (assinaturaImg) {
-    try { pdf.addImage(assinaturaImg.dataUrl, 'JPEG', margem + larguraUtil / 2 - 70, y - 54, 140, 140 * assinaturaImg.h / assinaturaImg.w) } catch (e) {}
+    try {
+      const assW = 120
+      const assH = 120 * assinaturaImg.h / assinaturaImg.w
+      pdf.addImage(assinaturaImg.dataUrl, 'JPEG', conselheiroCentroX - assW / 2, y - assH - 4, assW, assH)
+    } catch (e) {}
   }
   pdf.setDrawColor(51, 51, 51)
-  pdf.line(margem + 30, y, margem + larguraUtil / 2 - 10, y)
+  pdf.line(conselheiroLinhaX1, y, conselheiroLinhaX2, y)
   pdf.line(margem + larguraUtil / 2 + 10, y, margem + larguraUtil - 30, y)
   pdf.setFontSize(9)
-  pdf.text('Conselheiro(a) Tutelar Requisitante', margem + larguraUtil / 4 + 10, y + 12, { align: 'center' })
-  pdf.text('Assinatura do Responsável / Representante', margem + larguraUtil * 3 / 4 - 10, y + 12, { align: 'center' })
+  pdf.text('Conselheiro(a) Tutelar Requisitante', conselheiroCentroX, y + 12, { align: 'center' })
+  const respLinhaCentroX = (margem + larguraUtil / 2 + 10 + margem + larguraUtil - 30) / 2
+  const respRotulo = v('rc-responsavel') ? `Assinatura do(a) Responsável (${v('rc-responsavel')})` : 'Assinatura do Responsável / Representante'
+  pdf.text(respRotulo, respLinhaCentroX, y + 12, { align: 'center' })
   y += 36
 
   // Observação legal
