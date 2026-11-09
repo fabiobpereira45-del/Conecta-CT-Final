@@ -15,12 +15,24 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' })
   }
 
-  const { to, cc, subject, body, replyTo, fromName, attachment, councilNum, councilNome, senderCt } = req.body || {}
+  const { to, cc, subject, body, replyTo, fromName, attachment, attachments, councilNum, councilNome, senderCt } = req.body || {}
   if (!to || !subject || !body) {
     return res.status(400).json({ error: 'Informe destinatário (to), assunto (subject) e mensagem (body).' })
   }
-  if (attachment && (!attachment.filename || !attachment.contentBase64)) {
-    return res.status(400).json({ error: 'Anexo inválido: informe filename e contentBase64.' })
+
+  const listaAnexos = []
+  if (Array.isArray(attachments)) {
+    for (const a of attachments) {
+      if (!a.filename || !a.contentBase64) {
+        return res.status(400).json({ error: 'Anexo inválido: informe filename e contentBase64.' })
+      }
+      listaAnexos.push(a)
+    }
+  } else if (attachment) {
+    if (!attachment.filename || !attachment.contentBase64) {
+      return res.status(400).json({ error: 'Anexo inválido: informe filename e contentBase64.' })
+    }
+    listaAnexos.push(attachment)
   }
 
   const resolvedCouncil = councilNum || senderCt
@@ -33,7 +45,7 @@ module.exports = async function handler(req, res) {
       body,
       replyTo,
       fromName,
-      attachment,
+      attachments: listaAnexos,
       councilNum: resolvedCouncil,
       councilNome
     })
