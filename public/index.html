@@ -1220,7 +1220,7 @@ const CARTORIOS_SALVADOR = [
   { oficio:'6º Ofício RCPN (Cajazeiras)', subdistritos:['Valéria','São Cristóvão'], email:'cartoriodecajazeiras@gmail.com', tel:'(71) 3301-8955', end:'Estrada da Paciência, 2183 — Cajazeiras VIII' },
   { oficio:'Subdistrito de Amaralina', subdistritos:['Amaralina','Caminho das Árvores'], email:'rcpnamaralina@gmail.com', tel:'(71) 3035-0009', end:'Av. Tancredo Neves, 1632, Loja 31 — Salvador Trade Center' },
   { oficio:'Subdistrito de Paripe', subdistritos:['Paripe','Periperi','Bom Jesus','Ilha de Maré'], email:'cartorioparipe@gmail.com', tel:'(71) 3307-5191', end:'Rua Almirante Barroso, 02 — Paripe' },
-  { oficio:'Subdistrito de Plataforma', subdistritos:['Plataforma','São Caetano'], email:'rcpnplataforma@gmail.com', tel:'(71) 3019-3572', end:'Av. Afrânio Peixoto, 76 — Itacaranha / Plataforma' },
+  { oficio:'Subdistrito de Plataforma', subdistritos:['Plataforma','São Caetano'], email:'contatosaocaetano@gmail.com', tel:'(71) 3019-3572', end:'Av. Afrânio Peixoto, 76 — Itacaranha / Plataforma' },
   { oficio:'Subdistrito dos Mares', subdistritos:['Mares','Calçada'], email:'cartoriodosmares@gmail.com', tel:'(71) 3042-9199', end:'Av. Oscar Pontes, 1.503, Ed. Serra Vale — Calçada' },
   { oficio:'Subdistrito da Penha', subdistritos:['Penha','Bonfim','Ribeira'], email:'registrocivildapenha@gmail.com', tel:'(71) 3316-9579', end:'Av. Beira Mar, 419 — Ribeira' },
 ]
@@ -1237,11 +1237,62 @@ let emailAgenda = [
   { id:'ag5', nome:'6º Ofício RCPN – Cajazeiras', email:'cartoriodecajazeiras@gmail.com', tipo:'Cartório', tel:'(71) 3301-8955' },
   { id:'ag6', nome:'Subdistrito de Amaralina', email:'rcpnamaralina@gmail.com', tipo:'Cartório', tel:'(71) 3035-0009' },
   { id:'ag7', nome:'Subdistrito de Paripe', email:'cartorioparipe@gmail.com', tipo:'Cartório', tel:'(71) 3307-5191' },
-  { id:'ag8', nome:'Subdistrito de Plataforma', email:'rcpnplataforma@gmail.com', tipo:'Cartório', tel:'(71) 3019-3572' },
+  { id:'ag8', nome:'Subdistrito de Plataforma', email:'contatosaocaetano@gmail.com', tipo:'Cartório', tel:'(71) 3019-3572' },
   { id:'ag9', nome:'Subdistrito dos Mares', email:'cartoriodosmares@gmail.com', tipo:'Cartório', tel:'(71) 3042-9199' },
   { id:'ag10', nome:'Subdistrito da Penha', email:'registrocivildapenha@gmail.com', tipo:'Cartório', tel:'(71) 3316-9579' },
 ]
 let agendaNextId = 11
+
+function _salvarAgenda() {
+  try { localStorage.setItem('cct_email_agenda', JSON.stringify(emailAgenda)) } catch(e) {}
+}
+
+function _carregarAgenda() {
+  try {
+    const salvo = localStorage.getItem('cct_email_agenda')
+    if (salvo) {
+      const parsed = JSON.parse(salvo)
+      if (Array.isArray(parsed) && parsed.length) {
+        emailAgenda = parsed
+        const maxId = parsed.reduce((max, item) => {
+          const num = parseInt(String(item.id).replace(/\D/g, ''), 10)
+          return !isNaN(num) && num > max ? num : max
+        }, 10)
+        agendaNextId = maxId + 1
+      }
+    }
+  } catch(e) {}
+}
+
+function _salvarCartoriosOverrides() {
+  try {
+    const overrides = {}
+    CARTORIOS_SALVADOR.forEach((c, idx) => {
+      overrides[idx] = { email: c.email, tel: c.tel, end: c.end }
+    })
+    localStorage.setItem('cct_cartorios_salvador', JSON.stringify(overrides))
+  } catch(e) {}
+}
+
+function _carregarCartoriosOverrides() {
+  try {
+    const salvo = localStorage.getItem('cct_cartorios_salvador')
+    if (salvo) {
+      const overrides = JSON.parse(salvo)
+      Object.keys(overrides).forEach(idx => {
+        const i = parseInt(idx, 10)
+        if (CARTORIOS_SALVADOR[i]) {
+          if (overrides[idx].email) CARTORIOS_SALVADOR[i].email = overrides[idx].email
+          if (overrides[idx].tel)   CARTORIOS_SALVADOR[i].tel   = overrides[idx].tel
+          if (overrides[idx].end)   CARTORIOS_SALVADOR[i].end   = overrides[idx].end
+        }
+      })
+    }
+  } catch(e) {}
+}
+
+_carregarAgenda()
+_carregarCartoriosOverrides()
 
 // ── API BACKEND ──
 const API_BASE = 'https://conecta-ct-final.vercel.app'
@@ -3430,6 +3481,7 @@ function agendaAdd() {
   if (!nome || !email) { showToast('Preencha nome e e-mail.'); return }
   const id = 'ag' + (agendaNextId++)
   emailAgenda.push({ id, nome, email, tipo, tel })
+  _salvarAgenda()
   showToast(`"${nome}" adicionado à agenda!`)
   openAgendaModal(window._agendaSelectMode, window._agendaSelectCb)
 }
@@ -3458,10 +3510,40 @@ function agendaEdit(id) {
 function agendaSave(id) {
   const d = emailAgenda.find(x=>x.id===id)
   if (!d) return
-  d.nome = document.getElementById(`ag-edit-nome-${id}`)?.value.trim() || d.nome
-  d.email = document.getElementById(`ag-edit-email-${id}`)?.value.trim() || d.email
-  d.tel = document.getElementById(`ag-edit-tel-${id}`)?.value.trim() || ''
-  showToast('Destinatário atualizado!')
+  const novoNome = document.getElementById(`ag-edit-nome-${id}`)?.value.trim() || d.nome
+  const novoEmail = document.getElementById(`ag-edit-email-${id}`)?.value.trim() || d.email
+  const novoTel = document.getElementById(`ag-edit-tel-${id}`)?.value.trim() || ''
+
+  d.nome = novoNome
+  d.email = novoEmail
+  d.tel = novoTel
+
+  // Se corresponder a um Cartório de Salvador, sincroniza também no registro oficial do cartório
+  const cartorioMatch = CARTORIOS_SALVADOR.find(c =>
+    c.oficio.toLowerCase() === d.nome.toLowerCase() ||
+    d.nome.toLowerCase().includes(c.oficio.toLowerCase()) ||
+    c.subdistritos.some(s => d.nome.toLowerCase().includes(s.toLowerCase()))
+  )
+  if (cartorioMatch) {
+    cartorioMatch.email = novoEmail
+    if (novoTel) cartorioMatch.tel = novoTel
+    _salvarCartoriosOverrides()
+
+    // Se o modal de envio de e-mail estiver aberto por baixo, atualiza os campos na hora
+    const emailToEl = document.getElementById('email-to')
+    const ciEmailEl = document.getElementById('ci-email')
+    const emailCartorioSel = document.getElementById('email-cartorio')
+    if (emailCartorioSel && emailCartorioSel.value) {
+      const [idx] = emailCartorioSel.value.split('|')
+      if (CARTORIOS_SALVADOR[parseInt(idx)] === cartorioMatch) {
+        if (emailToEl) emailToEl.value = novoEmail
+        if (ciEmailEl) ciEmailEl.textContent = novoEmail
+      }
+    }
+  }
+
+  _salvarAgenda()
+  showToast('Destinatário atualizado com sucesso!')
   openAgendaModal(window._agendaSelectMode, window._agendaSelectCb)
 }
 
@@ -3469,6 +3551,7 @@ function agendaDelete(id) {
   const d = emailAgenda.find(x=>x.id===id)
   if (!d || !confirm(`Excluir "${d.nome}"?`)) return
   emailAgenda = emailAgenda.filter(x=>x.id!==id)
+  _salvarAgenda()
   showToast('Destinatário removido.')
   openAgendaModal(window._agendaSelectMode, window._agendaSelectCb)
 }
