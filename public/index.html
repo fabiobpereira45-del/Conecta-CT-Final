@@ -6855,7 +6855,7 @@ function _requisicaoCorpoHtml() {
   const linha = (rotulo, valor) => '<tr><td class="rot">' + rotulo + '</td><td class="val">' + (valor ? esc(valor) : '&nbsp;') + '</td></tr>'
   const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
   const ct = v('rc-ct') || '—'
-  const banner = _bannerParaWord(document.getElementById('council-banner'))
+  const banner = _bannerParaWord(document.getElementById('council-banner'), ct)
   const ctFormatado = _formatarNomeCt(ct)
   const obsTexto = v('rc-obs')
   const respNome = v('rc-responsavel')
@@ -7024,70 +7024,123 @@ function _comprimirParaAnexo(dataUrl, larguraMax) {
 
 async function _gerarAnexoRequisicaoPDF() {
   await _carregarGeradorPdf()
+
+  // Sincroniza a assinatura com o Supabase caso o objeto currentUser ainda não a tenha em memória
+  if (!currentUser?.assinatura && currentUser?.id) {
+    try {
+      const res = await fetch(`${_SB_URL}/rest/v1/usuarios?id=eq.${currentUser.id}&select=assinatura_url`, {
+        headers: _sbHeaders()
+      })
+      if (res.ok) {
+        const rows = await res.json()
+        if (rows?.[0]?.assinatura_url) currentUser.assinatura = rows[0].assinatura_url
+      }
+    } catch(e) {}
+  }
+
   const logo = await _comprimirParaAnexo(_CT_LOGO_SRC, 160)
-  const assinaturaImg = await _comprimirParaAnexo(currentUser.assinatura, 400)
+  const assinaturaImg = await _comprimirParaAnexo(currentUser?.assinatura, 400)
   const v = id => (document.getElementById(id)?.value || '').trim()
   const sel = name => document.querySelector('[name="' + name + '"]:checked')?.value || ''
   const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
   const ct = v('rc-ct') || '—'
-  const ctNome = currentUser.ctFull || currentUser.ct || 'Conselho Tutelar'
+  const ctInfo = _getActiveCtInfo(ct)
+  const ctNomeProprio = ctInfo ? ctInfo.nome.replace(/^CT \w+ – /,'').toUpperCase() : (currentUser?.ctFull || 'SALVADOR').toUpperCase()
+  const ctNomeCompleto = `CONSELHO TUTELAR – ${ctNomeProprio}`
+  const ctLei = 'Lei Federal 8.069/90 – Lei Municipal 6.266'
+  const ctEnd = ctInfo?.endereco ? `${ctInfo.endereco} – Salvador/BA` : 'Salvador/BA'
+  const contatosList = []
+  if (ctInfo?.telefone) contatosList.push(`Tel.: ${ctInfo.telefone}`)
+  if (ctInfo?.celular)  contatosList.push(`Celular: ${ctInfo.celular}`)
+  if (ctInfo?.email)    contatosList.push(`E-mail: ${String(ctInfo.email).toLowerCase()}`)
+  const ctContato = contatosList.join(' · ')
   const ctFormatado = _formatarNomeCt(ct)
 
   const { jsPDF } = window.jspdf
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
   const pageW = pdf.internal.pageSize.getWidth()
-  const margem = 48
+  const pageH = pdf.internal.pageSize.getHeight()
+  const margem = 40
   const larguraUtil = pageW - margem * 2
   let y = margem
 
-  // Cabeçalho: logo + nome do conselho
-  if (logo) { try { pdf.addImage(logo.dataUrl, 'JPEG', margem, y, 48, 48 * logo.h / logo.w) } catch (e) {} }
-  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(12); pdf.setTextColor(30, 58, 95)
-  pdf.text(ctNome, margem + 58, y + 16)
-  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(90, 100, 115)
-  pdf.text('Lei Federal 8.069/90 · Lei Municipal 6.266 · Salvador/BA', margem + 58, y + 30)
-  y += 60
-  pdf.setDrawColor(221, 227, 236); pdf.line(margem, y, margem + larguraUtil, y)
-  y += 24
+  // Cabeçalho institucional completo idêntico ao padrão oficial
+  const headerH = 56
+  pdf.setDrawColor(26, 58, 107)
+  pdf.setLineWidth(1.2)
+  pdf.roundedRect(margem, y, larguraUtil, headerH, 3, 3, 'D')
 
-  // Título
-  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14); pdf.setTextColor(30, 58, 95)
-  pdf.text('REQUISIÇÃO DE CERTIDÃO', pageW / 2, y, { align: 'center' })
-  y += 22
+  // Divisória vertical do logo
+  pdf.setLineWidth(0.8)
+  pdf.line(margem + 72, y, margem + 72, y + headerH)
 
-  // Destinatário
-  pdf.setDrawColor(221, 227, 236); pdf.setFillColor(248, 250, 252)
-  pdf.roundedRect(margem, y, larguraUtil, 44, 3, 3, 'FD')
-  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.setTextColor(30, 35, 45)
-  pdf.text('Ao Cartório de Registro Civil das Pessoas Naturais', margem + 10, y + 16)
-  pdf.setFont('helvetica', 'normal')
-  pdf.text(`Comarca de ${v('rc-comarca') || '________________'}   Subdistrito de ${v('rc-subdistrito') || '________________'}   NESTA`, margem + 10, y + 32)
-  y += 60
+  // Logo oficial
+  if (logo) {
+    try {
+      const logoW = 54
+      const logoH = Math.min(headerH - 8, 54 * logo.h / logo.w)
+      pdf.addImage(logo.dataUrl, 'JPEG', margem + (72 - logoW) / 2, y + (headerH - logoH) / 2, logoW, logoH)
+    } catch (e) {}
+  }
+
+  // Textos do cabeçalho centralizados
+  const centroTexto = margem + 72 + (larguraUtil - 72) / 2
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11); pdf.setTextColor(26, 58, 107)
+  pdf.text(ctNomeCompleto, centroTexto, y + 15, { align: 'center' })
+
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(60, 60, 60)
+  pdf.text(ctLei, centroTexto, y + 27, { align: 'center' })
+
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7.5); pdf.setTextColor(70, 70, 70)
+  pdf.text(ctEnd, centroTexto, y + 38, { align: 'center' })
+
+  if (ctContato) {
+    pdf.setFontSize(7.5); pdf.setTextColor(70, 70, 70)
+    pdf.text(ctContato, centroTexto, y + 49, { align: 'center' })
+  }
+  y += headerH + 12
+
+  // Título do Documento
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(13); pdf.setTextColor(26, 58, 107)
+  pdf.text('REQUISIÇÃO DE CERTIDÃO', pageW / 2, y + 2, { align: 'center' })
+  y += 16
+
+  // Destinatário do Cartório
+  pdf.setDrawColor(221, 227, 236); pdf.setFillColor(248, 250, 252); pdf.setLineWidth(0.8)
+  pdf.roundedRect(margem, y, larguraUtil, 36, 3, 3, 'FD')
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5); pdf.setTextColor(30, 35, 45)
+  pdf.text('Ao Cartório de Registro Civil das Pessoas Naturais', margem + 8, y + 13)
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9)
+  pdf.text(`Comarca de ${v('rc-comarca') || '________________'}   Subdistrito de ${v('rc-subdistrito') || '________________'}   NESTA`, margem + 8, y + 27)
+  y += 44
 
   // Parágrafo legal
-  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10.5); pdf.setTextColor(26, 35, 50)
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9); pdf.setTextColor(26, 35, 50)
   const tipo = sel('tipo-certidao') || 'Nascimento'
   const paragrafo = `O ${ctFormatado}, por meio do(a) Conselheiro(a) ${v('rc-conselheiro')}, no uso de suas atribuições legais (art. 136 da Lei nº 8.069/1990 – ECA), REQUISITA a expedição da certidão abaixo especificada.`
   const linhasPar = pdf.splitTextToSize(paragrafo, larguraUtil)
   pdf.text(linhasPar, margem, y)
-  y += linhasPar.length * 14 + 14
+  y += linhasPar.length * 11 + 8
 
-  // Seções em tabela simples (rótulo em negrito + valor)
+  // Seções tabulares (rótulo em negrito + valor)
   const secao = (titulo, linhas) => {
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10); pdf.setTextColor(30, 58, 95)
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9); pdf.setTextColor(26, 58, 107)
     pdf.text(titulo.toUpperCase(), margem, y)
-    y += 14
+    y += 10
     linhas.forEach(([rot, val]) => {
       pdf.setFillColor(244, 246, 249)
-      pdf.rect(margem, y - 9, larguraUtil, 18, 'F')
-      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5); pdf.setTextColor(51, 65, 85)
+      pdf.rect(margem, y - 7, larguraUtil, 15, 'F')
+      pdf.setDrawColor(221, 227, 236); pdf.setLineWidth(0.5)
+      pdf.rect(margem, y - 7, larguraUtil, 15, 'S')
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8.5); pdf.setTextColor(51, 65, 85)
       pdf.text(rot, margem + 6, y + 3)
       pdf.setFont('helvetica', 'normal'); pdf.setTextColor(26, 35, 50)
-      pdf.text(val || '—', margem + 170, y + 3)
-      y += 18
+      pdf.text(val || '—', margem + 160, y + 3)
+      y += 15
     })
-    y += 14
+    y += 8
   }
+
   secao('1. Dados da pessoa requerida', [
     ['Nome completo', v('rc-nome')],
     ['Data de nascimento', dataBr(v('rc-nasc'))],
@@ -7108,43 +7161,82 @@ async function _gerarAnexoRequisicaoPDF() {
     ['Folha', v('rc-folha')],
     ['Termo', v('rc-termo')],
   ])
-  if (v('rc-obs')) {
-    secao('4. Anotações e Observações', [
-      ['Observações', v('rc-obs')],
-    ])
+
+  // 4. Anotações e Observações (bloco dedicado expansível com quebra automática de texto)
+  const obsTexto = v('rc-obs')
+  if (obsTexto) {
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9); pdf.setTextColor(26, 58, 107)
+    pdf.text('4. ANOTAÇÕES E OBSERVAÇÕES', margem, y)
+    y += 10
+
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5); pdf.setTextColor(26, 35, 50)
+    const larguraCaixaTexto = larguraUtil - 16
+    const linhasObs = pdf.splitTextToSize(obsTexto, larguraCaixaTexto)
+    const alturaLinha = 11.5
+    const alturaCaixa = Math.max(22, linhasObs.length * alturaLinha + 10)
+
+    if (y + alturaCaixa + 90 > pageH - margem) {
+      pdf.addPage()
+      y = margem
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9); pdf.setTextColor(26, 58, 107)
+      pdf.text('4. ANOTAÇÕES E OBSERVAÇÕES', margem, y)
+      y += 10
+      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5); pdf.setTextColor(26, 35, 50)
+    }
+
+    pdf.setFillColor(250, 251, 252)
+    pdf.setDrawColor(221, 227, 236)
+    pdf.setLineWidth(0.6)
+    pdf.roundedRect(margem, y - 5, larguraUtil, alturaCaixa, 3, 3, 'FD')
+
+    pdf.text(linhasObs, margem + 8, y + 6)
+    y += alturaCaixa + 10
+  }
+
+  // Se não couber o bloco final (data + assinaturas + nota legal = ~90pt), passa para a próxima página
+  if (y + 90 > pageH - margem) {
+    pdf.addPage()
+    y = margem
   }
 
   // Local e data
-  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10.5); pdf.setTextColor(26, 35, 50)
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9.5); pdf.setTextColor(26, 35, 50)
   pdf.text(`${v('rc-local') || 'Salvador'}, ${dataBr(v('rc-data')) || '____/____/______'}.`, margem + larguraUtil, y, { align: 'right' })
-  y += 70
+  y += 36
 
-  // Assinatura
-  const conselheiroLinhaX1 = margem + 30
-  const conselheiroLinhaX2 = margem + larguraUtil / 2 - 10
+  // Assinaturas
+  const conselheiroLinhaX1 = margem + 20
+  const conselheiroLinhaX2 = margem + larguraUtil / 2 - 15
   const conselheiroCentroX = (conselheiroLinhaX1 + conselheiroLinhaX2) / 2
+
+  const respLinhaX1 = margem + larguraUtil / 2 + 15
+  const respLinhaX2 = margem + larguraUtil - 20
+  const respLinhaCentroX = (respLinhaX1 + respLinhaX2) / 2
 
   if (assinaturaImg) {
     try {
-      const assW = 120
-      const assH = 120 * assinaturaImg.h / assinaturaImg.w
-      pdf.addImage(assinaturaImg.dataUrl, 'JPEG', conselheiroCentroX - assW / 2, y - assH - 4, assW, assH)
+      const assW = 100
+      const assH = Math.min(36, 100 * assinaturaImg.h / assinaturaImg.w)
+      pdf.addImage(assinaturaImg.dataUrl, 'JPEG', conselheiroCentroX - assW / 2, y - assH - 3, assW, assH)
     } catch (e) {}
   }
-  pdf.setDrawColor(51, 51, 51)
-  pdf.line(conselheiroLinhaX1, y, conselheiroLinhaX2, y)
-  pdf.line(margem + larguraUtil / 2 + 10, y, margem + larguraUtil - 30, y)
-  pdf.setFontSize(9)
-  pdf.text('Conselheiro(a) Tutelar Requisitante', conselheiroCentroX, y + 12, { align: 'center' })
-  const respLinhaCentroX = (margem + larguraUtil / 2 + 10 + margem + larguraUtil - 30) / 2
-  const respRotulo = v('rc-responsavel') ? `Assinatura do(a) Responsável (${v('rc-responsavel')})` : 'Assinatura do Responsável / Representante'
-  pdf.text(respRotulo, respLinhaCentroX, y + 12, { align: 'center' })
-  y += 36
 
-  // Observação legal
-  pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8.5); pdf.setTextColor(68, 68, 68)
+  pdf.setDrawColor(51, 51, 51); pdf.setLineWidth(0.8)
+  pdf.line(conselheiroLinhaX1, y, conselheiroLinhaX2, y)
+  pdf.line(respLinhaX1, y, respLinhaX2, y)
+
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5); pdf.setTextColor(40, 40, 40)
+  pdf.text('Conselheiro(a) Tutelar Requisitante', conselheiroCentroX, y + 11, { align: 'center' })
+
+  const respRotulo = v('rc-responsavel') ? `Assinatura do(a) Responsável (${v('rc-responsavel')})` : 'Assinatura do Responsável / Representante'
+  pdf.text(respRotulo, respLinhaCentroX, y + 11, { align: 'center' })
+  y += 24
+
+  // Observação legal (ECA, art. 136)
+  pdf.setFont('helvetica', 'italic'); pdf.setFontSize(7.5); pdf.setTextColor(80, 80, 80)
   const obs = 'Observação legal (ECA, art. 136): em determinados casos, faz-se necessária a expedição da Certidão de Nascimento ou de Casamento dos pais ou responsáveis legais para fins de regularização documental.'
-  pdf.text(pdf.splitTextToSize(obs, larguraUtil), margem, y)
+  const linhasObsLegal = pdf.splitTextToSize(obs, larguraUtil)
+  pdf.text(linhasObsLegal, margem, y)
 
   return pdf.output('datauristring').split(',')[1]
 }
