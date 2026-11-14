@@ -5,3 +5,5 @@ node_modules/
 *.log
 .skills/
 client_secret*
+
+.env*.local

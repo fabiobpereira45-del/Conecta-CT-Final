@@ -62,10 +62,11 @@ module.exports = async function handler(req, res) {
 
   // ── DELETE /api/requisicoes/:id ─────────────────────────────────────────
   if (req.method === 'DELETE' && !subpath) {
-    await supabase.from('requisicao_mensagens').delete().eq('requisicao_id', id)
-    const { error } = await supabase.from('requisicoes').delete().eq('id', id)
-    if (error) return res.status(500).json({ error: error.message })
-    return res.status(200).json({ ok: true })
+    const { data: dMsgs, error: errMsgs } = await supabase.from('requisicao_mensagens').delete().eq('requisicao_id', id).select()
+    const { data: dReq, error: errReq } = await supabase.from('requisicoes').delete().eq('id', id).select()
+    if (errMsgs) console.error('Erro ao deletar mensagens:', errMsgs)
+    if (errReq) return res.status(500).json({ error: errReq.message })
+    return res.status(200).json({ ok: true, deletedCount: dReq?.length || 0, deleted: dReq, debug: { id, url: req.url, query: req.query } })
   }
 
   // ── GET /api/requisicoes/:id/mensagens ──────────────────────────────────
