@@ -1694,12 +1694,19 @@ function buildNav() {
   const unreadFichas = fichasEnviadas
     ? fichasEnviadas.filter(f => !f.lida && (_vêTudo() || f.ctDestino===currentUser.ct)).length
     : 0
+  // Count unread/replied requisicoes for badge
+  const unreadRequisicoes = (typeof requisicoes !== 'undefined' && Array.isArray(requisicoes))
+    ? requisicoes.filter(r => r.tem_mensagem_nao_lida || r.status === 'Respondida').length
+    : 0
   nav.innerHTML = items.map(item => {
     if (item.id === '__sep__') return '<div class="nav-sep"></div>'
     const label = item.label
-    const badge = (item.id === 'fichas-inbox' && unreadFichas > 0)
-      ? `<span style="margin-left:auto;background:var(--danger);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 7px;min-width:18px;text-align:center">${unreadFichas}</span>`
-      : ''
+    let badge = ''
+    if (item.id === 'fichas-inbox' && unreadFichas > 0) {
+      badge = `<span style="margin-left:auto;background:var(--danger);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 7px;min-width:18px;text-align:center">${unreadFichas}</span>`
+    } else if (item.id === 'requisicoes' && unreadRequisicoes > 0) {
+      badge = `<span style="margin-left:auto;background:#10b981;color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 7px;min-width:18px;text-align:center" title="${unreadRequisicoes} resposta(s) do cartório">${unreadRequisicoes}</span>`
+    }
     return `<button class="nav-item${activeModule===item.id?' active':''}" onclick="navigate('${item.id}')" style="justify-content:flex-start">
       ${I[item.icon]||''}<span style="flex:1">${label}</span>${badge}
     </button>`
@@ -1775,7 +1782,7 @@ function renderContent() {
     case 'users': el.innerHTML = renderUsers(); break
     case 'approvals': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando aprovações…</div>'; renderApprovals().then(html => { el.innerHTML = html }); break
     case 'duty-roster': el.innerHTML = renderDutyRoster(); attachDutyRosterEvents(); break
-    case 'requisicoes': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando requisições…</div>'; carregarRequisicoes(); break
+    case 'requisicoes': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando requisições…</div>'; carregarRequisicoes().then(() => { if (typeof sincronizarRespostasCartorios === 'function') sincronizarRespostasCartorios(true) }); break
     case 'councils': el.innerHTML = renderCouncils(); break
     case 'general-stats': el.innerHTML = renderGeneralStats(); break
     case 'photos': el.innerHTML = renderPhotos(); attachPhotosEvents(); break
@@ -7247,8 +7254,37 @@ async function _gerarAnexoRequisicaoPDF() {
 
 
 // ── REQUISIÇÕES DE CERTIDÃO ──
-const STATUS_REQUISICAO = ['Enviada','Em andamento','Concluída','Cancelada']
-const STATUS_COLORS = { 'Enviada':'var(--accent)', 'Em andamento':'var(--warning)', 'Concluída':'var(--success)', 'Cancelada':'var(--danger)' }
+const STATUS_REQUISICAO = ['Enviada','Em andamento','Respondida','Concluída','Cancelada']
+const STATUS_COLORS = { 'Enviada':'var(--accent)', 'Em andamento':'var(--warning)', 'Respondida':'#10b981', 'Concluída':'var(--success)', 'Cancelada':'var(--danger)' }
+
+async function sincronizarRespostasCartorios(silencioso = false) {
+  const btn = document.getElementById('btn-sync-requisicoes')
+  if (btn) {
+    btn.disabled = true
+    btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite">🔄</span> Verificando…'
+  }
+  try {
+    const res = await apiFetch('/api/requisicoes/poll')
+    if (res && res.novasRespostas > 0) {
+      showToast(`📩 ${res.novasRespostas} nova(s) resposta(s) de cartório recebida(s)!`)
+      await carregarRequisicoes()
+      buildNav()
+    } else if (!silencioso) {
+      showToast('Nenhuma nova resposta de cartório no momento.')
+    }
+  } catch(e) {
+    console.warn('Erro ao sincronizar respostas do Gmail:', e)
+    if (!silencioso) showToast('Não foi possível verificar respostas no servidor.')
+  } finally {
+    if (btn) {
+      btn.disabled = false
+      btn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Sincronizar Respostas
+      `
+    }
+  }
+}
 
 async function carregarRequisicoes() {
   try {
@@ -7292,6 +7328,10 @@ function renderRequisicoes() {
       <p>${list.length} registro(s)${_vêTudo()?' · todos os conselhos':' · suas requisições'}</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="btn-sync-requisicoes" class="btn btn-outline" onclick="sincronizarRespostasCartorios(false)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Sincronizar Respostas
+      </button>
       <button class="btn btn-outline" onclick="downloadRequisicoesPDF()">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Baixar PDF
@@ -7329,28 +7369,28 @@ function renderRequisicoes() {
     <tbody>
       ${filtered.map((r,i) => `<tr>
         <td>
-          <div style="display:flex;align-items:center;gap:6px">
-            <strong style="font-family:monospace;color:var(--primary)">${r.protocolo}</strong>
-            ${r.tem_mensagem_nao_lida ? `<span title="Nova mensagem do cartório" style="display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#d97706;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;border:1px solid #fde68a">
-              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              Resposta
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <strong style="font-family:monospace;color:var(--primary)">${esc(r.protocolo)}</strong>
+            ${(r.tem_mensagem_nao_lida || r.status === 'Respondida') ? `<span title="Resposta recebida do Cartório" style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#15803d;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;border:1px solid #86efac">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Nova Resposta!
             </span>` : ''}
           </div>
         </td>
         <td style="color:var(--text-muted);font-size:12px">${r.data} ${r.hora}</td>
-        ${role==='master'?`<td><div style="font-size:12px"><strong>${r.solicitante}</strong><br><span style="color:var(--text-muted)">${r.solicitanteCt}</span></div></td>`:''}
-        <td style="font-size:12px"><div><strong>${r.cartorio}</strong>${r.subdistrito?`<br><span style="color:var(--text-muted)">${r.subdistrito}</span>`:''}</div></td>
-        <td><span style="font-size:12px;background:var(--primary-subtle);color:var(--primary);padding:2px 8px;border-radius:12px">${r.tipo}</span></td>
-        <td><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:${STATUS_COLORS[r.status]}22;color:${STATUS_COLORS[r.status]}">${r.status}</span></td>
+        ${role==='master'?`<td><div style="font-size:12px"><strong>${esc(r.solicitante)}</strong><br><span style="color:var(--text-muted)">${esc(r.solicitanteCt)}</span></div></td>`:''}
+        <td style="font-size:12px"><div><strong>${esc(r.cartorio)}</strong>${r.subdistrito?`<br><span style="color:var(--text-muted)">${esc(r.subdistrito)}</span>`:''}</div></td>
+        <td><span style="font-size:12px;background:var(--primary-subtle);color:var(--primary);padding:2px 8px;border-radius:12px">${esc(r.tipo)}</span></td>
+        <td><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:${STATUS_COLORS[r.status] || 'var(--primary)'}22;color:${STATUS_COLORS[r.status] || 'var(--primary)'}">${esc(r.status)}</span></td>
         <td>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <select style="font-size:11px;padding:4px 6px;width:auto" onchange="alterarStatusRequisicao(${i},this.value)">
+            <select style="font-size:11px;padding:4px 6px;width:auto" onchange="alterarStatusRequisicao('${r.id}',this.value)">
               ${STATUS_REQUISICAO.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
             </select>
-            <button title="Visualizar" style="border:1px solid var(--border);background:#fff;border-radius:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--primary)" onclick="visualizarRequisicao(${i})">
+            <button title="Visualizar" style="border:1px solid var(--border);background:#fff;border-radius:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--primary)" onclick="visualizarRequisicao('${r.id}')">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
-            <button title="Excluir" style="border:1px solid var(--border);background:#fff;border-radius:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#dc2626" onclick="excluirRequisicao(${i})">
+            <button title="Excluir" style="border:1px solid var(--border);background:#fff;border-radius:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#dc2626" onclick="excluirRequisicao('${r.id}','${esc(r.protocolo)}')">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             </button>
           </div>
@@ -7371,22 +7411,16 @@ function attachRequisicaoEvents() {
   if (inp) inp.addEventListener('input', refreshRequisicoes)
 }
 
-async function alterarStatusRequisicao(idxFiltered, novoStatus) {
-  const busca = (document.getElementById('req-search')?.value || '').toLowerCase()
-  const filtro = document.getElementById('req-status-filter')?.value || ''
-  const filtered = requisicoes.filter(r =>
-    (!busca || r.protocolo.toLowerCase().includes(busca) || r.solicitante.toLowerCase().includes(busca) || r.cartorio.toLowerCase().includes(busca) || r.tipo.toLowerCase().includes(busca)) &&
-    (!filtro || r.status === filtro)
-  )
-  const target = filtered[idxFiltered]
+async function alterarStatusRequisicao(id, novoStatus) {
+  const target = requisicoes.find(r => r.id === id)
   if (!target) return
-  const globalIdx = requisicoes.indexOf(target)
-  if (globalIdx !== -1) requisicoes[globalIdx].status = novoStatus
+  target.status = novoStatus
   refreshRequisicoes()
+  buildNav()
   // Salvar no backend
-  if (target.id) {
+  if (id) {
     try {
-      await apiFetch(`/api/requisicoes/${target.id}`, {
+      await apiFetch(`/api/requisicoes/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: novoStatus })
       })
@@ -7399,32 +7433,24 @@ async function alterarStatusRequisicao(idxFiltered, novoStatus) {
   }
 }
 
-function _filtrarRequisicoesAtuais() {
-  const busca = (document.getElementById('req-search')?.value || '').toLowerCase()
-  const filtro = document.getElementById('req-status-filter')?.value || ''
-  return requisicoes.filter(r =>
-    (!busca || r.protocolo.toLowerCase().includes(busca) || r.solicitante.toLowerCase().includes(busca) || r.cartorio.toLowerCase().includes(busca) || r.tipo.toLowerCase().includes(busca)) &&
-    (!filtro || r.status === filtro)
-  )
-}
-
-async function excluirRequisicao(idxFiltered) {
-  const target = _filtrarRequisicoesAtuais()[idxFiltered]
-  if (!target) return
-  if (!confirm(`Excluir a requisição ${target.protocolo}? Esta ação não pode ser desfeita.`)) return
+async function excluirRequisicao(id, protocolo) {
+  if (!confirm(`Excluir a requisição ${protocolo}? Esta ação não pode ser desfeita.`)) return
   try {
-    if (target.id) await apiFetch(`/api/requisicoes/${target.id}`, { method: 'DELETE' })
-    const globalIdx = requisicoes.indexOf(target)
-    if (globalIdx !== -1) requisicoes.splice(globalIdx, 1)
+    if (id) {
+      await apiFetch(`/api/requisicoes/${id}`, { method: 'DELETE' })
+    }
+    requisicoes = requisicoes.filter(r => r.id !== id && r.protocolo !== protocolo)
     refreshRequisicoes()
-    showToast('Requisição excluída.')
+    buildNav()
+    showToast('Requisição excluída com sucesso.')
   } catch(e) {
+    console.error('Erro ao excluir:', e)
     showToast('Erro ao excluir a requisição no servidor.')
   }
 }
 
-async function visualizarRequisicao(idxFiltered) {
-  const target = _filtrarRequisicoesAtuais()[idxFiltered]
+async function visualizarRequisicao(id) {
+  const target = requisicoes.find(r => r.id === id)
   if (!target) return
   showModal(`
     <div class="modal-box" style="max-width:560px">
@@ -7437,7 +7463,10 @@ async function visualizarRequisicao(idxFiltered) {
     </div>
   `)
   try {
-    const d = await apiFetch(`/api/requisicoes/${target.id}`)
+    const d = await apiFetch(`/api/requisicoes/${id}`)
+    // Marca como lida localmente
+    target.tem_mensagem_nao_lida = false
+    buildNav()
     const linha = (rotulo, valor) => `<tr><td style="padding:5px 8px;border:1px solid var(--border);background:#f8fafc;font-weight:700;width:38%">${esc(rotulo)}</td><td style="padding:5px 8px;border:1px solid var(--border)">${valor ? esc(valor) : '—'}</td></tr>`
     const msgs = (d.mensagens || []).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
     document.getElementById('req-view-body').innerHTML = `
@@ -7458,13 +7487,13 @@ async function visualizarRequisicao(idxFiltered) {
             <span style="font-weight:700;text-transform:capitalize">${esc(m.origem || '')}</span>
             <span>${new Date(m.created_at).toLocaleString('pt-BR')}</span>
           </div>
-          ${m.assunto ? `<div style="font-size:12px;font-weight:600;margin-bottom:2px">${esc(m.assunto)}</div>` : ''}
+          ${m.assunto && !m.assunto.startsWith('gmail:') ? `<div style="font-size:12px;font-weight:600;margin-bottom:2px">${esc(m.assunto)}</div>` : ''}
           <div style="font-size:12.5px;white-space:pre-wrap">${esc(m.corpo || '')}</div>
         </div>
-      `).join('') : '<p style="color:var(--text-muted);font-size:12.5px">Nenhuma mensagem registrada.</p>'}
+      `).join('') : '<div style="color:var(--text-muted);font-style:italic">Nenhuma mensagem registrada.</div>'}
     `
   } catch(e) {
-    document.getElementById('req-view-body').innerHTML = '<p>Erro ao carregar os detalhes da requisição.</p>'
+    document.getElementById('req-view-body').innerHTML = '<div style="color:var(--danger)">Erro ao carregar os dados da requisição.</div>'
   }
 }
 

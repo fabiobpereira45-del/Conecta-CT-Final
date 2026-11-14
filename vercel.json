@@ -1,6 +1,13 @@
 {
   "version": 2,
+  "crons": [
+    {
+      "path": "/api/requisicoes/poll",
+      "schedule": "*/10 * * * *"
+    }
+  ],
   "rewrites": [
+    { "source": "/api/requisicoes/poll",          "destination": "/api/requisicoes/poll" },
     { "source": "/api/requisicoes/:id/mensagens", "destination": "/api/requisicoes/[id]" },
     { "source": "/api/requisicoes/:id",           "destination": "/api/requisicoes/[id]" },
     { "source": "/api/requisicoes",               "destination": "/api/requisicoes/index" },

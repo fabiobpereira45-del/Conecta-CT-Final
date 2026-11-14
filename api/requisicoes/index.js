@@ -22,7 +22,12 @@ module.exports = async function handler(req, res) {
       .order('created_at', { ascending: false })
 
     if (solicitante) query = query.eq('solicitante', solicitante)
-    if (status)      query = query.eq('status', status)
+    if (status) {
+      query = query.eq('status', status)
+    } else {
+      // Por padrão, não exibe requisições canceladas/excluídas
+      query = query.neq('status', 'Cancelada')
+    }
     if (ct)          query = query.eq('solicitante_ct', ct)
     if (search) {
       query = query.or(

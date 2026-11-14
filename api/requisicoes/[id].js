@@ -66,12 +66,20 @@ module.exports = async function handler(req, res) {
     const { data: dReq, error: errReq } = await supabase.from('requisicoes').delete().eq('id', id).select()
     if (errMsgs) console.error('Erro ao deletar mensagens:', errMsgs)
     if (errReq) return res.status(500).json({ error: errReq.message })
-    let keyRole = 'unknown'
-    try {
-      const parts = (process.env.SUPABASE_SERVICE_KEY || '').split('.')
-      if (parts[1]) keyRole = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8')).role
-    } catch(e) {}
-    return res.status(200).json({ ok: true, deletedCount: dReq?.length || 0, deleted: dReq, keyRole, debug: { id, url: req.url, query: req.query } })
+
+    let softDeleted = false
+    // Se o RLS bloqueou a exclusão física (dReq retornou vazio), fazemos soft-delete como Cancelada
+    if (!dReq || dReq.length === 0) {
+      const { data: dUpd } = await supabase.from('requisicoes').update({ status: 'Cancelada' }).eq('id', id).select()
+      softDeleted = !!(dUpd && dUpd.length > 0)
+    }
+
+    return res.status(200).json({
+      ok: true,
+      deletedCount: dReq?.length || 0,
+      hardDeleted: !!(dReq && dReq.length > 0),
+      softDeleted
+    })
   }
 
   // ── GET /api/requisicoes/:id/mensagens ──────────────────────────────────
