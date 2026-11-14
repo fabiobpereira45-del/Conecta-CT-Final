@@ -40,6 +40,10 @@
 html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text);overflow-x:hidden}
 button{cursor:pointer;border:none;background:none;font:inherit;color:inherit}
 input,textarea,select{font:inherit;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;outline:none;width:100%}
+textarea{min-height:80px;resize:vertical}
+#f03c-descricao{min-height:115px}
+#f03c-motivo,#f03c-providencias{min-height:95px}
+#f03c-obs-enc{min-height:75px}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
 /* Caixinhas de marcação têm tamanho natural; a regra geral de campos (width:100%) não pode esticá-las */
 input[type="checkbox"],input[type="radio"]{width:auto;padding:0;margin:0 6px 0 0;border:none;box-shadow:none;flex-shrink:0;accent-color:var(--primary)}
@@ -4258,15 +4262,15 @@ function renderFormFill(id) {
           </label>`).join('')}
         </div>
         <div><label class="field-label">Descrição da Situação</label>
-          <textarea rows="4" style="resize:vertical" placeholder="Descreva detalhadamente a situação…"></textarea>
+          <textarea rows="4" style="resize:vertical;min-height:115px" placeholder="Descreva detalhadamente a situação…"></textarea>
         </div>
       </div>
 
       <!-- Motivo e Providências -->
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📋 Parecer e Providências</div>
-        <div><label class="field-label">Motivo do Atendimento</label><textarea rows="3" style="resize:vertical" placeholder="Descreva o motivo…"></textarea></div>
-        <div style="margin-top:10px"><label class="field-label">Providências Imediatas</label><textarea rows="3" style="resize:vertical" placeholder="Providências tomadas…"></textarea></div>
+        <div><label class="field-label">Motivo do Atendimento</label><textarea rows="3" style="resize:vertical;min-height:95px" placeholder="Descreva o motivo…"></textarea></div>
+        <div style="margin-top:10px"><label class="field-label">Providências Imediatas</label><textarea rows="3" style="resize:vertical;min-height:95px" placeholder="Providências tomadas…"></textarea></div>
       </div>
 
       <!-- Encaminhamentos -->
@@ -4903,13 +4907,13 @@ function renderForm03(form) {
           ${F03_VIOLACOES.map((v,i)=>box(`<input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" /> ${v}`)).join('')}
         </div>
         <div><label class="field-label">Descrição da Situação</label>
-          <textarea id="f03c-descricao" data-label="Descrição da situação" rows="4" style="resize:vertical" placeholder="Descreva detalhadamente a situação…"></textarea>
+          <textarea id="f03c-descricao" data-label="Descrição da situação" rows="4" style="resize:vertical;min-height:115px" placeholder="Descreva detalhadamente a situação…"></textarea>
         </div>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📋 Parecer e Providências</div>
-        <div><label class="field-label">Motivo do Atendimento</label><textarea id="f03c-motivo" data-label="Motivo do atendimento" rows="3" style="resize:vertical" placeholder="Descreva o motivo…"></textarea></div>
-        <div style="margin-top:10px"><label class="field-label">Providências Imediatas</label><textarea id="f03c-providencias" data-label="Providências imediatas" rows="3" style="resize:vertical" placeholder="Providências tomadas…"></textarea></div>
+        <div><label class="field-label">Motivo do Atendimento</label><textarea id="f03c-motivo" data-label="Motivo do atendimento" rows="3" style="resize:vertical;min-height:95px" placeholder="Descreva o motivo…"></textarea></div>
+        <div style="margin-top:10px"><label class="field-label">Providências Imediatas</label><textarea id="f03c-providencias" data-label="Providências imediatas" rows="3" style="resize:vertical;min-height:95px" placeholder="Providências tomadas…"></textarea></div>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📌 Ações e Encaminhamentos</div>
@@ -4917,7 +4921,7 @@ function renderForm03(form) {
           ${F03_ACOES_UNIFICADAS.map(x=>box(`<input type="checkbox" id="${x.id}" data-label="Ação/Encaminhamento: ${x.label}" style="accent-color:var(--primary)" /> ${x.label}`)).join('')}
         </div>
         <div><label class="field-label">Observações de Encaminhamento</label>
-          <textarea id="f03c-obs-enc" data-label="Observações de encaminhamento" rows="2" style="resize:vertical" placeholder="Detalhes dos encaminhamentos…"></textarea>
+          <textarea id="f03c-obs-enc" data-label="Observações de encaminhamento" rows="2" style="resize:vertical;min-height:75px" placeholder="Detalhes dos encaminhamentos…"></textarea>
         </div>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:14px">
@@ -10082,7 +10086,15 @@ new MutationObserver(m => { if (m.some(x => x.addedNodes.length)) _aplicarAssina
 function _autosizeTextarea(t) {
   if (!t || t.tagName !== 'TEXTAREA') return
   t.style.height = 'auto'
-  t.style.height = (t.scrollHeight + 2) + 'px'
+  let minH = 80
+  const rows = parseInt(t.getAttribute('rows') || '0', 10)
+  if (rows > 0) minH = Math.max(minH, rows * 24 + 14)
+  if (t.id === 'f03c-descricao') minH = Math.max(minH, 115)
+  if (t.id === 'f03c-motivo' || t.id === 'f03c-providencias') minH = Math.max(minH, 95)
+  if (t.id === 'f03c-obs-enc') minH = Math.max(minH, 75)
+
+  const novaAltura = Math.max(minH, t.scrollHeight + 2)
+  t.style.height = novaAltura + 'px'
   t.style.overflow = 'hidden'
 }
 document.addEventListener('input', e => { if (e.target?.tagName === 'TEXTAREA') _autosizeTextarea(e.target) })
