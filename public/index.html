@@ -3609,6 +3609,7 @@ const GE_SERIES_LIST = ['Educação Infantil (Creche/Pré-escola)', '1º ano EF'
 let _geFiltros = {
   termo: '',
   operacao: 'todas',
+  ano: 'todos',
   centro: 'todos',
   atividade: 'todas'
 };
@@ -3623,28 +3624,40 @@ function renderGrandesEventos() {
   const dados = _loadGrandesEventos();
 
   // Contadores
-  const total = dados.length;
+  const totalRegistros = dados.length;
+  let totalCriancasAcolhidas = 0;
+  dados.forEach(d => {
+    const f = _geGetFilhos(d);
+    totalCriancasAcolhidas += Math.max(1, f.length);
+  });
+
   const carnavalCount = dados.filter(d => d.operacao === 'Carnaval').length;
   const reveillonCount = dados.filter(d => d.operacao === 'Réveillon' || (d.operacao && d.operacao.includes('Réveillon'))).length;
   const acolhidosCount = dados.filter(d => d.status === 'Acolhido').length;
 
+  // Anos disponíveis nos registros
+  const anosDisponiveis = [...new Set(dados.map(d => d.ano || 2026))].sort((a,b) => b - a);
+
   // Filtragem
   const filtrados = dados.filter(item => {
     if (_geFiltros.operacao !== 'todas' && item.operacao !== _geFiltros.operacao) return false;
+    if (_geFiltros.ano !== 'todos' && String(item.ano) !== String(_geFiltros.ano)) return false;
     if (_geFiltros.centro !== 'todos' && item.centroNome !== _geFiltros.centro) return false;
     if (_geFiltros.atividade !== 'todas' && item.atvTipo !== _geFiltros.atividade) return false;
     if (_geFiltros.termo) {
       const q = _geFiltros.termo.toLowerCase().trim();
+      const filhos = _geGetFilhos(item);
+      const nomesFilhos = filhos.map(f => (f.nome || '') + ' ' + (f.nomeSocial || '')).join(' ');
       const haystack = [
         item.protocolo,
-        item.criancaNome,
-        item.criancaNomeSocial,
         item.respNome,
         item.respCpf,
+        item.conselheiro,
         item.atvDam,
         item.atvPontoCircuito,
         item.centroNome,
-        item.centroCircuito
+        item.centroCircuito,
+        nomesFilhos
       ].filter(Boolean).join(' ').toLowerCase();
       if (!haystack.includes(q)) return false;
     }
@@ -3658,7 +3671,9 @@ function renderGrandesEventos() {
         <h2 style="margin:0">Grandes Eventos · Salvador Acolhe</h2>
         <span style="background:linear-gradient(135deg, #1e3a5f, #2563eb);color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px">OPERAÇÕES ESPECIAIS</span>
       </div>
-      <p style="margin-top:4px;color:var(--text-muted);font-size:13px">Captação de dados de assistidos e emissão de documentos de acolhimento durante o <strong>Carnaval</strong> e <strong>Réveillon</strong> · ${hoje}</p>
+      <p style="margin-top:4px;color:var(--text-muted);font-size:13px">
+        Captação de assistidos, histórico familiar multi-ano (Carnaval e Réveillon) e emissão de guias de acolhimento · ${hoje}
+      </p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-outline" onclick="_geExportarCsv()">
@@ -3676,15 +3691,15 @@ function renderGrandesEventos() {
     <div class="card" style="padding:16px;border-left:4px solid #2563eb;display:flex;align-items:center;gap:14px">
       <div style="font-size:28px">🎪</div>
       <div>
-        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Total de Acolhidos</div>
-        <div style="font-size:24px;font-weight:800;color:var(--primary)">${total}</div>
-        <div style="font-size:11px;color:var(--text-muted)">Crianças e adolescentes</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Crianças Acolhidas</div>
+        <div style="font-size:24px;font-weight:800;color:var(--primary)">${totalCriancasAcolhidas}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Em ${totalRegistros} atendimentos/famílias</div>
       </div>
     </div>
     <div class="card" style="padding:16px;border-left:4px solid #f59e0b;display:flex;align-items:center;gap:14px">
       <div style="font-size:28px">🎭</div>
       <div>
-        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Operação Carnaval</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Operações Carnaval</div>
         <div style="font-size:24px;font-weight:800;color:#d97706">${carnavalCount}</div>
         <div style="font-size:11px;color:var(--text-muted)">Circuito Dodô, Osmar e Batatinha</div>
       </div>
@@ -3692,7 +3707,7 @@ function renderGrandesEventos() {
     <div class="card" style="padding:16px;border-left:4px solid #8b5cf6;display:flex;align-items:center;gap:14px">
       <div style="font-size:28px">🎆</div>
       <div>
-        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Operação Réveillon</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Operações Réveillon</div>
         <div style="font-size:24px;font-weight:800;color:#7c3aed">${reveillonCount}</div>
         <div style="font-size:11px;color:var(--text-muted)">Festival Virada Salvador</div>
       </div>
@@ -3700,24 +3715,53 @@ function renderGrandesEventos() {
     <div class="card" style="padding:16px;border-left:4px solid #10b981;display:flex;align-items:center;gap:14px">
       <div style="font-size:28px">🏫</div>
       <div>
-        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Salvador Acolhe</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Salvador Acolhe Ativo</div>
         <div style="font-size:24px;font-weight:800;color:#059669">${acolhidosCount}</div>
-        <div style="font-size:11px;color:var(--text-muted)">Atualmente nos postos</div>
+        <div style="font-size:11px;color:var(--text-muted)">No momento nos postos</div>
       </div>
     </div>
   </div>
 
-  <!-- FILTROS E PESQUISA -->
+  <!-- BARRA DE PESQUISA RÁPIDA DE FAMÍLIA / CONSULTA ANTECIPADA -->
+  <div class="card" style="padding:14px 18px;margin-bottom:16px;background:#f0f9ff;border:1px solid #bae6fd">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+      <div style="font-weight:700;font-size:13px;color:#0369a1;display:flex;align-items:center;gap:6px">
+        <span>🔍</span> Consulta Rápida de Histórico Familiar (Verificar se a família já foi acolhida em anos anteriores)
+      </div>
+      <span style="font-size:11px;color:#0284c7;background:#e0f2fe;padding:3px 8px;border-radius:12px;font-weight:600">
+        Reaproveita dados cadastrais sem perder o histórico dos anos anteriores
+      </span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input id="ge-busca-rapida-geral"
+        type="text"
+        placeholder="Digite o CPF do responsável, nome do pai/mãe ou nome de um dos filhos..."
+        style="flex:1"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();_geExecutarBuscaRapida()}" />
+      <button class="btn btn-primary" type="button" onclick="_geExecutarBuscaRapida()">
+        Buscar Histórico da Família
+      </button>
+    </div>
+    <div id="ge-busca-rapida-resultado" style="margin-top:10px;display:none"></div>
+  </div>
+
+  <!-- FILTROS E PESQUISA DA TABELA -->
   <div class="card" style="padding:14px 18px;margin-bottom:20px;background:var(--bg)">
-    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;align-items:center">
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:12px;align-items:center">
       <div style="position:relative">
         <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted)">${I.search}</span>
         <input id="ge-filtro-termo"
           type="text"
-          placeholder="Buscar por nome da criança, responsável, DAM ou protocolo…"
+          placeholder="Filtrar por nome, responsável, conselheiro ou DAM…"
           value="${_geEscapeHtml(_geFiltros.termo)}"
           oninput="_geFiltros.termo = this.value; _geAtualizarTabela()"
           style="padding-left:34px;width:100%" />
+      </div>
+      <div>
+        <select id="ge-filtro-ano" onchange="_geFiltros.ano = this.value; _geAtualizarTabela()" style="width:100%">
+          <option value="todos" ${_geFiltros.ano==='todos'?'selected':''}>Ano: Todos</option>
+          ${anosDisponiveis.map(a => `<option value="${a}" ${String(_geFiltros.ano)===String(a)?'selected':''}>Edição ${a}</option>`).join('')}
+        </select>
       </div>
       <div>
         <select id="ge-filtro-op" onchange="_geFiltros.operacao = this.value; _geAtualizarTabela()" style="width:100%">
@@ -3729,7 +3773,7 @@ function renderGrandesEventos() {
       </div>
       <div>
         <select id="ge-filtro-centro" onchange="_geFiltros.centro = this.value; _geAtualizarTabela()" style="width:100%">
-          <option value="todos" ${_geFiltros.centro==='todos'?'selected':''}>Posto: Todos os Postos</option>
+          <option value="todos" ${_geFiltros.centro==='todos'?'selected':''}>Posto: Todos</option>
           ${GE_CENTROS_ACOLHIMENTO.map(c => `<option value="${c.nome}" ${_geFiltros.centro===c.nome?'selected':''}>${c.nome} (${c.bairro})</option>`).join('')}
         </select>
       </div>
@@ -3755,7 +3799,9 @@ function _geRenderizarTabelaHtml(filtrados) {
     <div style="text-align:center;padding:56px 20px;color:var(--text-muted)">
       <div style="font-size:48px;margin-bottom:12px">🎪</div>
       <p style="font-weight:700;font-size:16px;margin-bottom:6px;color:var(--text)">Nenhum acolhimento encontrado</p>
-      <p style="font-size:13px;margin-bottom:20px;max-width:440px;margin-left:auto;margin-right:auto">Nenhum registro com os filtros aplicados. Clique em <strong>+ Novo Acolhimento</strong> para cadastrar a família e emitir a guia.</p>
+      <p style="font-size:13px;margin-bottom:20px;max-width:440px;margin-left:auto;margin-right:auto">
+        Nenhum registro com os filtros aplicados. Clique em <strong>+ Novo Acolhimento</strong> para cadastrar a família ou consultar o histórico de anos anteriores.
+      </p>
       <button class="btn btn-primary" onclick="showGrandesEventosModal()">${I.plus} Cadastrar Novo Acolhimento</button>
     </div>`;
   }
@@ -3767,12 +3813,12 @@ function _geRenderizarTabelaHtml(filtrados) {
     <table>
       <thead>
         <tr>
-          <th style="width:110px">Guia / Protocolo</th>
+          <th style="width:110px">Guia / Ano</th>
           <th>Operação</th>
-          <th>Criança / Adolescente</th>
+          <th>Criança(s) Acolhida(s)</th>
           <th>Responsável & Contatos</th>
           <th>Centro Salvador Acolhe</th>
-          <th>Data / Horário</th>
+          <th>Conselheiro(a) Plantonista</th>
           <th>Status</th>
           <th style="text-align:right">Ações</th>
         </tr>
@@ -3788,34 +3834,53 @@ function _geRenderizarTabelaHtml(filtrados) {
             ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac'
             : 'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1';
 
+          const filhos = _geGetFilhos(item);
+          const totalFilhos = filhos.length;
+
+          // Verifica se essa família possui outros registros em outros anos/eventos
+          const historicoFamilia = _geBuscarRegistrosDaFamilia(item.respCpf, item.respNome);
+          const temOutrosAnos = historicoFamilia.length > 1;
+          const anosHistorico = [...new Set(historicoFamilia.map(h => h.ano || 2026))].sort().join(', ');
+
           return `
           <tr>
             <td>
               <span style="font-family:monospace;font-weight:700;font-size:12px;color:var(--primary);background:var(--primary-subtle);padding:3px 6px;border-radius:4px">
                 ${item.protocolo}
               </span>
+              <div style="font-size:10.5pt;font-weight:800;color:#1e3a5f;margin-top:2px">Edição ${item.ano || 2026}</div>
             </td>
             <td>
               <span style="display:inline-flex;align-items:center;gap:4px;background:${opBadgeBg};color:${opBadgeColor};font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px">
                 ${opIcon} ${item.operacao} ${item.ano ? "'" + String(item.ano).slice(-2) : ''}
               </span>
+              ${temOutrosAnos ? `
+              <div style="margin-top:4px">
+                <span class="badge" style="background:#e0f2fe;color:#0369a1;cursor:pointer;font-size:10px"
+                  onclick="showHistoricoFamiliarModal('${_geEscapeHtml(item.respCpf || item.respNome)}')"
+                  title="Clique para ver o histórico completo da família nos anos ${anosHistorico}">
+                  🔄 Recorrente (${anosHistorico})
+                </span>
+              </div>` : ''}
             </td>
             <td>
-              <div style="font-weight:700;font-size:14px;color:var(--text)">${_geEscapeHtml(item.criancaNome)}</div>
-              ${item.criancaNomeSocial ? `<div style="font-size:11px;color:var(--text-muted)">Nome social: <em>${_geEscapeHtml(item.criancaNomeSocial)}</em></div>` : ''}
-              <div style="font-size:11px;color:var(--text-muted);display:flex;gap:6px;align-items:center;margin-top:2px;flex-wrap:wrap">
-                <span>🎂 ${item.criancaIdade || '--'}</span>
-                <span>•</span>
-                <span>${item.criancaSexo || '--'}</span>
-                <span>•</span>
-                <span>Cor: ${item.criancaCor || '--'}</span>
-                ${item.criancaNeuro === 'Sim' ? `<span style="background:#fee2e2;color:#991b1b;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">Neurodivergente</span>` : ''}
-                ${item.criancaPcd === 'Sim' ? `<span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">PCD</span>` : ''}
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="background:#e2e8f0;color:#1e293b;font-weight:700;padding:2px 6px;border-radius:10px;font-size:11px">
+                  ${totalFilhos} ${totalFilhos === 1 ? 'filho(a)' : 'filhos'}
+                </span>
+              </div>
+              <div style="margin-top:4px">
+                ${filhos.map((f, fi) => `
+                <div style="font-size:12px;margin-bottom:2px;color:var(--text)">
+                  <strong>${fi+1}. ${_geEscapeHtml(f.nome)}</strong>
+                  <span style="color:var(--text-muted);font-size:11px">(${f.idade || '--'}${f.pcd==='Sim'?' · PCD':''}${f.neuro==='Sim'?' · Neuro':''})</span>
+                </div>
+                `).join('')}
               </div>
             </td>
             <td>
-              <div style="font-weight:600;font-size:13px">${_geEscapeHtml(item.respNome)}</div>
-              <div style="font-size:11px;color:var(--text-muted)">${item.respParentesco || 'Responsável'} · ${item.respCpf || 'Sem CPF'}</div>
+              <div style="font-weight:700;font-size:13px;color:var(--text)">${_geEscapeHtml(item.respNome)}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${item.respParentesco || 'Responsável'} · CPF: <strong>${item.respCpf || 'Não informado'}</strong></div>
               <div style="font-size:11px;color:var(--primary);margin-top:2px;display:flex;align-items:center;gap:6px">
                 <span>📞 ${item.respTel1 || '--'}</span>
                 ${item.respTel2 ? `<span style="color:var(--text-muted)">/ ${item.respTel2}</span>` : ''}
@@ -3830,8 +3895,11 @@ function _geRenderizarTabelaHtml(filtrados) {
               <div style="font-size:10px;color:#059669;font-weight:600;margin-top:1px">${_geEscapeHtml(item.centroCircuito || '')}</div>
             </td>
             <td>
-              <div style="font-size:12px;font-weight:600">${item.data ? item.data.split('-').reverse().join('/') : '--'}</div>
-              <div style="font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums">⏰ ${item.hora || '--:--'}</div>
+              <div style="font-weight:700;font-size:12px;color:#0f2d59">👤 ${_geEscapeHtml(item.conselheiro || 'Conselheiro Plantonista')}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${_geEscapeHtml(item.ct || '')}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+                ${item.data ? item.data.split('-').reverse().join('/') : '--'} às ${item.hora || '--:--'}
+              </div>
             </td>
             <td>
               <span style="display:inline-block;padding:4px 8px;border-radius:12px;font-size:11px;font-weight:700;${stChip}">
@@ -3839,21 +3907,27 @@ function _geRenderizarTabelaHtml(filtrados) {
               </span>
             </td>
             <td style="text-align:right">
-              <div style="display:inline-flex;gap:6px;align-items:center">
+              <div style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
                 <button class="btn btn-outline btn-sm"
                   onclick="imprimirGuiaAcolhimento(${originalIdx})"
                   title="Emitir Guia Oficial de Acolhimento Provisório (Salvador Acolhe)">
                   📄 Guia
                 </button>
                 <button class="btn btn-outline btn-sm"
+                  style="color:#0369a1;border-color:#bae6fd"
+                  onclick="showHistoricoFamiliarModal('${_geEscapeHtml(item.respCpf || item.respNome)}')"
+                  title="Ver Histórico Completo da Família (anos anteriores)">
+                  📜 Histórico
+                </button>
+                <button class="btn btn-outline btn-sm"
                   onclick="showGrandesEventosModal(${originalIdx})"
-                  title="Editar dados">
+                  title="Editar dados desta edição">
                   ✏️
                 </button>
                 <button class="btn btn-outline btn-sm"
                   style="color:#ef4444;border-color:#fecaca"
                   onclick="deleteGrandesEventos(${originalIdx})"
-                  title="Excluir registro">
+                  title="Excluir este registro">
                   🗑️
                 </button>
               </div>
@@ -3871,26 +3945,102 @@ function _geAtualizarTabela() {
   const dados = _loadGrandesEventos();
   const filtrados = dados.filter(item => {
     if (_geFiltros.operacao !== 'todas' && item.operacao !== _geFiltros.operacao) return false;
+    if (_geFiltros.ano !== 'todos' && String(item.ano) !== String(_geFiltros.ano)) return false;
     if (_geFiltros.centro !== 'todos' && item.centroNome !== _geFiltros.centro) return false;
     if (_geFiltros.atividade !== 'todas' && item.atvTipo !== _geFiltros.atividade) return false;
     if (_geFiltros.termo) {
       const q = _geFiltros.termo.toLowerCase().trim();
+      const filhos = _geGetFilhos(item);
+      const nomesFilhos = filhos.map(f => (f.nome || '') + ' ' + (f.nomeSocial || '')).join(' ');
       const haystack = [
         item.protocolo,
-        item.criancaNome,
-        item.criancaNomeSocial,
         item.respNome,
         item.respCpf,
+        item.conselheiro,
         item.atvDam,
         item.atvPontoCircuito,
         item.centroNome,
-        item.centroCircuito
+        item.centroCircuito,
+        nomesFilhos
       ].filter(Boolean).join(' ').toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     return true;
   });
   container.innerHTML = _geRenderizarTabelaHtml(filtrados);
+}
+
+function _geExecutarBuscaRapida() {
+  const input = document.getElementById('ge-busca-rapida-geral');
+  const box = document.getElementById('ge-busca-rapida-resultado');
+  if (!input || !box) return;
+  const termo = input.value.trim();
+  if (!termo) {
+    box.style.display = 'none';
+    showToast('Digite o CPF, nome do responsável ou nome da criança.');
+    return;
+  }
+
+  const historico = _geBuscarRegistrosDaFamilia(termo, termo);
+  if (!historico.length) {
+    box.style.display = 'block';
+    box.innerHTML = `
+    <div style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:12px;color:#9a3412;font-size:12px">
+      ⚠️ Nenhum registro familiar anterior encontrado com "<strong>${_geEscapeHtml(termo)}</strong>".
+      <div style="margin-top:6px">
+        <button class="btn btn-primary btn-sm" onclick="showGrandesEventosModal()">+ Cadastrar Novo Acolhimento</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // Agrupa dados da família
+  const rep = historico[0];
+  const cpfFormatado = rep.respCpf || 'Não informado';
+  box.style.display = 'block';
+  box.innerHTML = `
+  <div style="background:#fff;border:1px solid #0284c7;border-radius:8px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.05)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+      <div>
+        <span style="background:#10b981;color:#fff;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px">FAMÍLIA ENCONTRADA</span>
+        <h4 style="margin:4px 0 2px 0;font-size:15px;color:#0f2d59">${_geEscapeHtml(rep.respNome)}</h4>
+        <div style="font-size:12px;color:var(--text-muted)">
+          CPF: <strong>${cpfFormatado}</strong> · ${rep.respParentesco || 'Responsável'} · Contato: <strong>${rep.respTel1 || '--'}</strong>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="showHistoricoFamiliarModal('${_geEscapeHtml(rep.respCpf || rep.respNome)}')">
+          📜 Ver Histórico Completo
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="_geIniciarNovoAcolhimentoAPartirDe('${rep.id}')">
+          🔄 Criar Novo Acolhimento para esta Família
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;border-top:1px dashed #bae6fd;padding-top:8px">
+      <div style="font-size:11.5px;font-weight:700;color:#0369a1;margin-bottom:6px">Edições Anteriores no Salvador Acolhe (${historico.length} registros preservados):</div>
+      <div style="display:grid;gap:6px">
+        ${historico.map(h => {
+          const fList = _geGetFilhos(h);
+          return `
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;font-size:11.5px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div>
+              <strong>${h.operacao} ${h.ano || 2026}</strong> (${h.data ? h.data.split('-').reverse().join('/') : '--'}) · 
+              Posto: <strong>${_geEscapeHtml(h.centroNome)}</strong> · 
+              Conselheiro: <strong>${_geEscapeHtml(h.conselheiro || 'Plantonista')}</strong>
+              <div style="color:var(--text-muted);margin-top:2px">
+                Filhos acolhidos (${fList.length}): ${fList.map(f => f.nome).join(', ')}
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="imprimirGuiaAcolhimento(${_loadGrandesEventos().indexOf(h)})">
+              📄 Guia ${h.ano || 2026}
+            </button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
 }
 
 function _geEscapeHtml(str) {
@@ -3907,23 +4057,24 @@ function _geExportarCsv() {
   const dados = _loadGrandesEventos();
   if (!dados.length) { showToast('Nenhum dado para exportar.'); return; }
   const headers = [
-    'Protocolo', 'Operacao', 'Ano', 'Data', 'Hora', 'Status',
-    'Crianca_Nome', 'Crianca_Nome_Social', 'Crianca_Nasc', 'Crianca_Idade', 'Crianca_Sexo', 'Crianca_Cor',
-    'Crianca_Estuda', 'Crianca_Escola', 'Crianca_Serie', 'Crianca_PCD', 'Crianca_Neurodivergente', 'Crianca_Laudo',
+    'Protocolo', 'Operacao', 'Ano', 'Data', 'Hora', 'Status', 'Conselheiro', 'CT',
+    'Total_Filhos', 'Nomes_Filhos',
     'Resp_Nome', 'Resp_Parentesco', 'Resp_Idade', 'Resp_CPF', 'Resp_Tel1', 'Resp_Tel2', 'Resp_Tel3', 'Resp_Instagram',
     'Resp_Moradia', 'Resp_Beneficio_Social', 'Resp_Atividade', 'Resp_DAM', 'Resp_Local_Circuito',
     'End_CEP', 'End_Logradouro', 'End_Numero', 'End_Bairro', 'End_Cidade', 'End_UF',
     'Centro_Acolhimento', 'Centro_Bairro', 'Centro_Circuito'
   ];
-  const rows = dados.map(d => [
-    d.protocolo, d.operacao, d.ano, d.data, d.hora, d.status,
-    d.criancaNome, d.criancaNomeSocial || '', d.criancaNasc || '', d.criancaIdade || '', d.criancaSexo || '', d.criancaCor || '',
-    d.criancaEstuda || '', d.criancaEscola || '', d.criancaSerie || '', d.criancaPcd || '', d.criancaNeuro || '', d.criancaPossuiLaudo || '',
-    d.respNome || '', d.respParentesco || '', d.respIdade || '', d.respCpf || '', d.respTel1 || '', d.respTel2 || '', d.respTel3 || '', d.respInstagram || '',
-    d.respMoradia || '', d.respBeneficioSocial || '', d.atvTipo || '', d.atvDam || '', d.atvPontoCircuito || '',
-    d.endCep || '', d.endLogradouro || '', d.endNumero || '', d.endBairro || '', d.endCidade || '', d.endUf || '',
-    d.centroNome || '', d.centroBairro || '', d.centroCircuito || ''
-  ].map(v => '"' + String(v || '').replace(/"/g, '""') + '"').join(';'));
+  const rows = dados.map(d => {
+    const fList = _geGetFilhos(d);
+    return [
+      d.protocolo, d.operacao, d.ano, d.data, d.hora, d.status, d.conselheiro || '', d.ct || '',
+      fList.length, fList.map(f => f.nome + ' (' + (f.idade || '') + ')').join('; '),
+      d.respNome || '', d.respParentesco || '', d.respIdade || '', d.respCpf || '', d.respTel1 || '', d.respTel2 || '', d.respTel3 || '', d.respInstagram || '',
+      d.respMoradia || '', d.respBeneficioSocial || '', d.atvTipo || '', d.atvDam || '', d.atvPontoCircuito || '',
+      d.endCep || '', d.endLogradouro || '', d.endNumero || '', d.endBairro || '', d.endCidade || '', d.endUf || '',
+      d.centroNome || '', d.centroBairro || '', d.centroCircuito || ''
+    ].map(v => '"' + String(v || '').replace(/"/g, '""') + '"').join(';');
+  });
 
   const csv = [headers.join(';'), ...rows].join('\r\n');
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
@@ -9735,6 +9886,55 @@ function saveSystemSettings() {
 let fichasEnviadas = []
 let lancamentosData = []; // Mantido para compatibilidade retroativa
 let grandesEventosData = null;
+let _geModalFilhos = []; // Estado temporário dos filhos no modal atual
+let _geModalOriginalIdx = undefined; // Se estamos editando um registro existente ou criando um novo
+
+function _geGetFilhos(r) {
+  if (!r) return [];
+  if (Array.isArray(r.filhos) && r.filhos.length > 0) return r.filhos;
+  if (r.criancaNome) {
+    return [{
+      nome: r.criancaNome,
+      nomeSocial: r.criancaNomeSocial || '',
+      nasc: r.criancaNasc || '',
+      idade: r.criancaIdade || _geCalcularIdade(r.criancaNasc),
+      sexo: r.criancaSexo || 'Masculino',
+      cor: r.criancaCor || 'Parda',
+      estuda: r.criancaEstuda || 'Não',
+      escola: r.criancaEscola || '',
+      serie: r.criancaSerie || '',
+      pcd: r.criancaPcd || 'Não',
+      pcdDesc: r.criancaPcdDesc || '',
+      lgbtqia: r.criancaLgbtqia || 'Não',
+      neuro: r.criancaNeuro || 'Não',
+      neuroCondicoes: r.criancaNeuroCondicoes || [],
+      neuroOutra: r.criancaNeuroOutra || '',
+      possuiLaudo: r.criancaPossuiLaudo || 'Não'
+    }];
+  }
+  return [];
+}
+
+function _geNovoFilhoVazio() {
+  return {
+    nome: '',
+    nomeSocial: '',
+    nasc: '',
+    idade: '',
+    sexo: 'Masculino',
+    cor: 'Parda',
+    estuda: 'Não',
+    escola: '',
+    serie: '3º ano EF',
+    pcd: 'Não',
+    pcdDesc: '',
+    lgbtqia: 'Não',
+    neuro: 'Não',
+    neuroCondicoes: [],
+    neuroOutra: '',
+    possuiLaudo: 'Não'
+  };
+}
 
 function _loadGrandesEventos() {
   if (grandesEventosData !== null) return grandesEventosData;
@@ -9747,10 +9947,124 @@ function _loadGrandesEventos() {
   } catch(e) {
     console.warn('Erro ao carregar cct_grandes_eventos', e);
   }
-  // Dados iniciais de demonstração
+
+  // Dados iniciais de demonstração (incluindo o caso real citado pelo usuário: Família Marilene atendida em 2026 com 3 filhos e retornando em 2027 com 4 filhos)
   grandesEventosData = [
     {
-      id: 'ge_seed_1',
+      id: 'ge_demo_2027',
+      protocolo: 'GE-2027/001',
+      operacao: 'Carnaval',
+      ano: 2027,
+      data: '2027-02-06',
+      hora: '15:10',
+      conselheiro: 'Patrícia Gomes Santos',
+      ct: 'CT XII - Narandiba',
+      respNome: 'Marilene dos Santos da Silva',
+      respIdade: '35',
+      respCpf: '849.201.535-72',
+      respParentesco: 'Genitora (Mãe)',
+      respTel1: '(71) 98745-1234',
+      respTel2: '(71) 99123-4567',
+      respTel3: '',
+      respInstagram: '@marilene_ambulante',
+      respMoradia: 'Alugada',
+      respBeneficioSocial: 'Sim',
+      respBeneficiosList: ['Bolsa Família', 'Tarifa Social de Energia'],
+      respBeneficioOutro: '',
+      endCep: '41213-310',
+      endLogradouro: 'Rua Direta de Tancredo Neves',
+      endNumero: '142, Casa 2',
+      endBairro: 'Tancredo Neves',
+      endCidade: 'Salvador',
+      endUf: 'BA',
+      endPontoRef: 'Próximo ao Mercado Todo Dia',
+      atvTipo: 'Ambulante',
+      atvOutro: '',
+      atvDam: 'DAM-2027-SEMOP-91024',
+      atvPontoCircuito: 'Pelourinho - Largo do Terreiro de Jesus',
+      centroNome: 'Escola Municipal João Lino',
+      centroBairro: 'Centro Histórico (Pelourinho)',
+      centroCircuito: 'Circuito Batatinha / Osmar',
+      status: 'Acolhido',
+      obs: 'Família retornou no Carnaval de 2027 agora apresentando 4 filhos para acolhimento preventivo. Registro de 2026 mantido integralmente.',
+      filhos: [
+        {
+          nome: 'Kauã Gabriel Santos da Silva',
+          nomeSocial: '',
+          nasc: '2016-05-18',
+          idade: '10 anos',
+          sexo: 'Masculino',
+          cor: 'Parda',
+          estuda: 'Sim',
+          escola: 'Escola Municipal Cidade de Jequié',
+          serie: '5º ano EF',
+          pcd: 'Não',
+          pcdDesc: '',
+          lgbtqia: 'Não',
+          neuro: 'Sim',
+          neuroCondicoes: ['TDAH'],
+          neuroOutra: '',
+          possuiLaudo: 'Sim'
+        },
+        {
+          nome: 'Bruno Henrique Santos da Silva',
+          nomeSocial: '',
+          nasc: '2018-08-22',
+          idade: '8 anos',
+          sexo: 'Masculino',
+          cor: 'Parda',
+          estuda: 'Sim',
+          escola: 'Escola Municipal Cidade de Jequié',
+          serie: '3º ano EF',
+          pcd: 'Não',
+          pcdDesc: '',
+          lgbtqia: 'Não',
+          neuro: 'Não',
+          neuroCondicoes: [],
+          neuroOutra: '',
+          possuiLaudo: 'Não'
+        },
+        {
+          nome: 'Lucas Vinicius Santos da Silva',
+          nomeSocial: '',
+          nasc: '2021-12-10',
+          idade: '5 anos',
+          sexo: 'Masculino',
+          cor: 'Parda',
+          estuda: 'Sim',
+          escola: 'Creche Municipal Tancredo Neves',
+          serie: 'Educação Infantil (Creche/Pré-escola)',
+          pcd: 'Não',
+          pcdDesc: '',
+          lgbtqia: 'Não',
+          neuro: 'Não',
+          neuroCondicoes: [],
+          neuroOutra: '',
+          possuiLaudo: 'Não'
+        },
+        {
+          nome: 'Sophia Vitória Santos da Silva',
+          nomeSocial: '',
+          nasc: '2025-04-14',
+          idade: '1 ano',
+          sexo: 'Feminino',
+          cor: 'Parda',
+          estuda: 'Não',
+          escola: '',
+          serie: 'Não frequenta',
+          pcd: 'Não',
+          pcdDesc: '',
+          lgbtqia: 'Não',
+          neuro: 'Não',
+          neuroCondicoes: [],
+          neuroOutra: '',
+          possuiLaudo: 'Não'
+        }
+      ],
+      createdAt: '2027-02-06T15:10:00.000Z'
+    },
+    {
+      id: 'ge_demo_2026',
       protocolo: 'GE-2026/001',
       operacao: 'Carnaval',
       ano: 2026,
@@ -9758,22 +10072,6 @@ function _loadGrandesEventos() {
       hora: '14:30',
       conselheiro: 'Fabio Barreto Pereira',
       ct: 'CT XII - Narandiba',
-      criancaNome: 'Kauã Gabriel Santos da Silva',
-      criancaNomeSocial: '',
-      criancaNasc: '2016-05-18',
-      criancaIdade: '9 anos',
-      criancaSexo: 'Masculino',
-      criancaCor: 'Parda',
-      criancaEstuda: 'Sim',
-      criancaEscola: 'Escola Municipal Cidade de Jequié',
-      criancaSerie: '4º ano EF',
-      criancaPcd: 'Não',
-      criancaPcdDesc: '',
-      criancaLgbtqia: 'Não',
-      criancaNeuro: 'Sim',
-      criancaNeuroCondicoes: ['TDAH'],
-      criancaNeuroOutra: '',
-      criancaPossuiLaudo: 'Sim',
       respNome: 'Marilene dos Santos da Silva',
       respIdade: '34',
       respCpf: '849.201.535-72',
@@ -9800,8 +10098,64 @@ function _loadGrandesEventos() {
       centroNome: 'Escola Municipal Santa Terezinha',
       centroBairro: 'Barra',
       centroCircuito: 'Circuito Dodô (Barra/Ondina)',
-      status: 'Acolhido',
-      obs: 'Criança acolhida preventivamente durante a atividade da genitora no circuito.',
+      status: 'Desacolhido / Entregue',
+      obs: 'Primeiro acolhimento realizado no Carnaval 2026 com 3 filhos. Registro histórico preservado.',
+      filhos: [
+        {
+          nome: 'Kauã Gabriel Santos da Silva',
+          nomeSocial: '',
+          nasc: '2016-05-18',
+          idade: '9 anos',
+          sexo: 'Masculino',
+          cor: 'Parda',
+          estuda: 'Sim',
+          escola: 'Escola Municipal Cidade de Jequié',
+          serie: '4º ano EF',
+          pcd: 'Não',
+          pcdDesc: '',
+          lgbtqia: 'Não',
+          neuro: 'Sim',
+          neuroCondicoes: ['TDAH'],
+          neuroOutra: '',
+          possuiLaudo: 'Sim'
+        },
+        {
+          nome: 'Bruno Henrique Santos da Silva',
+          nomeSocial: '',
+          nasc: '2018-08-22',
+          idade: '7 anos',
+          sexo: 'Masculino',
+          cor: 'Parda',
+          estuda: 'Sim',
+          escola: 'Escola Municipal Cidade de Jequié',
+          serie: '2º ano EF',
+          pcd: 'Não',
+          pcdDesc: '',
+          lgbtqia: 'Não',
+          neuro: 'Não',
+          neuroCondicoes: [],
+          neuroOutra: '',
+          possuiLaudo: 'Não'
+        },
+        {
+          nome: 'Lucas Vinicius Santos da Silva',
+          nomeSocial: '',
+          nasc: '2021-12-10',
+          idade: '4 anos',
+          sexo: 'Masculino',
+          cor: 'Parda',
+          estuda: 'Sim',
+          escola: 'Creche Municipal Tancredo Neves',
+          serie: 'Educação Infantil (Creche/Pré-escola)',
+          pcd: 'Não',
+          pcdDesc: '',
+          lgbtqia: 'Não',
+          neuro: 'Não',
+          neuroCondicoes: [],
+          neuroOutra: '',
+          possuiLaudo: 'Não'
+        }
+      ],
       createdAt: '2026-02-14T14:30:00.000Z'
     },
     {
@@ -9813,22 +10167,6 @@ function _loadGrandesEventos() {
       hora: '19:15',
       conselheiro: 'Fabio Barreto Pereira',
       ct: 'CT XII - Narandiba',
-      criancaNome: 'Larissa Vitória Nogueira Ribeiro',
-      criancaNomeSocial: '',
-      criancaNasc: '2019-11-04',
-      criancaIdade: '6 anos',
-      criancaSexo: 'Feminino',
-      criancaCor: 'Preta',
-      criancaEstuda: 'Sim',
-      criancaEscola: 'Escola Municipal Lagoa do Urubu',
-      criancaSerie: '1º ano EF',
-      criancaPcd: 'Não',
-      criancaPcdDesc: '',
-      criancaLgbtqia: 'Não',
-      criancaNeuro: 'Não',
-      criancaNeuroCondicoes: [],
-      criancaNeuroOutra: '',
-      criancaPossuiLaudo: 'Não',
       respNome: 'Carlos Eduardo Ribeiro',
       respIdade: '39',
       respCpf: '712.384.995-15',
@@ -9857,6 +10195,26 @@ function _loadGrandesEventos() {
       centroCircuito: 'Circuito Dodô / Palco Rio Vermelho',
       status: 'Desacolhido / Entregue',
       obs: 'Acolhimento preventivo concluído com entrega ao genitor.',
+      filhos: [
+        {
+          nome: 'Larissa Vitória Nogueira Ribeiro',
+          nomeSocial: '',
+          nasc: '2019-11-04',
+          idade: '6 anos',
+          sexo: 'Feminino',
+          cor: 'Preta',
+          estuda: 'Sim',
+          escola: 'Escola Municipal Lagoa do Urubu',
+          serie: '1º ano EF',
+          pcd: 'Não',
+          pcdDesc: '',
+          lgbtqia: 'Não',
+          neuro: 'Não',
+          neuroCondicoes: [],
+          neuroOutra: '',
+          possuiLaudo: 'Não'
+        }
+      ],
       createdAt: '2025-12-31T19:15:00.000Z'
     }
   ];
@@ -9937,34 +10295,445 @@ function _geAtualizarCentroInfo(nomeCentro) {
   }
 }
 
+// ── BUSCA REGISTROS DA MESMA FAMÍLIA (POR CPF OU NOME) ──
+function _geBuscarRegistrosDaFamilia(cpf, nome) {
+  const dados = _loadGrandesEventos();
+  const cpfDig = (cpf || '').replace(/\D/g, '');
+  const nomeNorm = (nome || '').toLowerCase().trim();
+
+  return dados.filter(d => {
+    const dCpfDig = (d.respCpf || '').replace(/\D/g, '');
+    if (cpfDig.length >= 8 && dCpfDig.length >= 8 && cpfDig === dCpfDig) return true;
+    if (nomeNorm.length >= 4 && (d.respNome || '').toLowerCase().includes(nomeNorm)) return true;
+    // Também busca pelos nomes dos filhos
+    const filhos = _geGetFilhos(d);
+    for (const f of filhos) {
+      if (nomeNorm.length >= 4 && (f.nome || '').toLowerCase().includes(nomeNorm)) return true;
+    }
+    return false;
+  }).sort((a,b) => (b.ano || 2026) - (a.ano || 2026));
+}
+
+// ── CONSULTA DE HISTÓRICO NO TOPO DO MODAL ──
+function _geConsultarHistoricoModal() {
+  const input = document.getElementById('ge-modal-busca-hist');
+  const resBox = document.getElementById('ge-modal-hist-resultados');
+  if (!input || !resBox) return;
+  const termo = input.value.trim();
+  if (!termo) {
+    resBox.style.display = 'none';
+    showToast('Informe o CPF, nome do responsável ou nome da criança.');
+    return;
+  }
+
+  const historico = _geBuscarRegistrosDaFamilia(termo, termo);
+  if (!historico.length) {
+    resBox.style.display = 'block';
+    resBox.innerHTML = `
+    <div style="background:#fff;border:1px solid #fed7aa;border-radius:6px;padding:10px;font-size:12px;color:#9a3412">
+      ⚠️ Nenhum registro familiar anterior encontrado com "<strong>${_geEscapeHtml(termo)}</strong>". Você pode preencher como um novo cadastro abaixo.
+    </div>`;
+    return;
+  }
+
+  const maisRecente = historico[0];
+  const cpfFormatado = maisRecente.respCpf || 'Sem CPF';
+  const totalFilhosConhecidos = [...new Set(historico.flatMap(h => _geGetFilhos(h).map(f => f.nome)))].length;
+
+  resBox.style.display = 'block';
+  resBox.innerHTML = `
+  <div style="background:#fff;border:2px solid #0284c7;border-radius:8px;padding:12px;margin-top:6px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+      <div>
+        <span style="background:#0284c7;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">REGISTRO FAMILIAR LOCALIZADO</span>
+        <h4 style="margin:4px 0 2px 0;font-size:14px;color:#0f2d59">${_geEscapeHtml(maisRecente.respNome)}</h4>
+        <div style="font-size:11.5px;color:var(--text-muted)">
+          CPF: <strong>${cpfFormatado}</strong> · ${maisRecente.respParentesco || 'Responsável'} · Contato: <strong>${maisRecente.respTel1 || '--'}</strong>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" type="button"
+        onclick="_geImportarDadosFamiliaParaModal('${maisRecente.id}')"
+        style="background:#059669;border-color:#059669;font-weight:700">
+        🔄 Importar Dados para Este Novo Acolhimento
+      </button>
+    </div>
+
+    <div style="margin-top:8px;border-top:1px dashed #cbd5e1;padding-top:6px;font-size:11px;color:#475569">
+      <strong>Histórico no Salvador Acolhe (${historico.length} edições):</strong>
+      <ul style="margin:4px 0 0 16px;padding:0">
+        ${historico.map(h => {
+          const fList = _geGetFilhos(h);
+          return `<li><strong>${h.operacao} ${h.ano || 2026}</strong> · Conselheiro(a): <em>${_geEscapeHtml(h.conselheiro || 'Plantonista')}</em> · Posto: ${_geEscapeHtml(h.centroNome)} · <strong>${fList.length} filho(s) acolhido(s)</strong>: ${fList.map(f=>f.nome).join(', ')}</li>`;
+        }).join('')}
+      </ul>
+      <div style="margin-top:6px;color:#0369a1;font-weight:600">
+        💡 Ao importar, os dados do responsável e os filhos já conhecidos serão carregados. Você poderá alterar o ano, atualizar dados, adicionar novos filhos (ex.: 4º filho) e o atendimento será salvo como um <strong>novo registro independente</strong>, mantendo os anos anteriores preservados!
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── IMPORTAR DADOS DA FAMÍLIA PARA O MODAL (CRIANDO NOVO ACOLHIMENTO PRESERVANDO ANTERIORES) ──
+function _geImportarDadosFamiliaParaModal(registroId) {
+  const dados = _loadGrandesEventos();
+  const r = dados.find(x => x.id === registroId);
+  if (!r) return;
+
+  // Preenche dados do responsável
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+  setVal('ge-in-resp-nome', r.respNome || '');
+  setVal('ge-in-resp-parentesco', r.respParentesco || 'Genitora (Mãe)');
+  setVal('ge-in-resp-idade', r.respIdade || '');
+  setVal('ge-in-resp-cpf', r.respCpf || '');
+  setVal('ge-in-resp-insta', r.respInstagram || '');
+  setVal('ge-in-resp-tel1', r.respTel1 || '');
+  setVal('ge-in-resp-tel2', r.respTel2 || '');
+  setVal('ge-in-resp-tel3', r.respTel3 || '');
+  setVal('ge-in-resp-moradia', r.respMoradia || 'Alugada');
+  setVal('ge-in-resp-ben', r.respBeneficioSocial || 'Sim');
+
+  // Benefícios
+  const benBox = document.getElementById('ge-box-beneficios');
+  if (benBox) benBox.style.display = r.respBeneficioSocial === 'Sim' ? 'block' : 'none';
+  const bList = r.respBeneficiosList || [];
+  document.querySelectorAll('input[name="ge-resp-beneficio"]').forEach(cb => {
+    cb.checked = bList.includes(cb.value);
+  });
+  setVal('ge-in-resp-ben-outro', r.respBeneficioOutro || '');
+
+  // Endereço
+  setVal('ge-end-cep', r.endCep || '');
+  setVal('ge-end-logradouro', r.endLogradouro || '');
+  setVal('ge-end-numero', r.endNumero || '');
+  setVal('ge-end-bairro', r.endBairro || '');
+  setVal('ge-end-cidade', r.endCidade || 'Salvador');
+  setVal('ge-end-uf', r.endUf || 'BA');
+  setVal('ge-end-ref', r.endPontoRef || '');
+
+  // Atividade no circuito
+  setVal('ge-in-atv-tipo', r.atvTipo || 'Ambulante');
+  setVal('ge-in-atv-dam', r.atvDam || '');
+  setVal('ge-in-atv-ponto', r.atvPontoCircuito || '');
+
+  // Conselheiro atual responsável pelo NOVO acolhimento (garante registro de quem atendeu este ano)
+  const currentCounselor = (typeof currentUser !== 'undefined' && currentUser?.name) ? currentUser.name : '';
+  const currentCt = (typeof currentUser !== 'undefined' && (currentUser?.ctFull || currentUser?.ct)) ? (currentUser.ctFull || currentUser.ct) : '';
+  setVal('ge-in-conselheiro', currentCounselor);
+  setVal('ge-in-ct', currentCt);
+
+  // Define nova edição / ano (ano atual ou seguinte ao anterior)
+  const anoSugestao = Math.max(new Date().getFullYear(), (r.ano || 2026) + 1);
+  setVal('ge-in-ano', anoSugestao);
+  setVal('ge-in-data', new Date().toISOString().slice(0, 10));
+  setVal('ge-in-hora', new Date().toTimeString().slice(0, 5));
+
+  // Carrega os filhos da família
+  const filhosAnteriores = _geGetFilhos(r);
+  _geModalFilhos = filhosAnteriores.map(f => {
+    // Recalcula a idade atual dos filhos com base na data de nascimento
+    const idadeAtualizada = f.nasc ? _geCalcularIdade(f.nasc) : f.idade;
+    return { ...f, idade: idadeAtualizada };
+  });
+
+  if (!_geModalFilhos.length) {
+    _geModalFilhos.push(_geNovoFilhoVazio());
+  }
+
+  // Define que estamos criando um NOVO registro (para NÃO sobrescrever o anterior!)
+  _geModalOriginalIdx = undefined;
+
+  _geRenderizarFilhosModal();
+
+  // Alerta informativo
+  const alertEl = document.getElementById('ge-modal-alerta-importacao');
+  if (alertEl) {
+    alertEl.style.display = 'block';
+    alertEl.innerHTML = `
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:14px">
+      ✅ <strong>Dados da família importados com sucesso de ${r.operacao} ${r.ano || 2026}!</strong><br>
+      • Conselheiro(a) atual registrado: <strong>${currentCounselor || 'Conselheiro Plantonista'}</strong>.<br>
+      • Foram carregados <strong>${_geModalFilhos.length} filho(s)</strong> já cadastrados anteriormente. Você pode atualizar séries, idades ou clicar em <strong>"+ Adicionar Outro Filho / Criança"</strong> para incluir novos filhos (ex.: 4º filho).<br>
+      • Ao salvar, este acolhimento será registrado para a edição <strong>${anoSugestao}</strong>, mantendo o histórico de ${r.ano || 2026} 100% intacto!
+    </div>`;
+  }
+
+  const resBox = document.getElementById('ge-modal-hist-resultados');
+  if (resBox) resBox.style.display = 'none';
+
+  showToast('Dados da família importados! Pronto para novo acolhimento.');
+}
+
+function _geIniciarNovoAcolhimentoAPartirDe(registroId) {
+  showGrandesEventosModal();
+  setTimeout(() => {
+    _geImportarDadosFamiliaParaModal(registroId);
+  }, 250);
+}
+
+// ── RENDERIZAÇÃO DINÂMICA DOS CARDS DE FILHOS NO MODAL ──
+function _geSalvarValoresAtuaisFilhosDoDom() {
+  _geModalFilhos.forEach((filho, idx) => {
+    const nomeEl = document.getElementById(`ge-cr-nome-${idx}`);
+    if (nomeEl) filho.nome = nomeEl.value.trim();
+
+    const socialEl = document.getElementById(`ge-cr-social-${idx}`);
+    if (socialEl) filho.nomeSocial = socialEl.value.trim();
+
+    const nascEl = document.getElementById(`ge-cr-nasc-${idx}`);
+    if (nascEl) filho.nasc = nascEl.value;
+
+    const idadeEl = document.getElementById(`ge-cr-idade-${idx}`);
+    if (idadeEl) filho.idade = idadeEl.value;
+
+    const sexoEl = document.getElementById(`ge-cr-sexo-${idx}`);
+    if (sexoEl) filho.sexo = sexoEl.value;
+
+    const corEl = document.getElementById(`ge-cr-cor-${idx}`);
+    if (corEl) filho.cor = corEl.value;
+
+    const estudaEl = document.getElementById(`ge-cr-estuda-${idx}`);
+    if (estudaEl) filho.estuda = estudaEl.value;
+
+    const escolaEl = document.getElementById(`ge-cr-escola-${idx}`);
+    if (escolaEl) filho.escola = escolaEl.value.trim();
+
+    const serieEl = document.getElementById(`ge-cr-serie-${idx}`);
+    if (serieEl) filho.serie = serieEl.value;
+
+    const pcdEl = document.getElementById(`ge-cr-pcd-${idx}`);
+    if (pcdEl) filho.pcd = pcdEl.value;
+
+    const pcdDescEl = document.getElementById(`ge-cr-pcd-desc-${idx}`);
+    if (pcdDescEl) filho.pcdDesc = pcdDescEl.value.trim();
+
+    const lgbtEl = document.getElementById(`ge-cr-lgbt-${idx}`);
+    if (lgbtEl) filho.lgbtqia = lgbtEl.value;
+
+    const neuroEl = document.getElementById(`ge-cr-neuro-${idx}`);
+    if (neuroEl) filho.neuro = neuroEl.value;
+
+    const neuroConds = [];
+    document.querySelectorAll(`input[name="ge-cr-neuro-cond-${idx}"]:checked`).forEach(cb => {
+      neuroConds.push(cb.value);
+    });
+    filho.neuroCondicoes = neuroConds;
+
+    const neuroOutraEl = document.getElementById(`ge-cr-neuro-outra-${idx}`);
+    if (neuroOutraEl) filho.neuroOutra = neuroOutraEl.value.trim();
+
+    const laudoEl = document.getElementById(`ge-cr-laudo-${idx}`);
+    if (laudoEl) filho.possuiLaudo = laudoEl.value;
+  });
+}
+
+function _geRenderizarFilhosModal() {
+  const container = document.getElementById('ge-modal-filhos-container');
+  if (!container) return;
+
+  const html = _geModalFilhos.map((f, i) => {
+    const isPcd = f.pcd === 'Sim';
+    const isNeuro = f.neuro !== 'Não';
+    const isEstuda = f.estuda === 'Sim';
+
+    return `
+    <div class="ge-filho-card" style="background:#f8fafc;border:2px solid #cbd5e1;border-radius:10px;padding:16px;margin-bottom:14px;position:relative">
+      
+      <!-- TOPO DO CARD DO FILHO -->
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="background:#1e3a5f;color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">
+            ${i+1}
+          </span>
+          <strong style="font-size:14px;color:#0f2d59">
+            Criança / Adolescente #${i+1} ${f.nome ? '· ' + _geEscapeHtml(f.nome) : ''}
+          </strong>
+        </div>
+        ${_geModalFilhos.length > 1 ? `
+        <button type="button" class="btn btn-outline btn-sm"
+          style="color:#ef4444;border-color:#fecaca;padding:3px 8px;font-size:11px"
+          onclick="_geRemoverFilhoModal(${i})">
+          🗑️ Remover Este Filho
+        </button>` : ''}
+      </div>
+
+      <!-- CAMPOS DO FILHO -->
+      <div class="field-row cols-2" style="margin-bottom:10px">
+        <div class="field-group">
+          <label class="field-label">Nome Completo Civil da Criança *</label>
+          <input id="ge-cr-nome-${i}" value="${_geEscapeHtml(f.nome)}" placeholder="Nome completo da criança/adolescente" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Nome Social (se houver)</label>
+          <input id="ge-cr-social-${i}" value="${_geEscapeHtml(f.nomeSocial)}" placeholder="Como prefere ser chamada" />
+        </div>
+      </div>
+
+      <div class="field-row cols-3" style="margin-bottom:10px">
+        <div class="field-group">
+          <label class="field-label">Data de Nascimento *</label>
+          <input id="ge-cr-nasc-${i}"
+            type="date"
+            value="${f.nasc || ''}"
+            onchange="const id=document.getElementById('ge-cr-idade-${i}'); if(id) id.value=_geCalcularIdade(this.value)" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Idade (Automática)</label>
+          <input id="ge-cr-idade-${i}"
+            value="${f.idade || _geCalcularIdade(f.nasc)}"
+            placeholder="Calculada automaticamente"
+            readonly
+            style="background:var(--primary-subtle);color:var(--primary);font-weight:700" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Sexo *</label>
+          <select id="ge-cr-sexo-${i}">
+            <option value="Masculino" ${f.sexo==='Masculino'?'selected':''}>Masculino</option>
+            <option value="Feminino" ${f.sexo==='Feminino'?'selected':''}>Feminino</option>
+            <option value="Não-binário" ${f.sexo==='Não-binário'?'selected':''}>Não-binário</option>
+            <option value="Outro" ${f.sexo==='Outro'?'selected':''}>Outro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row cols-3" style="margin-bottom:10px">
+        <div class="field-group">
+          <label class="field-label">Cor / Raça *</label>
+          <select id="ge-cr-cor-${i}">
+            <option value="Preta" ${f.cor==='Preta'?'selected':''}>Preta</option>
+            <option value="Parda" ${f.cor==='Parda'?'selected':''}>Parda</option>
+            <option value="Branca" ${f.cor==='Branca'?'selected':''}>Branca</option>
+            <option value="Amarela" ${f.cor==='Amarela'?'selected':''}>Amarela</option>
+            <option value="Indígena" ${f.cor==='Indígena'?'selected':''}>Indígena</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Estuda atualmente?</label>
+          <select id="ge-cr-estuda-${i}" onchange="const sim=this.value==='Sim'; document.getElementById('ge-box-escola-${i}').style.display=sim?'grid':'none'">
+            <option value="Sim" ${isEstuda?'selected':''}>Sim</option>
+            <option value="Não" ${!isEstuda?'selected':''}>Não</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">LGBTQIA+?</label>
+          <select id="ge-cr-lgbt-${i}">
+            <option value="Não" ${f.lgbtqia==='Não'?'selected':''}>Não</option>
+            <option value="Sim" ${f.lgbtqia==='Sim'?'selected':''}>Sim</option>
+            <option value="Não informado" ${f.lgbtqia==='Não informado'?'selected':''}>Não informado</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ESCOLA E SÉRIE -->
+      <div id="ge-box-escola-${i}" class="field-row cols-2" style="margin-bottom:10px;display:${isEstuda?'grid':'none'};background:#fff;padding:10px;border-radius:6px;border:1px solid #e2e8f0">
+        <div class="field-group">
+          <label class="field-label">Qual Escola?</label>
+          <input id="ge-cr-escola-${i}" value="${_geEscapeHtml(f.escola)}" placeholder="Nome da escola" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Série / Ano Escolar</label>
+          <select id="ge-cr-serie-${i}">
+            ${GE_SERIES_LIST.map(s => `<option value="${s}" ${f.serie===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <!-- PCD E NEURODIVERGÊNCIA -->
+      <div class="field-row cols-2" style="margin-bottom:10px">
+        <div class="field-group">
+          <label class="field-label">Pessoa com Deficiência (PCD)?</label>
+          <select id="ge-cr-pcd-${i}" onchange="const sim=this.value==='Sim'; document.getElementById('ge-box-pcd-${i}').style.display=sim?'block':'none'">
+            <option value="Não" ${!isPcd?'selected':''}>Não</option>
+            <option value="Sim" ${isPcd?'selected':''}>Sim</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Neurodivergente?</label>
+          <select id="ge-cr-neuro-${i}" onchange="const at=this.value!=='Não'; document.getElementById('ge-box-neuro-${i}').style.display=at?'block':'none'">
+            <option value="Não" ${f.neuro==='Não'?'selected':''}>Não</option>
+            <option value="Sim" ${f.neuro==='Sim'?'selected':''}>Sim</option>
+            <option value="Em Investigação" ${f.neuro==='Em Investigação'?'selected':''}>Em Investigação</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="ge-box-pcd-${i}" class="field-group" style="margin-bottom:10px;display:${isPcd?'block':'none'};background:#fff;padding:8px 10px;border-radius:6px;border:1px solid #e2e8f0">
+        <label class="field-label">Especifique a deficiência:</label>
+        <input id="ge-cr-pcd-desc-${i}" value="${_geEscapeHtml(f.pcdDesc)}" placeholder="Descreva a deficiência (Física, Visual, Auditiva, Múltipla, etc.)" />
+      </div>
+
+      <div id="ge-box-neuro-${i}" style="margin-bottom:10px;display:${isNeuro?'block':'none'};background:#fff;padding:10px;border-radius:6px;border:1px solid #e2e8f0">
+        <div style="font-weight:700;font-size:11.5px;color:#1e3a5f;margin-bottom:6px">Condições neurodivergentes:</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));gap:6px;margin-bottom:8px">
+          ${GE_CONDICOES_NEURO.map(cond => {
+            const checked = (f.neuroCondicoes || []).includes(cond) ? 'checked' : '';
+            return `
+            <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;cursor:pointer;background:#f8fafc;padding:5px 8px;border:1px solid #cbd5e1;border-radius:4px">
+              <input type="checkbox" name="ge-cr-neuro-cond-${i}" value="${cond}" ${checked} />
+              <span>${cond}</span>
+            </label>`;
+          }).join('')}
+        </div>
+        <div class="field-row cols-2">
+          <div class="field-group">
+            <label class="field-label">Possui Laudo Médico?</label>
+            <select id="ge-cr-laudo-${i}">
+              <option value="Não" ${f.possuiLaudo==='Não'?'selected':''}>Não</option>
+              <option value="Sim" ${f.possuiLaudo==='Sim'?'selected':''}>Sim (Apresentado ou Declarado)</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Outra condição (se houver):</label>
+            <input id="ge-cr-neuro-outra-${i}" value="${_geEscapeHtml(f.neuroOutra)}" placeholder="Especificar se houver outra" />
+          </div>
+        </div>
+      </div>
+
+    </div>`;
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+function _geAdicionarFilhoModal() {
+  _geSalvarValoresAtuaisFilhosDoDom();
+  _geModalFilhos.push(_geNovoFilhoVazio());
+  _geRenderizarFilhosModal();
+  showToast(`Criança #${_geModalFilhos.length} adicionada! Preencha os dados abaixo.`);
+  // Rola até o novo card
+  setTimeout(() => {
+    const el = document.getElementById(`ge-cr-nome-${_geModalFilhos.length - 1}`);
+    if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }, 100);
+}
+
+function _geRemoverFilhoModal(index) {
+  if (_geModalFilhos.length <= 1) {
+    showToast('É necessário manter pelo menos uma criança cadastrada.');
+    return;
+  }
+  _geSalvarValoresAtuaisFilhosDoDom();
+  _geModalFilhos.splice(index, 1);
+  _geRenderizarFilhosModal();
+  showToast('Criança removida do cadastro.');
+}
+
+// ── MODAL PRINCIPAL DE GRANDES EVENTOS ──
 function showGrandesEventosModal(idx) {
   const dados = _loadGrandesEventos();
   const editing = idx !== undefined && idx !== 'undefined';
-  const d = editing ? dados[idx] : {
+  _geModalOriginalIdx = editing ? Number(idx) : undefined;
+
+  const d = editing ? dados[_geModalOriginalIdx] : {
     operacao: 'Carnaval',
     ano: new Date().getFullYear(),
     data: new Date().toISOString().slice(0, 10),
     hora: new Date().toTimeString().slice(0, 5),
     status: 'Acolhido',
+    conselheiro: (typeof currentUser !== 'undefined' && currentUser?.name) ? currentUser.name : '',
+    ct: (typeof currentUser !== 'undefined' && (currentUser?.ctFull || currentUser?.ct)) ? (currentUser.ctFull || currentUser.ct) : '',
     centroNome: GE_CENTROS_ACOLHIMENTO[2].nome,
     centroBairro: GE_CENTROS_ACOLHIMENTO[2].bairro,
     centroCircuito: GE_CENTROS_ACOLHIMENTO[2].circuito,
-    criancaNome: '',
-    criancaNomeSocial: '',
-    criancaNasc: '',
-    criancaIdade: '',
-    criancaSexo: 'Masculino',
-    criancaCor: 'Parda',
-    criancaEstuda: 'Sim',
-    criancaEscola: '',
-    criancaSerie: '3º ano EF',
-    criancaPcd: 'Não',
-    criancaPcdDesc: '',
-    criancaLgbtqia: 'Não',
-    criancaNeuro: 'Não',
-    criancaNeuroCondicoes: [],
-    criancaNeuroOutra: '',
-    criancaPossuiLaudo: 'Não',
     respNome: '',
     respIdade: '',
     respCpf: '',
@@ -9988,32 +10757,64 @@ function showGrandesEventosModal(idx) {
     atvOutro: '',
     atvDam: '',
     atvPontoCircuito: '',
-    obs: ''
+    obs: '',
+    filhos: []
   };
+
+  // Carrega os filhos
+  const filhosIniciais = _geGetFilhos(d);
+  _geModalFilhos = filhosIniciais.length ? JSON.parse(JSON.stringify(filhosIniciais)) : [_geNovoFilhoVazio()];
 
   const selectedCentro = GE_CENTROS_ACOLHIMENTO.find(c => c.nome === d.centroNome) || GE_CENTROS_ACOLHIMENTO[0];
 
   document.getElementById('modal-root').innerHTML = `
   <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-    <div class="modal-box" style="max-width:880px;width:95vw;max-height:92vh;overflow-y:auto;padding:24px">
+    <div class="modal-box" style="max-width:920px;width:95vw;max-height:92vh;overflow-y:auto;padding:24px">
       
       <!-- CABEÇALHO DO MODAL -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px">
         <div>
           <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:22px">${d.operacao==='Carnaval'?'🎭':'🎆'}</span>
-            <h3 style="margin:0;font-size:18px;font-weight:700">${editing ? 'Editar Cadastro de Acolhimento' : 'Novo Cadastro de Família & Acolhimento'}</h3>
+            <span style="font-size:24px">${d.operacao==='Carnaval'?'🎭':'🎆'}</span>
+            <h3 style="margin:0;font-size:18px;font-weight:700">
+              ${editing ? 'Editar Cadastro de Acolhimento' : 'Novo Cadastro de Família & Acolhimento'}
+            </h3>
           </div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
-            Operações Especiais · Salvador Acolhe (Conselho Tutelar de Salvador)
+            Operações Especiais · Salvador Acolhe · Gestão Multi-ano de Acolhimentos
           </div>
         </div>
         <button class="btn btn-outline btn-sm" onclick="closeModal()" style="border:none;font-size:16px">✕</button>
       </div>
 
-      <!-- SEÇÃO 1: OPERAÇÃO E CENTRO DE ACOLHIMENTO -->
-      <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin:12px 0 10px 0;border-radius:0 4px 4px 0;display:flex;align-items:center;gap:8px">
-        <span>🏛️ 1. OPERAÇÃO & CENTRO DE ACOLHIMENTO INSTITUCIONAL (SALVADOR ACOLHE)</span>
+      <!-- ALERTA DE IMPORTAÇÃO (SE HOUVER) -->
+      <div id="ge-modal-alerta-importacao" style="display:none"></div>
+
+      <!-- CONSULTA ANTECIPADA DE HISTÓRICO FAMILIAR -->
+      ${!editing ? `
+      <div style="background:#f0f9ff;border:1px solid #7dd3fc;border-radius:8px;padding:12px 14px;margin-bottom:16px">
+        <div style="font-weight:700;font-size:12.5px;color:#0369a1;display:flex;align-items:center;gap:6px">
+          <span>🔍</span> Consultar se a família já foi acolhida em anos anteriores
+        </div>
+        <div style="font-size:11px;color:#0369a1;margin:2px 0 8px 0">
+          Informe o CPF ou Nome do Responsável (ou nome de um dos filhos). Se confirmado o registro, os dados serão reaproveitados para a nova edição e você poderá adicionar novos filhos sem perder o histórico dos anos passados.
+        </div>
+        <div style="display:flex;gap:8px">
+          <input id="ge-modal-busca-hist"
+            type="text"
+            placeholder="Digite CPF ou Nome da mãe/pai/criança..."
+            style="flex:1"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();_geConsultarHistoricoModal()}" />
+          <button type="button" class="btn btn-primary btn-sm" onclick="_geConsultarHistoricoModal()">
+            🔍 Consultar Histórico
+          </button>
+        </div>
+        <div id="ge-modal-hist-resultados" style="margin-top:8px;display:none"></div>
+      </div>` : ''}
+
+      <!-- SEÇÃO 1: OPERAÇÃO, CONSELHEIRO E POSTO -->
+      <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin:10px 0 10px 0;border-radius:0 4px 4px 0;display:flex;align-items:center;gap:8px">
+        <span>🏛️ 1. OPERAÇÃO, CONSELHEIRO(A) RESPONSÁVEL & POSTO SALVADOR ACOLHE</span>
       </div>
 
       <div class="field-row cols-3" style="margin-bottom:10px">
@@ -10025,7 +10826,7 @@ function showGrandesEventosModal(idx) {
         </div>
         <div class="field-group">
           <label class="field-label">Ano / Edição *</label>
-          <input id="ge-in-ano" type="number" value="${d.ano || new Date().getFullYear()}" placeholder="Ex: 2026" />
+          <input id="ge-in-ano" type="number" value="${d.ano || new Date().getFullYear()}" placeholder="Ex: 2026, 2027..." />
         </div>
         <div class="field-group">
           <label class="field-label">Status do Acolhimento</label>
@@ -10034,6 +10835,17 @@ function showGrandesEventosModal(idx) {
             <option value="Desacolhido / Entregue" ${d.status==='Desacolhido / Entregue'?'selected':''}>⚪ Desacolhido / Entregue aos Pais</option>
             <option value="Transferido" ${d.status==='Transferido'?'selected':''}>🔄 Transferido de Posto</option>
           </select>
+        </div>
+      </div>
+
+      <div class="field-row cols-2" style="margin-bottom:10px">
+        <div class="field-group">
+          <label class="field-label">Conselheiro(a) Tutelar Responsável pelo Acolhimento *</label>
+          <input id="ge-in-conselheiro" value="${_geEscapeHtml(d.conselheiro || ((typeof currentUser !== 'undefined' && currentUser?.name) ? currentUser.name : ''))}" placeholder="Nome do(a) conselheiro(a) plantonista" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Conselho Tutelar (Unidade de Origem / Plantão) *</label>
+          <input id="ge-in-ct" value="${_geEscapeHtml(d.ct || ((typeof currentUser !== 'undefined' && (currentUser?.ctFull || currentUser?.ct)) ? (currentUser.ctFull || currentUser.ct) : ''))}" placeholder="Ex: CT XII - Narandiba" />
         </div>
       </div>
 
@@ -10065,146 +10877,9 @@ function showGrandesEventosModal(idx) {
         </div>
       </div>
 
-      <!-- SEÇÃO 2: DADOS DA CRIANÇA OU ADOLESCENTE -->
+      <!-- SEÇÃO 2: DADOS DOS PAIS OU RESPONSÁVEIS -->
       <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin:16px 0 10px 0;border-radius:0 4px 4px 0;display:flex;align-items:center;gap:8px">
-        <span>👶 2. DADOS DA CRIANÇA OU ADOLESCENTE</span>
-      </div>
-
-      <div class="field-row cols-2" style="margin-bottom:10px">
-        <div class="field-group">
-          <label class="field-label">Nome Completo da Criança/Adolescente *</label>
-          <input id="ge-in-cr-nome" value="${_geEscapeHtml(d.criancaNome)}" placeholder="Nome completo civil" />
-        </div>
-        <div class="field-group">
-          <label class="field-label">Nome Social (se houver)</label>
-          <input id="ge-in-cr-social" value="${_geEscapeHtml(d.criancaNomeSocial)}" placeholder="Como a criança prefere ser chamada" />
-        </div>
-      </div>
-
-      <div class="field-row cols-3" style="margin-bottom:10px">
-        <div class="field-group">
-          <label class="field-label">Data de Nascimento *</label>
-          <input id="ge-in-cr-nasc"
-            type="date"
-            value="${d.criancaNasc || ''}"
-            onchange="const id=document.getElementById('ge-in-cr-idade'); if(id) id.value=_geCalcularIdade(this.value)" />
-        </div>
-        <div class="field-group">
-          <label class="field-label">Idade (Automática)</label>
-          <input id="ge-in-cr-idade"
-            value="${d.criancaIdade || _geCalcularIdade(d.criancaNasc)}"
-            placeholder="Calculada automaticamente"
-            readonly
-            style="background:var(--primary-subtle);color:var(--primary);font-weight:700" />
-        </div>
-        <div class="field-group">
-          <label class="field-label">Sexo *</label>
-          <select id="ge-in-cr-sexo">
-            <option value="Masculino" ${d.criancaSexo==='Masculino'?'selected':''}>Masculino</option>
-            <option value="Feminino" ${d.criancaSexo==='Feminino'?'selected':''}>Feminino</option>
-            <option value="Não-binário" ${d.criancaSexo==='Não-binário'?'selected':''}>Não-binário</option>
-            <option value="Outro" ${d.criancaSexo==='Outro'?'selected':''}>Outro</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field-row cols-3" style="margin-bottom:10px">
-        <div class="field-group">
-          <label class="field-label">Cor / Raça *</label>
-          <select id="ge-in-cr-cor">
-            <option value="Preta" ${d.criancaCor==='Preta'?'selected':''}>Preta</option>
-            <option value="Parda" ${d.criancaCor==='Parda'?'selected':''}>Parda</option>
-            <option value="Branca" ${d.criancaCor==='Branca'?'selected':''}>Branca</option>
-            <option value="Amarela" ${d.criancaCor==='Amarela'?'selected':''}>Amarela</option>
-            <option value="Indígena" ${d.criancaCor==='Indígena'?'selected':''}>Indígena</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label class="field-label">Estuda atualmente?</label>
-          <select id="ge-in-cr-estuda" onchange="const sim = this.value==='Sim'; document.getElementById('ge-box-escola').style.display = sim?'grid':'none'">
-            <option value="Sim" ${d.criancaEstuda==='Sim'?'selected':''}>Sim</option>
-            <option value="Não" ${d.criancaEstuda==='Não'?'selected':''}>Não</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label class="field-label">LGBTQIA+?</label>
-          <select id="ge-in-cr-lgbt">
-            <option value="Não" ${d.criancaLgbtqia==='Não'?'selected':''}>Não</option>
-            <option value="Sim" ${d.criancaLgbtqia==='Sim'?'selected':''}>Sim</option>
-            <option value="Não informado" ${d.criancaLgbtqia==='Não informado'?'selected':''}>Não informado</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- CAMPO REVELADO: ESCOLA E SÉRIE -->
-      <div id="ge-box-escola" class="field-row cols-2" style="margin-bottom:10px;display:${d.criancaEstuda==='Sim'?'grid':'none'};background:#f8fafc;padding:10px;border-radius:8px;border:1px solid #e2e8f0">
-        <div class="field-group">
-          <label class="field-label">Qual Escola?</label>
-          <input id="ge-in-cr-escola" value="${_geEscapeHtml(d.criancaEscola)}" placeholder="Nome da escola municipal ou estadual" />
-        </div>
-        <div class="field-group">
-          <label class="field-label">Série / Ano Escolar</label>
-          <select id="ge-in-cr-serie">
-            ${GE_SERIES_LIST.map(s => `<option value="${s}" ${d.criancaSerie===s?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-
-      <!-- PCD E NEURODIVERGÊNCIA -->
-      <div class="field-row cols-2" style="margin-bottom:10px">
-        <div class="field-group">
-          <label class="field-label">Pessoa com Deficiência (PCD)?</label>
-          <select id="ge-in-cr-pcd" onchange="const sim = this.value==='Sim'; document.getElementById('ge-box-pcd-desc').style.display = sim?'block':'none'">
-            <option value="Não" ${d.criancaPcd==='Não'?'selected':''}>Não</option>
-            <option value="Sim" ${d.criancaPcd==='Sim'?'selected':''}>Sim</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label class="field-label">Neurodivergente?</label>
-          <select id="ge-in-cr-neuro" onchange="const active = this.value!=='Não'; document.getElementById('ge-box-neuro-detalhes').style.display = active?'block':'none'">
-            <option value="Não" ${d.criancaNeuro==='Não'?'selected':''}>Não</option>
-            <option value="Sim" ${d.criancaNeuro==='Sim'?'selected':''}>Sim</option>
-            <option value="Em Investigação" ${d.criancaNeuro==='Em Investigação'?'selected':''}>Em Investigação</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="ge-box-pcd-desc" class="field-group" style="margin-bottom:10px;display:${d.criancaPcd==='Sim'?'block':'none'};background:#f8fafc;padding:10px;border-radius:8px;border:1px solid #e2e8f0">
-        <label class="field-label">Especifique a deficiência (Física, Visual, Auditiva, Múltipla, etc.):</label>
-        <input id="ge-in-cr-pcd-desc" value="${_geEscapeHtml(d.criancaPcdDesc)}" placeholder="Descreva a deficiência e necessidades de acessibilidade" />
-      </div>
-
-      <!-- REVELAÇÃO PROGRESSIVA: CONDIÇÕES NEURODIVERGENTES E LAUDO -->
-      <div id="ge-box-neuro-detalhes" style="margin-bottom:12px;display:${d.criancaNeuro!=='Não'?'block':'none'};background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0">
-        <div style="font-weight:700;font-size:12px;color:#1e3a5f;margin-bottom:8px">Selecione as condições neurodivergentes aplicáveis:</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:8px;margin-bottom:10px">
-          ${GE_CONDICOES_NEURO.map((cond, ci) => {
-            const checked = (d.criancaNeuroCondicoes || []).includes(cond) ? 'checked' : '';
-            return `
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:#fff;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px">
-              <input type="checkbox" name="ge-cr-neuro-cond" value="${cond}" ${checked} />
-              <span>${cond}</span>
-            </label>`;
-          }).join('')}
-        </div>
-        <div class="field-row cols-2">
-          <div class="field-group">
-            <label class="field-label">Possui Laudo Médico? *</label>
-            <select id="ge-in-cr-laudo">
-              <option value="Não" ${d.criancaPossuiLaudo==='Não'?'selected':''}>Não</option>
-              <option value="Sim" ${d.criancaPossuiLaudo==='Sim'?'selected':''}>Sim (Apresentado ou Declarado)</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <label class="field-label">Outra condição (se houver):</label>
-            <input id="ge-in-cr-neuro-outra" value="${_geEscapeHtml(d.criancaNeuroOutra)}" placeholder="Especificar se houver outra condição" />
-          </div>
-        </div>
-      </div>
-
-      <!-- SEÇÃO 3: DADOS DOS PAIS OU RESPONSÁVEIS -->
-      <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin:16px 0 10px 0;border-radius:0 4px 4px 0;display:flex;align-items:center;gap:8px">
-        <span>👨‍👩‍👧 3. DADOS DOS PAIS OU RESPONSÁVEIS</span>
+        <span>👨‍👩‍👧 2. DADOS DOS PAIS OU RESPONSÁVEIS LEGAIS</span>
       </div>
 
       <div class="field-row cols-3" style="margin-bottom:10px">
@@ -10290,9 +10965,9 @@ function showGrandesEventosModal(idx) {
         <input id="ge-in-resp-ben-outro" value="${_geEscapeHtml(d.respBeneficioOutro)}" placeholder="Especificar outro benefício se houver" style="width:100%" />
       </div>
 
-      <!-- SEÇÃO 4: ENDEREÇO RESIDENCIAL (BUSCA AUTOMÁTICA POR CEP) -->
+      <!-- SEÇÃO 3: ENDEREÇO RESIDENCIAL (BUSCA AUTOMÁTICA POR CEP) -->
       <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin:16px 0 10px 0;border-radius:0 4px 4px 0;display:flex;align-items:center;gap:8px">
-        <span>📍 4. ENDEREÇO RESIDENCIAL (BUSCA AUTOMÁTICA VIA CEP)</span>
+        <span>📍 3. ENDEREÇO RESIDENCIAL DA FAMÍLIA (BUSCA POR CEP)</span>
       </div>
 
       <div class="field-row cols-3" style="margin-bottom:10px">
@@ -10337,6 +11012,23 @@ function showGrandesEventosModal(idx) {
         <input id="ge-end-ref" value="${_geEscapeHtml(d.endPontoRef)}" placeholder="Ex: Próximo ao Colégio Estadual, perto da padaria" />
       </div>
 
+      <!-- SEÇÃO 4: CRIANÇAS / ADOLESCENTES ACOLHIDOS (SUPORTE A MÚLTIPLOS FILHOS) -->
+      <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin:16px 0 10px 0;border-radius:0 4px 4px 0;display:flex;justify-content:space-between;align-items:center">
+        <span>👶 4. CRIANÇAS E ADOLESCENTES ACOLHIDOS (MÚLTIPLOS FILHOS)</span>
+        <button type="button" class="btn btn-primary btn-sm" onclick="_geAdicionarFilhoModal()" style="font-size:11px;padding:3px 10px">
+          ➕ Adicionar Outro Filho
+        </button>
+      </div>
+
+      <!-- CONTAINER DINÂMICO DE FILHOS -->
+      <div id="ge-modal-filhos-container"></div>
+
+      <div style="margin-bottom:14px;text-align:center">
+        <button type="button" class="btn btn-outline" onclick="_geAdicionarFilhoModal()" style="font-weight:700;border-style:dashed">
+          ➕ Adicionar Mais Uma Criança / Filho
+        </button>
+      </div>
+
       <!-- SEÇÃO 5: ATIVIDADE NO CIRCUITO DO EVENTO -->
       <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin:16px 0 10px 0;border-radius:0 4px 4px 0;display:flex;align-items:center;gap:8px">
         <span>🎪 5. ATIVIDADE DURANTE O EVENTO NO CIRCUITO</span>
@@ -10351,7 +11043,7 @@ function showGrandesEventosModal(idx) {
         </div>
         <div class="field-group">
           <label class="field-label">Número do DAM (Licença SEMOP)</label>
-          <input id="ge-in-atv-dam" value="${_geEscapeHtml(d.atvDam)}" placeholder="Ex: DAM-2026-SEMOP-0000" />
+          <input id="ge-in-atv-dam" value="${_geEscapeHtml(d.atvDam)}" placeholder="Ex: DAM-2027-SEMOP-0000" />
         </div>
         <div class="field-group">
           <label class="field-label">Local de Instalação (Ponto no Circuito) *</label>
@@ -10370,14 +11062,14 @@ function showGrandesEventosModal(idx) {
       </div>
 
       <div class="field-group" style="margin-bottom:16px">
-        <label class="field-label">Observações sobre a criança (Medicamentos, alergias, pertences recebidos, etc.):</label>
+        <label class="field-label">Observações sobre as crianças (Medicamentos, alergias, pertences recebidos, etc.):</label>
         <textarea id="ge-in-obs" rows="2" placeholder="Observações de saúde, vestimenta, bolsas, etc.">${_geEscapeHtml(d.obs)}</textarea>
       </div>
 
       <!-- RODAPÉ DE AÇÕES DO MODAL -->
       <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border);padding-top:16px">
         <div>
-          ${editing ? `<button class="btn btn-outline" style="color:#ef4444;border-color:#fecaca" onclick="deleteGrandesEventos(${idx})">Excluir Registro</button>` : ''}
+          ${editing ? `<button class="btn btn-outline" style="color:#ef4444;border-color:#fecaca" onclick="deleteGrandesEventos(${idx})">Excluir Este Registro</button>` : ''}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
@@ -10390,11 +11082,23 @@ function showGrandesEventosModal(idx) {
 
     </div>
   </div>`;
+
+  _geRenderizarFilhosModal();
 }
 
 function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
-  const criancaNome = document.getElementById('ge-in-cr-nome')?.value.trim();
-  if (!criancaNome) { showToast('Informe o nome da criança/adolescente.'); return; }
+  _geSalvarValoresAtuaisFilhosDoDom();
+
+  // Validação dos filhos
+  if (!_geModalFilhos.length) {
+    showToast('Adicione pelo menos uma criança ao acolhimento.');
+    return;
+  }
+  const primeiroFilhoNome = _geModalFilhos[0].nome.trim();
+  if (!primeiroFilhoNome) {
+    showToast('Informe o nome da primeira criança/adolescente.');
+    return;
+  }
 
   const respNome = document.getElementById('ge-in-resp-nome')?.value.trim();
   if (!respNome) { showToast('Informe o nome do responsável.'); return; }
@@ -10402,32 +11106,14 @@ function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
   const operacao = document.getElementById('ge-in-operacao')?.value || 'Carnaval';
   const ano = parseInt(document.getElementById('ge-in-ano')?.value, 10) || new Date().getFullYear();
   const status = document.getElementById('ge-in-status')?.value || 'Acolhido';
+  const conselheiro = document.getElementById('ge-in-conselheiro')?.value.trim() || ((typeof currentUser !== 'undefined' && currentUser?.name) ? currentUser.name : 'Conselheiro Plantonista');
+  const ct = document.getElementById('ge-in-ct')?.value.trim() || ((typeof currentUser !== 'undefined' && (currentUser?.ctFull || currentUser?.ct)) ? (currentUser.ctFull || currentUser.ct) : 'CT Salvador');
+
   const centroNome = document.getElementById('ge-in-centro')?.value || GE_CENTROS_ACOLHIMENTO[0].nome;
   const centroBairro = document.getElementById('ge-centro-bairro')?.value || '';
   const centroCircuito = document.getElementById('ge-centro-circuito')?.value || '';
   const data = document.getElementById('ge-in-data')?.value || new Date().toISOString().slice(0, 10);
   const hora = document.getElementById('ge-in-hora')?.value || new Date().toTimeString().slice(0, 5);
-
-  const criancaNomeSocial = document.getElementById('ge-in-cr-social')?.value.trim() || '';
-  const criancaNasc = document.getElementById('ge-in-cr-nasc')?.value || '';
-  const criancaIdade = document.getElementById('ge-in-cr-idade')?.value || _geCalcularIdade(criancaNasc);
-  const criancaSexo = document.getElementById('ge-in-cr-sexo')?.value || 'Masculino';
-  const criancaCor = document.getElementById('ge-in-cr-cor')?.value || 'Parda';
-  const criancaEstuda = document.getElementById('ge-in-cr-estuda')?.value || 'Não';
-  const criancaEscola = document.getElementById('ge-in-cr-escola')?.value.trim() || '';
-  const criancaSerie = document.getElementById('ge-in-cr-serie')?.value || '';
-  const criancaPcd = document.getElementById('ge-in-cr-pcd')?.value || 'Não';
-  const criancaPcdDesc = document.getElementById('ge-in-cr-pcd-desc')?.value.trim() || '';
-  const criancaLgbtqia = document.getElementById('ge-in-cr-lgbt')?.value || 'Não';
-  const criancaNeuro = document.getElementById('ge-in-cr-neuro')?.value || 'Não';
-
-  // Coleta checkboxes neurodivergência
-  const criancaNeuroCondicoes = [];
-  document.querySelectorAll('input[name="ge-cr-neuro-cond"]:checked').forEach(cb => {
-    criancaNeuroCondicoes.push(cb.value);
-  });
-  const criancaNeuroOutra = document.getElementById('ge-in-cr-neuro-outra')?.value.trim() || '';
-  const criancaPossuiLaudo = document.getElementById('ge-in-cr-laudo')?.value || 'Não';
 
   // Dados do responsável
   const respParentesco = document.getElementById('ge-in-resp-parentesco')?.value || 'Genitora (Mãe)';
@@ -10440,7 +11126,6 @@ function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
   const respMoradia = document.getElementById('ge-in-resp-moradia')?.value || 'Alugada';
   const respBeneficioSocial = document.getElementById('ge-in-resp-ben')?.value || 'Não';
 
-  // Coleta checkboxes benefícios
   const respBeneficiosList = [];
   document.querySelectorAll('input[name="ge-resp-beneficio"]:checked').forEach(cb => {
     respBeneficiosList.push(cb.value);
@@ -10475,35 +11160,27 @@ function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
     item.id = 'ge_' + Date.now();
     item.protocolo = `GE-${ano}/${seq}`;
     item.createdAt = now.toISOString();
-    item.conselheiro = (typeof currentUser !== 'undefined' && currentUser?.name) ? currentUser.name : 'Conselheiro Plantonista';
-    item.ct = (typeof currentUser !== 'undefined' && (currentUser?.ctFull || currentUser?.ct)) ? (currentUser.ctFull || currentUser.ct) : 'CT Salvador';
   }
 
-  // Atualiza propriedades
+  // Preenche dados estruturados
   item.operacao = operacao;
   item.ano = ano;
   item.status = status;
+  item.conselheiro = conselheiro;
+  item.ct = ct;
   item.centroNome = centroNome;
   item.centroBairro = centroBairro;
   item.centroCircuito = centroCircuito;
   item.data = data;
   item.hora = hora;
-  item.criancaNome = criancaNome;
-  item.criancaNomeSocial = criancaNomeSocial;
-  item.criancaNasc = criancaNasc;
-  item.criancaIdade = criancaIdade;
-  item.criancaSexo = criancaSexo;
-  item.criancaCor = criancaCor;
-  item.criancaEstuda = criancaEstuda;
-  item.criancaEscola = criancaEscola;
-  item.criancaSerie = criancaSerie;
-  item.criancaPcd = criancaPcd;
-  item.criancaPcdDesc = criancaPcdDesc;
-  item.criancaLgbtqia = criancaLgbtqia;
-  item.criancaNeuro = criancaNeuro;
-  item.criancaNeuroCondicoes = criancaNeuroCondicoes;
-  item.criancaNeuroOutra = criancaNeuroOutra;
-  item.criancaPossuiLaudo = criancaPossuiLaudo;
+
+  // Filhos
+  item.filhos = JSON.parse(JSON.stringify(_geModalFilhos.filter(f => f.nome.trim())));
+  // Mantém criancaNome no topo para retrocompatibilidade
+  item.criancaNome = item.filhos.map(f => f.nome).join(', ');
+  item.criancaIdade = item.filhos.map(f => f.idade).join(', ');
+
+  // Dados do responsável
   item.respNome = respNome;
   item.respParentesco = respParentesco;
   item.respIdade = respIdade;
@@ -10516,6 +11193,8 @@ function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
   item.respBeneficioSocial = respBeneficioSocial;
   item.respBeneficiosList = respBeneficiosList;
   item.respBeneficioOutro = respBeneficioOutro;
+
+  // Endereço
   item.endCep = endCep;
   item.endLogradouro = endLogradouro;
   item.endNumero = endNumero;
@@ -10523,6 +11202,8 @@ function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
   item.endCidade = endCidade;
   item.endUf = endUf;
   item.endPontoRef = endPontoRef;
+
+  // Atividade
   item.atvTipo = atvTipo;
   item.atvDam = atvDam;
   item.atvPontoCircuito = atvPontoCircuito;
@@ -10539,7 +11220,11 @@ function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
   _saveGrandesEventos();
   closeModal();
   navigate('daily');
-  showToast(editing ? 'Registro atualizado com sucesso!' : 'Acolhimento registrado com sucesso!');
+
+  const msg = editing
+    ? 'Registro atualizado com sucesso!'
+    : `Acolhimento da edição ${ano} salvo com sucesso! Registros de anos anteriores permanecem preservados.`;
+  showToast(msg);
 
   if (emitirGuiaAposSalvar) {
     setTimeout(() => {
@@ -10550,12 +11235,133 @@ function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
 
 function deleteGrandesEventos(idx) {
   const dados = _loadGrandesEventos();
-  if (!confirm('Deseja realmente excluir este registro de acolhimento?')) return;
+  const d = dados[idx];
+  const anoStr = d?.ano ? ` (Edição ${d.ano})` : '';
+  if (!confirm(`Deseja realmente excluir este registro de acolhimento${anoStr}? Registros de outros anos não serão afetados.`)) return;
   dados.splice(idx, 1);
   _saveGrandesEventos();
   closeModal();
   navigate('daily');
-  showToast('Registro excluído com sucesso.');
+  showToast('Registro excluído.');
+}
+
+// ── MODAL DE HISTÓRICO FAMILIAR COMPLETO (TODAS AS EDIÇÕES / ANOS) ──
+function showHistoricoFamiliarModal(cpfOuNome) {
+  const historico = _geBuscarRegistrosDaFamilia(cpfOuNome, cpfOuNome);
+  if (!historico.length) {
+    showToast('Nenhum registro localizado para esta família.');
+    return;
+  }
+
+  const rep = historico[0];
+  const cpfFormatado = rep.respCpf || 'Não informado';
+
+  document.getElementById('modal-root').innerHTML = `
+  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box" style="max-width:820px;width:95vw;max-height:90vh;overflow-y:auto;padding:24px">
+      
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px">
+        <div>
+          <span style="background:#0284c7;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">HISTÓRICO FAMILIAR MULTI-ANO</span>
+          <h3 style="margin:4px 0 2px 0;font-size:18px;color:#0f2d59">${_geEscapeHtml(rep.respNome)}</h3>
+          <div style="font-size:12px;color:var(--text-muted)">
+            CPF: <strong>${cpfFormatado}</strong> · Parentesco: ${rep.respParentesco || 'Responsável'} · Contato: <strong>${rep.respTel1 || '--'}</strong>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="closeModal()" style="border:none;font-size:16px">✕</button>
+      </div>
+
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#0369a1">
+        📌 <strong>Esta família possui ${historico.length} registro(s) no Programa Salvador Acolhe.</strong>
+        Cada edição mantém intactos o conselheiro plantonista responsável, os filhos acolhidos naquele ano e o posto de acolhimento.
+      </div>
+
+      <div style="display:grid;gap:14px;margin-bottom:20px">
+        ${historico.map((h, hi) => {
+          const fList = _geGetFilhos(h);
+          const isCarnaval = h.operacao === 'Carnaval';
+          const opBadgeBg = isCarnaval ? '#fef3c7' : '#ede9fe';
+          const opBadgeColor = isCarnaval ? '#92400e' : '#5b21b6';
+          const opIcon = isCarnaval ? '🎭' : '🎆';
+          const origIdx = _loadGrandesEventos().indexOf(h);
+
+          return `
+          <div style="background:#fff;border:2px solid #e2e8f0;border-left:6px solid ${isCarnaval?'#f59e0b':'#8b5cf6'};border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+            
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;border-bottom:1px solid #f1f5f9;padding-bottom:10px;margin-bottom:10px">
+              <div>
+                <span style="background:${opBadgeBg};color:${opBadgeColor};font-size:11px;font-weight:800;padding:3px 8px;border-radius:12px">
+                  ${opIcon} ${h.operacao} ${h.ano || 2026}
+                </span>
+                <span style="font-family:monospace;font-weight:700;font-size:12px;color:var(--primary);margin-left:6px">
+                  Protocolo: ${h.protocolo}
+                </span>
+                <span style="font-size:11.5px;color:var(--text-muted);margin-left:8px">
+                  Data: ${h.data ? h.data.split('-').reverse().join('/') : '--'} às ${h.hora || '--:--'}
+                </span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-outline btn-sm" onclick="imprimirGuiaAcolhimento(${origIdx})">
+                  📄 Emitir Guia ${h.ano || 2026}
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="closeModal();showGrandesEventosModal(${origIdx})">
+                  ✏️ Editar
+                </button>
+              </div>
+            </div>
+
+            <!-- DETALHES DESTE ATENDIMENTO -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:10px;font-size:12px;margin-bottom:10px">
+              <div>
+                <span style="color:var(--text-muted)">Conselheiro(a) Plantonista:</span>
+                <div style="font-weight:700;color:#0f2d59">👤 ${_geEscapeHtml(h.conselheiro || 'Conselheiro Plantonista')}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${_geEscapeHtml(h.ct || '')}</div>
+              </div>
+              <div>
+                <span style="color:var(--text-muted)">Posto Salvador Acolhe:</span>
+                <div style="font-weight:700;color:#0f2d59">🏫 ${_geEscapeHtml(h.centroNome)}</div>
+                <div style="font-size:11px;color:#059669;font-weight:600">${_geEscapeHtml(h.centroCircuito || '')} (${_geEscapeHtml(h.centroBairro || '')})</div>
+              </div>
+              <div>
+                <span style="color:var(--text-muted)">Atividade no Circuito:</span>
+                <div style="font-weight:700;color:#d97706">${_geEscapeHtml(h.atvTipo || 'Ambulante')} ${h.atvDam ? `(DAM: ${h.atvDam})` : ''}</div>
+                <div style="font-size:11px;color:var(--text-muted)">Ponto: ${_geEscapeHtml(h.atvPontoCircuito || '--')}</div>
+              </div>
+            </div>
+
+            <!-- FILHOS ACOLHIDOS NESTA EDIÇÃO -->
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px">
+              <div style="font-weight:700;font-size:11.5px;color:#1e3a5f;margin-bottom:6px">
+                👶 Filhos Acolhidos Nesta Edição (${fList.length} ${fList.length===1?'filho':'filhos'}):
+              </div>
+              <div style="display:grid;gap:6px">
+                ${fList.map((fil, fi) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:4px;padding:5px 8px;font-size:11.5px">
+                  <div>
+                    <strong>${fi+1}. ${_geEscapeHtml(fil.nome)}</strong>
+                    <span style="color:var(--text-muted)"> · ${fil.idade || '--'} · Sexo: ${fil.sexo || '--'} · Cor: ${fil.cor || '--'}</span>
+                  </div>
+                  <div>
+                    ${fil.pcd==='Sim'?`<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:4px">PCD</span>`:''}
+                    ${fil.neuro==='Sim'?`<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">Neuro</span>`:''}
+                  </div>
+                </div>`).join('')}
+              </div>
+            </div>
+
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:14px">
+        <button class="btn btn-primary" type="button" onclick="closeModal();_geIniciarNovoAcolhimentoAPartirDe('${rep.id}')">
+          ➕ Iniciar Novo Acolhimento para esta Família (Novo Ano)
+        </button>
+        <button class="btn btn-outline" onclick="closeModal()">Fechar</button>
+      </div>
+
+    </div>
+  </div>`;
 }
 
 // ── GUIA OFICIAL DE ACOLHIMENTO INSTITUCIONAL (SALVADOR ACOLHE) ──
@@ -10565,8 +11371,11 @@ function imprimirGuiaAcolhimento(idx) {
   if (!d) { showToast('Registro não encontrado.'); return; }
 
   const dataExtenso = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
-  const ctNome = ((typeof currentUser !== 'undefined' && (currentUser?.ctFull || currentUser?.ct)) || 'CONSELHO TUTELAR DE SALVADOR').toUpperCase();
-  const conselheiroNome = (typeof currentUser !== 'undefined' && currentUser?.name) || d.conselheiro || 'Conselheiro(a) Tutelar Plantonista';
+  const ctNome = (d.ct || (typeof currentUser !== 'undefined' && (currentUser?.ctFull || currentUser?.ct)) || 'CONSELHO TUTELAR DE SALVADOR').toUpperCase();
+  const conselheiroNome = d.conselheiro || (typeof currentUser !== 'undefined' && currentUser?.name) || 'Conselheiro(a) Tutelar Plantonista';
+
+  const filhos = _geGetFilhos(d);
+  const totalFilhos = filhos.length;
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -10574,10 +11383,10 @@ function imprimirGuiaAcolhimento(idx) {
   <meta charset="UTF-8">
   <title>Guia de Acolhimento - ${d.protocolo} - Salvador Acolhe</title>
   <style>
-    @page { size: A4 portrait; margin: 15mm 15mm 15mm 15mm; }
+    @page { size: A4 portrait; margin: 12mm 15mm 12mm 15mm; }
     body {
       font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-      font-size: 11pt;
+      font-size: 10pt;
       line-height: 1.35;
       color: #111;
       margin: 0;
@@ -10588,18 +11397,18 @@ function imprimirGuiaAcolhimento(idx) {
     .header {
       text-align: center;
       border-bottom: 2px solid #1e3a5f;
-      padding-bottom: 10px;
-      margin-bottom: 12px;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
     }
     .header h1 {
-      font-size: 12pt;
+      font-size: 11.5pt;
       font-weight: bold;
       text-transform: uppercase;
       margin: 2px 0;
       color: #0f2d59;
     }
     .header h2 {
-      font-size: 10pt;
+      font-size: 9.5pt;
       font-weight: normal;
       margin: 1px 0;
       color: #333;
@@ -10608,86 +11417,85 @@ function imprimirGuiaAcolhimento(idx) {
       background: #eef4fb;
       border: 1px solid #1e3a5f;
       border-radius: 4px;
-      padding: 8px 12px;
+      padding: 6px 12px;
       text-align: center;
-      margin: 10px 0 14px 0;
+      margin: 8px 0 10px 0;
     }
     .doc-title {
-      font-size: 13pt;
+      font-size: 12pt;
       font-weight: bold;
       color: #0f2d59;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .doc-sub {
-      font-size: 9.5pt;
+      font-size: 9pt;
       color: #334155;
-      margin-top: 3px;
+      margin-top: 2px;
       font-weight: 600;
     }
     .section-band {
       background: #cfe2f7;
       border-left: 5px solid #1e3a5f;
       color: #0f2d59;
-      padding: 5px 10px;
+      padding: 4px 10px;
       font-weight: bold;
-      font-size: 9.5pt;
+      font-size: 9pt;
       letter-spacing: 0.5px;
-      margin: 10px 0 6px 0;
+      margin: 8px 0 5px 0;
       text-transform: uppercase;
     }
     table.data-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 8px;
-      font-size: 9.5pt;
+      margin-bottom: 6px;
+      font-size: 9pt;
     }
     table.data-table td, table.data-table th {
       border: 1px solid #cbd5e1;
-      padding: 5px 8px;
+      padding: 4px 6px;
       vertical-align: top;
     }
     table.data-table th {
       background: #f8fafc;
       font-weight: bold;
-      width: 28%;
       color: #1e293b;
     }
     .legal-text {
-      font-size: 9pt;
+      font-size: 8.5pt;
       text-align: justify;
       background: #fafafa;
       border: 1px solid #e2e8f0;
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 4px;
-      margin: 10px 0;
-      line-height: 1.4;
+      margin: 8px 0;
+      line-height: 1.35;
     }
     .signatures {
-      margin-top: 24px;
+      margin-top: 18px;
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 15px;
+      gap: 12px;
       page-break-inside: avoid;
     }
     .sig-box {
       text-align: center;
-      font-size: 8.5pt;
+      font-size: 8pt;
     }
     .sig-line {
       border-top: 1px solid #000;
-      margin-top: 36px;
+      margin-top: 30px;
       padding-top: 4px;
       font-weight: bold;
     }
     .no-print-bar {
       background: #1e3a5f;
       color: #fff;
-      padding: 10px 16px;
+      padding: 8px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       border-radius: 6px;
     }
     @media print {
@@ -10700,7 +11508,7 @@ function imprimirGuiaAcolhimento(idx) {
 
   <div class="no-print-bar">
     <div>
-      <strong>Guia de Acolhimento Provisório · Salvador Acolhe</strong> | Protocolo: ${d.protocolo}
+      <strong>Guia de Acolhimento Provisório · Salvador Acolhe</strong> | Protocolo: ${d.protocolo} | Edição: ${d.ano || 2026}
     </div>
     <div>
       <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:6px 16px;font-weight:bold;border-radius:4px;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
@@ -10712,62 +11520,64 @@ function imprimirGuiaAcolhimento(idx) {
     <h1>Prefeitura Municipal de Salvador</h1>
     <h2>Secretaria Municipal de Políticas para Mulheres, Infância e Juventude – SPMJ</h2>
     <h2>Secretaria Municipal de Promoção Social, Combate à Pobreza, Esportes e Lazer – SEMPRE</h2>
-    <h1 style="font-size:11pt;margin-top:4px">${ctNome}</h1>
+    <h1 style="font-size:10.5pt;margin-top:3px">${ctNome}</h1>
   </div>
 
   <div class="doc-title-box">
     <div class="doc-title">GUIA OFICIAL DE ACOLHIMENTO INSTITUCIONAL PROVISÓRIO</div>
     <div class="doc-sub">PROGRAMA SALVADOR ACOLHE · OPERAÇÃO ${(d.operacao || 'CARNAVAL').toUpperCase()} ${d.ano || '2026'}</div>
-    <div style="font-size:9pt;color:#1e3a5f;margin-top:2px">
-      <strong>Protocolo da Guia: ${d.protocolo}</strong> &nbsp;·&nbsp; Data de Emissão: ${dataExtenso} às ${d.hora || '--:--'}
+    <div style="font-size:8.5pt;color:#1e3a5f;margin-top:2px">
+      <strong>Protocolo da Guia: ${d.protocolo}</strong> &nbsp;·&nbsp; Emissão: ${dataExtenso} às ${d.hora || '--:--'} &nbsp;·&nbsp;
+      Conselheiro(a) Plantonista: <strong>${conselheiroNome}</strong>
     </div>
   </div>
 
   <div class="legal-text">
-    <strong>FUNDAMENTAÇÃO LEGAL:</strong> O presente encaminhamento é expedido pelo Conselho Tutelar no exercício de suas atribuições legais, com fundamento no <strong>Art. 98, inciso II</strong> e <strong>Art. 101, inciso VII</strong> da Lei Federal nº 8.069/1990 (Estatuto da Criança e do Adolescente - ECA), em consonância com o Plano Operativo Integrado de Proteção à Criança e ao Adolescente em Grandes Eventos do Município de Salvador, para acolhimento preventivo durante a jornada laboral do responsável no circuito oficial do evento.
+    <strong>FUNDAMENTAÇÃO LEGAL:</strong> O presente encaminhamento é expedido pelo Conselho Tutelar no exercício de suas atribuições legais, com fundamento no <strong>Art. 98, inciso II</strong> e <strong>Art. 101, inciso VII</strong> da Lei Federal nº 8.069/1990 (Estatuto da Criança e do Adolescente - ECA), em consonância com o Plano Integrado de Proteção à Criança e ao Adolescente em Grandes Eventos do Município de Salvador, para acolhimento preventivo durante a jornada laboral do responsável no circuito do evento.
   </div>
 
-  <!-- SEÇÃO 1: DADOS DA CRIANÇA / ADOLESCENTE -->
-  <div class="section-band">1. DADOS DA CRIANÇA OU ADOLESCENTE ACOLHIDA</div>
+  <!-- SEÇÃO 1: CRIANÇAS ACOLHIDAS (SUPORTE MULTI-FILHOS) -->
+  <div class="section-band">1. CRIANÇA(S) / ADOLESCENTE(S) ACOLHIDO(S) NESTA OPERAÇÃO (TOTAL: ${totalFilhos} FILHO${totalFilhos>1?'S':''})</div>
   <table class="data-table">
-    <tr>
-      <th>Nome Completo Civil:</th>
-      <td colspan="3"><strong>${_geEscapeHtml(d.criancaNome)}</strong> ${d.criancaNomeSocial ? ` (Nome Social: <em>${_geEscapeHtml(d.criancaNomeSocial)}</em>)` : ''}</td>
-    </tr>
-    <tr>
-      <th>Data de Nascimento:</th>
-      <td>${d.criancaNasc ? d.criancaNasc.split('-').reverse().join('/') : '--'}</td>
-      <th style="width:20%">Idade Atual:</th>
-      <td><strong>${d.criancaIdade || '--'}</strong></td>
-    </tr>
-    <tr>
-      <th>Sexo:</th>
-      <td>${d.criancaSexo || '--'}</td>
-      <th>Cor / Raça:</th>
-      <td>${d.criancaCor || '--'}</td>
-    </tr>
-    <tr>
-      <th>Frequência Escolar:</th>
-      <td>${d.criancaEstuda === 'Sim' ? 'Sim · Frequenta escola' : 'Não frequenta no momento'}</td>
-      <th>Escola / Série:</th>
-      <td>${d.criancaEstuda === 'Sim' ? `${_geEscapeHtml(d.criancaEscola || '--')} - ${d.criancaSerie || '--'}` : '--'}</td>
-    </tr>
-    <tr>
-      <th>Pessoa com Deficiência (PCD):</th>
-      <td>${d.criancaPcd === 'Sim' ? `Sim (${_geEscapeHtml(d.criancaPcdDesc) || 'Especificada'})` : 'Não'}</td>
-      <th>Neurodivergência:</th>
-      <td>
-        ${d.criancaNeuro !== 'Não' ? `${d.criancaNeuro}: ${(d.criancaNeuroCondicoes || []).join(', ') || 'Condição declarada'}` : 'Não'}
-        ${d.criancaPossuiLaudo === 'Sim' ? ' · <em>Possui Laudo</em>' : ''}
-      </td>
-    </tr>
+    <thead>
+      <tr style="background:#f1f5f9">
+        <th style="width:5%;text-align:center">Nº</th>
+        <th style="width:35%">Nome Completo Civil / Nome Social</th>
+        <th style="width:18%">Nascimento / Idade</th>
+        <th style="width:18%">Sexo / Cor</th>
+        <th style="width:24%">Escola / PCD / Neurodivergência</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filhos.map((f, i) => `
+      <tr>
+        <td style="text-align:center;font-weight:bold">${i+1}</td>
+        <td>
+          <strong>${_geEscapeHtml(f.nome)}</strong>
+          ${f.nomeSocial ? `<br><span style="font-size:8pt;color:#555">Nome Social: <em>${_geEscapeHtml(f.nomeSocial)}</em></span>` : ''}
+        </td>
+        <td>
+          ${f.nasc ? f.nasc.split('-').reverse().join('/') : '--'}<br>
+          <strong>${f.idade || '--'}</strong>
+        </td>
+        <td>
+          ${f.sexo || '--'}<br>
+          Cor: ${f.cor || '--'}
+        </td>
+        <td style="font-size:8.5pt">
+          ${f.estuda === 'Sim' ? `Escola: ${_geEscapeHtml(f.escola || '--')} (${f.serie || '--'})<br>` : 'Não frequenta escola<br>'}
+          ${f.pcd === 'Sim' ? `<span style="color:#b45309;font-weight:bold">PCD: ${_geEscapeHtml(f.pcdDesc || 'Sim')}</span><br>` : ''}
+          ${f.neuro !== 'Não' ? `<span style="color:#b91c1c;font-weight:bold">Neuro: ${(f.neuroCondicoes||[]).join(', ')||f.neuro}</span> ${f.possuiLaudo==='Sim'?'(Possui Laudo)':''}` : 'Sem laudo/neuro'}
+        </td>
+      </tr>`).join('')}
+    </tbody>
   </table>
 
   <!-- SEÇÃO 2: DADOS DO RESPONSÁVEL -->
   <div class="section-band">2. DADOS DO(A) GENITOR(A) OU RESPONSÁVEL LEGAL</div>
   <table class="data-table">
     <tr>
-      <th>Nome do Responsável:</th>
+      <th style="width:25%">Nome do Responsável:</th>
       <td colspan="3"><strong>${_geEscapeHtml(d.respNome)}</strong> (${d.respParentesco || 'Responsável Legal'})</td>
     </tr>
     <tr>
@@ -10789,7 +11599,7 @@ function imprimirGuiaAcolhimento(idx) {
       <th>Endereço Residencial:</th>
       <td colspan="3">
         ${_geEscapeHtml(d.endLogradouro || '')}, ${_geEscapeHtml(d.endNumero || 'S/N')} - ${_geEscapeHtml(d.endBairro || '')}, ${_geEscapeHtml(d.endCidade || 'Salvador')}/${d.endUf || 'BA'} - CEP: ${d.endCep || '--'}
-        ${d.endPontoRef ? `<br><span style="font-size:8.5pt;color:#555">Ref: ${_geEscapeHtml(d.endPontoRef)}</span>` : ''}
+        ${d.endPontoRef ? `<br><span style="font-size:8pt;color:#555">Ref: ${_geEscapeHtml(d.endPontoRef)}</span>` : ''}
       </td>
     </tr>
     <tr>
@@ -10804,7 +11614,7 @@ function imprimirGuiaAcolhimento(idx) {
   <div class="section-band">3. ATIVIDADE LABORAL NO CIRCUITO & LOCAL DE TRABALHO</div>
   <table class="data-table">
     <tr>
-      <th>Atividade Exercida:</th>
+      <th style="width:25%">Atividade Exercida:</th>
       <td><strong>${d.atvTipo || 'Atividade declarada'}</strong> ${d.atvOutro ? `(${_geEscapeHtml(d.atvOutro)})` : ''}</td>
       <th style="width:20%">Nº do DAM / Licença:</th>
       <td><strong>${d.atvDam || 'Em cadastramento / Isento'}</strong></td>
@@ -10819,8 +11629,8 @@ function imprimirGuiaAcolhimento(idx) {
   <div class="section-band">4. POSTO DE ACOLHIMENTO INSTITUCIONAL DESIGNADO (SALVADOR ACOLHE)</div>
   <table class="data-table">
     <tr>
-      <th>Unidade Escolar de Acolhimento:</th>
-      <td colspan="3"><strong style="font-size:10.5pt;color:#0f2d59">${_geEscapeHtml(d.centroNome)}</strong></td>
+      <th style="width:25%">Unidade Escolar:</th>
+      <td colspan="3"><strong style="font-size:10pt;color:#0f2d59">${_geEscapeHtml(d.centroNome)}</strong></td>
     </tr>
     <tr>
       <th>Bairro da Unidade:</th>
@@ -10829,7 +11639,7 @@ function imprimirGuiaAcolhimento(idx) {
       <td><strong>${_geEscapeHtml(d.centroCircuito || '')}</strong></td>
     </tr>
     <tr>
-      <th>Data e Horário de Admissão:</th>
+      <th>Admissão / Horário:</th>
       <td>${d.data ? d.data.split('-').reverse().join('/') : '--'} às ${d.hora || '--:--'}</td>
       <th>Status:</th>
       <td>${d.status || 'Acolhido'}</td>
@@ -10837,13 +11647,13 @@ function imprimirGuiaAcolhimento(idx) {
     ${d.obs ? `
     <tr>
       <th>Observações / Pertences:</th>
-      <td colspan="3" style="font-size:8.5pt">${_geEscapeHtml(d.obs)}</td>
+      <td colspan="3" style="font-size:8pt">${_geEscapeHtml(d.obs)}</td>
     </tr>` : ''}
   </table>
 
   <!-- TERMO DE COMPROMISSO DO RESPONSÁVEL -->
-  <div style="font-size:8.5pt;border:1px dashed #64748b;padding:6px 10px;border-radius:4px;margin-top:10px;background:#f8fafc">
-    <strong>TERMO DE CIÊNCIA E COMPROMISSO DO RESPONSÁVEL:</strong> Declaro sob as penas da lei que sou genitor(a)/responsável legal da criança/adolescente acima identificada e autorizo seu acolhimento preventivo no Programa Salvador Acolhe durante a realização de minhas atividades no circuito. Comprometo-me formalmente a <strong>comparecer pessoalmente ao posto para a retirada da criança</strong> ao término da minha jornada diária, mediante apresentação deste documento e de documento de identidade com foto.
+  <div style="font-size:8pt;border:1px dashed #64748b;padding:5px 8px;border-radius:4px;margin-top:6px;background:#f8fafc">
+    <strong>TERMO DE CIÊNCIA E COMPROMISSO DO RESPONSÁVEL:</strong> Declaro sob as penas da lei que sou genitor(a)/responsável legal pelas crianças/adolescentes acima identificadas e autorizo seu acolhimento preventivo no Programa Salvador Acolhe durante a realização de minhas atividades no circuito. Comprometo-me formalmente a <strong>comparecer pessoalmente ao posto para a retirada das crianças</strong> ao término da minha jornada diária, mediante apresentação deste documento e de documento de identidade com foto.
   </div>
 
   <!-- ASSINATURAS -->
@@ -10865,8 +11675,8 @@ function imprimirGuiaAcolhimento(idx) {
     </div>
   </div>
 
-  <div style="margin-top:20px;font-size:7.5pt;color:#64748b;text-align:center;border-top:1px solid #e2e8f0;padding-top:6px">
-    Conecta-CT · Módulo Grandes Eventos (Carnaval & Réveillon) · Sistema de Gestão do Conselho Tutelar de Salvador · Documento emitido eletronicamente em ${dataExtenso}.
+  <div style="margin-top:14px;font-size:7pt;color:#64748b;text-align:center;border-top:1px solid #e2e8f0;padding-top:4px">
+    Conecta-CT · Módulo Grandes Eventos (${d.operacao || 'Carnaval'} ${d.ano || 2026}) · Sistema de Gestão do Conselho Tutelar de Salvador · Documento emitido eletronicamente em ${dataExtenso}.
   </div>
 
   <script>window.onload = function() { setTimeout(function() { window.focus(); }, 200); };<\/script>
