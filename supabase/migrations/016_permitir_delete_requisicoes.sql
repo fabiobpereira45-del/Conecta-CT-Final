@@ -6,3 +6,4 @@ create policy "anon delete requisicoes"
 
 create policy "anon delete mensagens"
   on requisicao_mensagens for delete to anon, authenticated using (true);
+

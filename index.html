@@ -46,7 +46,7 @@ textarea{min-height:80px;resize:vertical}
 #f03c-obs-enc{min-height:75px}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
 /* Caixinhas de marcação têm tamanho natural; a regra geral de campos (width:100%) não pode esticá-las */
-input[type="checkbox"],input[type="radio"]{width:auto;padding:0;margin:0 6px 0 0;border:none;box-shadow:none;flex-shrink:0;accent-color:var(--primary)}
+input[type="checkbox"],input[type="radio"]{width:auto;padding:0;margin:0 0 0 6px;border:none;box-shadow:none;flex-shrink:0;accent-color:var(--primary)}
 label:has(> input[type="checkbox"]){display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 a{color:var(--accent);text-decoration:none}
 
@@ -76,7 +76,7 @@ a{color:var(--accent);text-decoration:none}
 .auth-footer{text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted)}
 .auth-footer a{color:var(--primary);font-weight:500;cursor:pointer}
 .commission-list{border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
-.commission-item{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s}
+.commission-item{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s}
 .commission-item:hover{background:var(--sidebar-hover)}
 .commission-item input{width:auto;padding:0;border:none;box-shadow:none;background:transparent}
 .admin-code-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--primary);cursor:pointer;margin-top:12px}
@@ -582,11 +582,11 @@ tr:hover td{background:var(--sidebar-hover)}
       <div class="field-group">
         <label class="field-label">Comissões <span style="font-weight:400;text-transform:none">(opcional)</span></label>
         <div class="commission-list">
-          <label class="commission-item"><input type="checkbox"> Comissão de Ética</label>
-          <label class="commission-item"><input type="checkbox"> Comissão de Administração e Planejamento</label>
-          <label class="commission-item"><input type="checkbox"> Comissão de Políticas Públicas</label>
-          <label class="commission-item"><input type="checkbox"> Comissão de Estudo de Casos</label>
-          <label class="commission-item"><input type="checkbox"> Comissão de Articulação e Divulgação</label>
+          <label class="commission-item"><span>Comissão de Ética</span> <input type="checkbox"></label>
+          <label class="commission-item"><span>Comissão de Administração e Planejamento</span> <input type="checkbox"></label>
+          <label class="commission-item"><span>Comissão de Políticas Públicas</span> <input type="checkbox"></label>
+          <label class="commission-item"><span>Comissão de Estudo de Casos</span> <input type="checkbox"></label>
+          <label class="commission-item"><span>Comissão de Articulação e Divulgação</span> <input type="checkbox"></label>
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Selecione as comissões que você pertence (opcional)</div>
       </div>
@@ -933,7 +933,7 @@ function _paraWord(el) {
   })
 
   // Opções (caixas) em sequência, separadas
-  c.querySelectorAll('.f03-opcao, .f03-check').forEach(l => { if (l.textContent.trim().startsWith('☐')) l.remove() })
+  c.querySelectorAll('.f03-opcao, .f03-check').forEach(l => { if (l.textContent.includes('☐')) l.remove() })
   c.querySelectorAll('.f03-opcao').forEach(l => { l.removeAttribute('style'); l.insertAdjacentHTML('afterend', '&nbsp;&nbsp;&nbsp; ') })
   // Blocos em grade/flex → sem layout de tela
   c.querySelectorAll('[style*="display:grid"], [style*="display:flex"]').forEach(d => {
@@ -2797,7 +2797,7 @@ async function _statsCarregar() {
 // A mesma lista alimenta a tela e o PDF, então ambos mostram exatamente as mesmas seções.
 const F03_ESTAT_SECOES = [
   { id:'atendimento', titulo:'Tipo de Atendimento', v: (a,c) => [a['f03a-atend-primeiro'] && '1º Atendimento', a['f03a-atend-retorno'] && 'Retorno'] },
-  { id:'irmaos', titulo:'Irmãos Atendidos Junto', v: (a,c) => [a['f03a-tem-irmaos-sim'] && 'Com irmãos', a['f03a-tem-irmaos-nao'] && 'Sem irmãos'] },
+  { id:'irmaos', titulo:'Irmãos Atendidos Junto', v: (a,c) => [a['f03a-tem-irmaos-sim'] ? 'Com irmãos' : 'Sem irmãos'] },
   { id:'bairro', titulo:'Atendimentos por Bairro', v: (a,c) => [(a['f03a-crianca-bairro']||'').trim()] },
   { id:'sexo', titulo:'Sexo', v: (a,c) => [a['f03a-sexo-masc'] && 'Masculino', a['f03a-sexo-fem'] && 'Feminino'] },
   { id:'faixa', titulo:'Faixa Etária', v: (a,c) => {
@@ -2808,11 +2808,11 @@ const F03_ESTAT_SECOES = [
   { id:'genero', titulo:'Gênero / Diversidade', v: (a,c) => [a['f03a-lgbt'] && 'LGBTQIAPN+'] },
   { id:'raca', titulo:'Raça/Cor', v: (a,c) => [['preta','Preta'],['branca','Branca'],['indigena','Indígena'],['parda','Parda'],['amarela','Amarela']].filter(([k])=>a['f03a-raca-'+k]).map(([,l])=>l) },
   { id:'serie', titulo:'Série / Ano Escolar', v: (a,c) => [a['f03a-serie']] },
-  { id:'matriculado', titulo:'Situação Escolar (Matriculado)', v: (a,c) => [a['f03a-estuda-sim'] && 'Sim', a['f03a-estuda-nao'] && 'Não'] },
-  { id:'pcd', titulo:'Pessoa com Deficiência (PCD)', v: (a,c) => [a['f03a-pcd-sim'] && 'Sim', a['f03a-pcd-nao'] && 'Não'] },
-  { id:'neuro', titulo:'Neurodivergência', v: (a,c) => [a['f03a-neuro-sim'] && 'Sim', a['f03a-neuro-nao'] && 'Não', a['f03a-neuro-investigacao'] && 'Em investigação'] },
+  { id:'matriculado', titulo:'Situação Escolar (Matriculado)', v: (a,c) => [a['f03a-estuda-sim'] ? 'Sim' : 'Não'] },
+  { id:'pcd', titulo:'Pessoa com Deficiência (PCD)', v: (a,c) => [a['f03a-pcd-sim'] ? 'Sim' : 'Não'] },
+  { id:'neuro', titulo:'Neurodivergência', v: (a,c) => [a['f03a-neuro-sim'] ? 'Sim' : (a['f03a-neuro-investigacao'] ? 'Em investigação' : 'Não')] },
   { id:'neuroCond', titulo:'Condição Neurodivergente', v: (a,c) => F03_NEURO.filter((n,i)=>a['f03a-neuro-'+i]) },
-  { id:'laudo', titulo:'Possui Laudo', v: (a,c) => [a['f03a-laudo-sim'] && 'Sim', a['f03a-laudo-nao'] && 'Não'] },
+  { id:'laudo', titulo:'Possui Laudo', v: (a,c) => [a['f03a-laudo-sim'] ? 'Sim' : 'Não'] },
   { id:'porta', titulo:'Porta de Entrada', v: (a,c) => F03_PORTA_ENTRADA.filter((p,i)=>c['f03c-porta-'+i]) },
   { id:'ident', titulo:'Identificação de Ocorrência', v: (a,c) => [c['f03c-ident-ocorrencia']] },
   { id:'agente', titulo:'Agente Violador', v: (a,c) => [c['f03c-agente-violador']] },
@@ -4264,8 +4264,8 @@ function renderFormFill(id) {
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
           ${['Negligência','Abandono','Violência Física','Violência Psicológica','Violência Sexual','Trabalho Infantil','Exploração Sexual','Evasão Escolar','Uso de Drogas','Conflito Familiar','Violência Doméstica','Outro'].map(v=>`
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
-            <input type="checkbox" name="violacao" value="${v}" style="accent-color:var(--primary)" /> ${v}
+          <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+            <span>${v}</span> <input type="checkbox" name="violacao" value="${v}" style="accent-color:var(--primary)" />
           </label>`).join('')}
         </div>
         <div><label class="field-label">Descrição da Situação</label>
@@ -4285,8 +4285,8 @@ function renderFormFill(id) {
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔀 Encaminhamentos</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:10px">
           ${['CRAS','CREAS','CAPS','UBS / Posto de Saúde','Hospital','Escola','Delegacia','MP / Promotoria','Vara da Infância e Juventude','Acolhimento Institucional','SGAS','Casa Abrigo','Outro'].map(e=>`
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
-            <input type="checkbox" name="encaminhamento" value="${e}" style="accent-color:var(--primary)" /> ${e}
+          <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;cursor:pointer;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+            <span>${e}</span> <input type="checkbox" name="encaminhamento" value="${e}" style="accent-color:var(--primary)" />
           </label>`).join('')}
         </div>
         <div><label class="field-label">Observações de Encaminhamento</label>
@@ -4444,9 +4444,9 @@ function renderForm12(form) {
     <input ${_INL_W('300px')} placeholder="(continuação do endereço)">, nesta Capital, para comparecer em <input ${_INL_W('130px')} placeholder="____________">, às <input ${_INL_W('80px')} placeholder="____________">, neste Conselho Tutelar.</p>
     <p>Para tanto deve comparecer acompanhado de:</p>
     <p>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Pais ou responsável legal.</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Documento de identificação pessoal (RG ou outro documento oficial).</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Atestado ou declaração de escolaridade.</label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Pais ou responsável legal. <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Documento de identificação pessoal (RG ou outro documento oficial). <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Atestado ou declaração de escolaridade. <input type="checkbox" style="width:auto"></label>
     </p>
     <p style="text-align:right;margin-top:24px">Salvador, <input ${_INL_W('30px')} placeholder="___"> de <input ${_INL_W('120px')} placeholder="______________"> de 20<input ${_INL_W('30px')} placeholder="___">.</p>
     ${_SIG}
@@ -4530,8 +4530,8 @@ function renderForm18(form) {
     <p>Ao Centro de Atenção Psicossocial – CAPS<br>
     Ilmo.(a) <input ${_INL_W('220px')} placeholder="________________________________"><br>
     Coordenador(a) do
-    <label style="display:inline"><input type="checkbox"> CAPS IA</label>
-    <label style="display:inline"><input type="checkbox"> CAPS AD</label>
+    <label style="display:inline-flex;align-items:center;gap:6px">CAPS IA <input type="checkbox" style="width:auto"></label> &nbsp;
+    <label style="display:inline-flex;align-items:center;gap:6px">CAPS AD <input type="checkbox" style="width:auto"></label>
     </p>
     <p>O Conselho Tutelar da Criança e do Adolescente do Município de Salvador, no uso de suas atribuições legais, conforme o Art. 136 da Lei Federal 8.069 - Estatuto da Criança e do Adolescente, por meio do(da) conselheiro(a) que abaixo subscreve, vem REQUISITAR o acompanhamento do(a) Sr.(Sra.): <input ${_INL_W('200px')} placeholder="__"><br>
     <input ${_INL_W('100%')} placeholder="Nome completo do(a) paciente"><br>
@@ -4540,12 +4540,12 @@ function renderForm18(form) {
     portador(a) do CPF nº <input ${_INL_W('110px')} placeholder="_________________"> Contato: <input ${_INL_W('100px')} placeholder="_________________">.</p>
     <p><strong>Motivo da Requisição</strong></p>
     <p>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Comportamento de risco e/ou prática de automutilação.</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Transtornos mentais diagnosticados ou em investigação.</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Neurodivergência diagnosticada ou em investigação.</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Uso abusivo de substâncias psicoativas.</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Ideação suicida.</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Outras situações: <input ${_INL_W('280px')} placeholder="__________________________________________________"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Comportamento de risco e/ou prática de automutilação. <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Transtornos mentais diagnosticados ou em investigação. <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Neurodivergência diagnosticada ou em investigação. <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Uso abusivo de substâncias psicoativas. <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Ideação suicida. <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Outras situações: <input ${_INL_W('280px')} placeholder="__________________________________________________"> <input type="checkbox" style="width:auto"></label>
     </p>
     <p><strong>Observações adicionais:</strong></p>
     <p><textarea style="width:100%;min-height:80px;border:1px solid #ccc;padding:6px;font-family:inherit;font-size:inherit;resize:vertical" placeholder="Observações..."></textarea></p>
@@ -4596,11 +4596,10 @@ function renderForm22(form) {
     <p>Ao Núcleo de Escuta Especializada<br>À Equipe Técnica<br><strong>NESTA.</strong></p>
     <p>O Conselho Tutelar, no uso de suas atribuições legais previstas no art. 136 da Lei nº 8.069/1990 – Estatuto da Criança e do Adolescente e com base na Lei nº 13.431/2017, REQUISITA a realização de Escuta Especializada da criança e/ou adolescente abaixo identificado(a), para fins de proteção e aplicação de medidas adequados: <input ${_INL_W('130px')} placeholder="_______________">,<br>
     <input ${_INL_W('100%')} placeholder="Nome completo da criança/adolescente">, nascido(a): <input ${_INL_W('100px')} placeholder="_____________">
-    Sexo: <label style="display:inline"><input type="checkbox"> Feminino</label>
-    <label style="display:inline"><input type="checkbox"> Masculino</label>
-    <label style="display:inline"><input type="checkbox"> LGBTQIAPN+</label>:
-    <label style="display:inline"><input type="checkbox"> SIM</label>
-    <label style="display:inline"><input type="checkbox"> NÃO</label><br>
+    Sexo: <label style="display:inline-flex;align-items:center;gap:6px">Feminino <input type="checkbox" style="width:auto"></label> &nbsp;
+    <label style="display:inline-flex;align-items:center;gap:6px">Masculino <input type="checkbox" style="width:auto"></label> &nbsp;
+    <label style="display:inline-flex;align-items:center;gap:6px">LGBTQIAPN+ <input type="checkbox" style="width:auto"></label>:
+    <label style="display:inline-flex;align-items:center;gap:6px">SIM <input type="checkbox" style="width:auto"></label><br>
     Filho(a) de <input ${_INL_W('100%')} placeholder="Nome dos pais">,<br>
     <input ${_INL_W('100%')} placeholder="(continuação)"><br>
     Residente na <input ${_INL_W('100%')} placeholder="Endereço completo"><br>
@@ -4609,22 +4608,22 @@ function renderForm22(form) {
     Contato telefônico: <input ${_INL_W('220px')} placeholder="__________________________________________"></p>
     <p><strong>Motivo da Requisição:</strong></p>
     <p>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Relato espontâneo de situação de violência</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> A criança e/ou adolescente relatou situação de violência</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Indícios observados por terceiros (escola, saúde, comunidade)</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Necessidade de aprofundar informações para adoção de medidas protetivas</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Outros: <input ${_INL_W('280px')} placeholder="__________________________________________________________________"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Relato espontâneo de situação de violência <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">A criança e/ou adolescente relatou situação de violência <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Indícios observados por terceiros (escola, saúde, comunidade) <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Necessidade de aprofundar informações para adoção de medidas protetivas <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Outros: <input ${_INL_W('280px')} placeholder="__________________________________________________________________"> <input type="checkbox" style="width:auto"></label>
     </p>
     <p><strong>Encaminhamentos Realizados:</strong></p>
     <p>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> CRAS – Apoio sociofamiliar</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> DERCCA – Proteção / investigação</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Unidade de Saúde – Atendimento médico</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> CREAS – Acompanhamento especializado</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Ministério Público – Encaminhamento de notícia de fato</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> CAPS IA / CAPS AD – Avaliação psicológica e/ou psiquiátrica</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Escola / Secretaria de Educação – Acompanhamento pedagógico</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox"> Outro(s): <input ${_INL_W('260px')} placeholder="__________________________________________________________"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">CRAS – Apoio sociofamiliar <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">DERCCA – Proteção / investigação <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Unidade de Saúde – Atendimento médico <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">CREAS – Acompanhamento especializado <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Ministério Público – Encaminhamento de notícia de fato <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">CAPS IA / CAPS AD – Avaliação psicológica e/ou psiquiátrica <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Escola / Secretaria de Educação – Acompanhamento pedagógico <input type="checkbox" style="width:auto"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:4px 0">Outro(s): <input ${_INL_W('260px')} placeholder="__________________________________________________________"> <input type="checkbox" style="width:auto"></label>
     </p>
     <p><strong>Observações adicionais:</strong><br>
     <textarea style="width:100%;min-height:80px;border:1px solid #ccc;padding:6px;font-family:inherit;font-size:inherit;resize:vertical" placeholder="Observações..."></textarea></p>
@@ -4737,7 +4736,7 @@ function renderForm37(form) {
 function renderForm01(form) {
   return _formHeader(form) + _docWrap(`
     <p style="text-align:center;font-size:15px;font-weight:700;text-transform:uppercase;margin-bottom:24pt">COMUNICADO DE VIOLAÇÃO</p>
-    <p>Tipo de denúncia: <label><input type="checkbox" style="width:auto;display:inline"> Telefone</label> &nbsp;&nbsp; <label><input type="checkbox" style="width:auto;display:inline"> Presencial</label> &nbsp;&nbsp; Data: <input ${_INL_W('110px')} placeholder="___/___/______"> Hora: <input ${_INL_W('70px')} placeholder="_____"></p>
+    <p>Tipo de denúncia: <label style="display:inline-flex;align-items:center;gap:6px">Telefone <input type="checkbox" style="width:auto;display:inline"></label> &nbsp;&nbsp; <label style="display:inline-flex;align-items:center;gap:6px">Presencial <input type="checkbox" style="width:auto;display:inline"></label> &nbsp;&nbsp; Data: <input ${_INL_W('110px')} placeholder="___/___/______"> Hora: <input ${_INL_W('70px')} placeholder="_____"></p>
     <p>Denunciante: <input ${_INL_W('220px')} placeholder="____________________________"> Contato: <input ${_INL_W('160px')} placeholder="_________________"></p>
     <p>E-mail: <input ${_INL_W('320px')} placeholder="___________________________________________"></p>
     <p>Quantidade de crianças/adolescentes: <input ${_INL_W('100px')} placeholder="_______"> Idade: <input ${_INL_W('120px')} placeholder="__________"></p>
@@ -4761,7 +4760,7 @@ function renderForm01(form) {
 function renderForm03(form) {
   // Campo de linha (mesmo visual da ficha original), com id e rótulo para snapshot/histórico
   const L = (id, label, w, extra='') => `<input id="f03a-${id}" data-label="${label}" style="width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" ${extra}/>`
-  const C = (id, label, txt) => `<label class="f03-check"><input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"> ${txt}</label>`
+  const C = (id, label, txt) => `<label class="f03-check">${txt} <input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"></label>`
   const td = (html, span=1, extra='') => `<td style="padding:6px 8px;border:1px solid #ccc${extra}"${span>1?` colspan="${span}"`:''}>${html}</td>`
   const th = (txt) => `<tr style="background:#f0f4f8"><td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">${txt}</td></tr>`
   const genitor = (p, titulo) => `
@@ -4772,7 +4771,7 @@ function renderForm03(form) {
         ${td(`RG: ${L(p+'-rg', titulo+': RG', '130px', 'placeholder="___________"')}`)}
         ${td(`CPF: ${L(p+'-cpf', titulo+': CPF', '130px', 'placeholder="000.000.000-00" inputmode="numeric" oninput="_f03MascaraCpf(this)"')}`)}
       </tr>
-      ${p==='pai' ? `<tr>${td(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="f03a-pai-mesmo-end" onchange="_f03CopiarEnderecoMae(this)" style="width:auto"> Endereço igual ao da mãe</label>`, 4)}</tr>` : ''}
+      ${p==='pai' ? `<tr>${td(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer">Endereço igual ao da mãe <input type="checkbox" id="f03a-pai-mesmo-end" onchange="_f03CopiarEnderecoMae(this)" style="width:auto"></label>`, 4)}</tr>` : ''}
       <tr>
         ${td(`CEP: ${L(p+'-cep', titulo+': CEP', '100px', 'placeholder="00000-000" inputmode="numeric"')} <span class="so-tela" style="font-size:11px;color:var(--text-muted)">↳ preenche o endereço</span>`, 2)}
         ${td(`Tel.: ${L(p+'-tel', titulo+': telefone', '130px', 'placeholder="(71) 99999-9999"')}`, 2)}
@@ -4783,7 +4782,7 @@ function renderForm03(form) {
         ${td(`Nº: ${L(p+'-numero', titulo+': número', '60px', 'placeholder="___"')}`)}
       </tr>
       <tr>${td(`Ponto de referência: ${L(p+'-ref', titulo+': referência', 'calc(100% - 130px)', 'placeholder="_______________"')}`, 4)}</tr>`
-  const box = (inner) => `<label class="f03-opcao" style="display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px">${inner}</label>`
+  const box = (inner) => `<label class="f03-opcao" style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px">${inner}</label>`
 
   setTimeout(_f03Inicializar, 60)
 
@@ -4799,8 +4798,8 @@ function renderForm03(form) {
         ${td(`Protocolo: <strong id="f03-protocolo" style="font-family:monospace;color:var(--primary)">gerado ao direcionar</strong>`, 2)}
       </tr>
       <tr>${td(`Atendimento:
-        <label class="f03-check"><input type="checkbox" id="f03a-atend-primeiro" data-label="Atendimento: 1º atendimento" style="width:auto" onchange="_f03ToggleAtendimento(this,false)"> 1º ATENDIMENTO</label>
-        <label class="f03-check"><input type="checkbox" id="f03a-atend-retorno" data-label="Atendimento: retorno" style="width:auto" onchange="_f03ToggleAtendimento(this,true)"> RETORNO</label>`, 4)}</tr>
+        <label class="f03-check">1º ATENDIMENTO <input type="checkbox" id="f03a-atend-primeiro" data-label="Atendimento: 1º atendimento" style="width:auto" onchange="_f03ToggleAtendimento(this,false)"></label>
+        <label class="f03-check">RETORNO <input type="checkbox" id="f03a-atend-retorno" data-label="Atendimento: retorno" style="width:auto" onchange="_f03ToggleAtendimento(this,true)"></label>`, 4)}</tr>
     </table>
     <!-- Grid de 4 colunas fixas: mantém todas as linhas (Nome, CEP, Bairro/Nº…) alinhadas na
          mesma grade vertical, tanto na tela quanto no Word/impressão. Sem isso, cada linha
@@ -4816,22 +4815,21 @@ function renderForm03(form) {
         ${td(C('lgbt','LGBTQIAPN+','LGBTQIAPN+'))}
       </tr>
       <tr>
-        ${td(`PCD? ${C('pcd-sim','PCD: sim','SIM')} ${C('pcd-nao','PCD: não','NÃO')}`)}
-        ${td(`${C('raca-preta','Raça: preta','Preta')} ${C('raca-branca','Raça: branca','Branca')} ${C('raca-indigena','Raça: indígena','Indígena')} ${C('raca-parda','Raça: parda','Pardo')} ${C('raca-amarela','Raça: amarela','Amarelo')}`)}
-        ${td(`ESTUDA? ${C('estuda-sim','Estuda: sim','SIM')} ${C('estuda-nao','Estuda: não','NÃO')} &nbsp; Série: <select id="f03a-serie" data-label="Série" style="width:150px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit;font-size:inherit">
+        ${td(`PCD? ${C('pcd-sim','PCD: sim','SIM')}`)}
+        ${td(`Cor: ${C('raca-preta','Raça: preta','Preta')} ${C('raca-branca','Raça: branca','Branca')} ${C('raca-indigena','Raça: indígena','Indígena')} ${C('raca-parda','Raça: parda','Parda')} ${C('raca-amarela','Raça: amarela','Amarela')}`)}
+        ${td(`ESTUDA? ${C('estuda-sim','Estuda: sim','SIM')} &nbsp; Série: <select id="f03a-serie" data-label="Série" style="width:150px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit;font-size:inherit">
           <option value="">-- Selecione --</option>
           ${F03_SERIES.map(s => `<option>${s}</option>`).join('')}
         </select>`, 2)}
       </tr>
       <tr>${td(`Escola: ${L('escola', 'Escola', 'calc(100% - 60px)', 'placeholder="Nome da escola"')}`, 4)}</tr>
       <tr>
-        ${td(`NEURODIVERGENTE? ${C('neuro-sim','Neurodivergente: sim','SIM')} ${C('neuro-nao','Neurodivergente: não','NÃO')} ${C('neuro-investigacao','Neurodivergente: em investigação','EM INVESTIGAÇÃO')}`, 2)}
-        ${td(`POSSUI LAUDO? ${C('laudo-sim','Laudo: sim','SIM')} ${C('laudo-nao','Laudo: não','NÃO')}`, 2)}
+        ${td(`NEURODIVERGENTE? ${C('neuro-sim','Neurodivergente: sim','SIM')} ${C('neuro-investigacao','Neurodivergente: em investigação','EM INVESTIGAÇÃO')}`, 2)}
+        ${td(`POSSUI LAUDO? ${C('laudo-sim','Laudo: sim','SIM')}`, 2)}
       </tr>
       <tr>${td(`Condição: ${F03_NEURO.map((n, i) => C('neuro-' + i, 'Condição: ' + n, n)).join(' ')} &nbsp; Outra: ${L('neuro-outra', 'Condição: outra', '160px', 'placeholder="______"')}`, 4)}</tr>
       <tr>${td(`Possui irmão(s) também atendido(s) junto com esta criança/adolescente?
-        <label class="f03-check"><input type="checkbox" id="f03a-tem-irmaos-sim" data-label="Possui irmãos: sim" style="width:auto" onchange="_f03ToggleIrmaos(this,true)"> SIM</label>
-        <label class="f03-check"><input type="checkbox" id="f03a-tem-irmaos-nao" data-label="Possui irmãos: não" style="width:auto" onchange="_f03ToggleIrmaos(this,false)"> NÃO</label>
+        <label class="f03-check">SIM <input type="checkbox" id="f03a-tem-irmaos-sim" data-label="Possui irmãos: sim" style="width:auto" onchange="_f03ToggleIrmaos(this,true)"></label>
         <span id="f03a-irmaos-qtd-wrap" style="display:none;margin-left:12px">Quantidade:
           <select id="f03a-irmaos-qtd" data-label="Quantidade de irmãos" onchange="_f03IrmaosRender(this.value)" style="width:60px;border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit;font-size:inherit">
             <option value="">--</option>
@@ -4891,7 +4889,7 @@ function renderForm03(form) {
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🚪 Porta de Entrada</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:16px">
-          ${F03_PORTA_ENTRADA.map((p,i)=>box(`<input type="checkbox" id="f03c-porta-${i}" data-label="Porta de entrada: ${p}" style="accent-color:var(--primary)" /> ${p}`)).join('')}
+          ${F03_PORTA_ENTRADA.map((p,i)=>box(`<span>${p}</span> <input type="checkbox" id="f03c-porta-${i}" data-label="Porta de entrada: ${p}" style="accent-color:var(--primary)" />`)).join('')}
         </div>
       </div>
       <div>
@@ -4911,7 +4909,7 @@ function renderForm03(form) {
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
-          ${F03_VIOLACOES.map((v,i)=>box(`<input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" /> ${v}`)).join('')}
+          ${F03_VIOLACOES.map((v,i)=>box(`<span>${v}</span> <input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" />`)).join('')}
         </div>
         <div><label class="field-label">Descrição da Situação</label>
           <textarea id="f03c-descricao" data-label="Descrição da situação" rows="4" style="resize:vertical;min-height:115px" placeholder="Descreva detalhadamente a situação…"></textarea>
@@ -4925,7 +4923,7 @@ function renderForm03(form) {
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📌 Ações e Encaminhamentos</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:10px">
-          ${F03_ACOES_UNIFICADAS.map(x=>box(`<input type="checkbox" id="${x.id}" data-label="Ação/Encaminhamento: ${x.label}" style="accent-color:var(--primary)" /> ${x.label}`)).join('')}
+          ${F03_ACOES_UNIFICADAS.map(x=>box(`<span>${x.label}</span> <input type="checkbox" id="${x.id}" data-label="Ação/Encaminhamento: ${x.label}" style="accent-color:var(--primary)" />`)).join('')}
         </div>
         <div><label class="field-label">Observações de Encaminhamento</label>
           <textarea id="f03c-obs-enc" data-label="Observações de encaminhamento" rows="2" style="resize:vertical;min-height:75px" placeholder="Detalhes dos encaminhamentos…"></textarea>
@@ -5057,11 +5055,9 @@ function _f03CopiarEnderecoMae(chk) {
 
 // ── Irmãos atendidos junto (mesma ficha) ──
 function _f03ToggleIrmaos(el, sim) {
-  const outro = document.getElementById(sim ? 'f03a-tem-irmaos-nao' : 'f03a-tem-irmaos-sim')
   const wrap  = document.getElementById('f03a-irmaos-qtd-wrap')
-  if (el.checked && outro) outro.checked = false
-  if (sim && el.checked) { wrap.style.display = '' }
-  else if (!sim && el.checked || (sim && !el.checked)) {
+  if (el.checked) { wrap.style.display = '' }
+  else {
     wrap.style.display = 'none'
     const qtd = document.getElementById('f03a-irmaos-qtd')
     if (qtd) qtd.value = ''
@@ -5075,7 +5071,7 @@ function _f03IrmaosRender(qtd) {
   if (!cont) return
   const n = parseInt(qtd, 10) || 0
   const L = (id, label, w, extra='') => `<input id="f03a-${id}" data-label="${label}" style="width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" ${extra}/>`
-  const C = (id, label, txt) => `<label class="f03-check"><input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"> ${txt}</label>`
+  const C = (id, label, txt) => `<label class="f03-check">${txt} <input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"></label>`
   const td = (html, span=1) => `<td style="padding:6px 8px;border:1px solid #ccc"${span>1?` colspan="${span}"`:''}>${html}</td>`
   const th = (txt) => `<tr style="background:#f0f4f8"><td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">${txt}</td></tr>`
   let html = ''
@@ -5087,9 +5083,9 @@ function _f03IrmaosRender(qtd) {
       ${td(`Data de nasc.: ${L(p+'-nasc', 'Irmão '+i+': nascimento', '110px', 'type="date"')}`)}
       ${td(`Idade: ${L(p+'-idade', 'Irmão '+i+': idade', '50px', 'placeholder="__"')}`)}
       ${td(`${C(p+'-sexo-masc','Irmão '+i+': sexo masculino','MASC')} &nbsp; ${C(p+'-sexo-fem','Irmão '+i+': sexo feminino','FEM')}`)}
-      ${td(`PCD? ${C(p+'-pcd-sim','Irmão '+i+': PCD sim','SIM')} ${C(p+'-pcd-nao','Irmão '+i+': PCD não','NÃO')}`)}
+      ${td(`PCD? ${C(p+'-pcd-sim','Irmão '+i+': PCD sim','SIM')}`)}
     </tr>`
-    html += `<tr>${td(`ESTUDA? ${C(p+'-estuda-sim','Irmão '+i+': estuda sim','SIM')} ${C(p+'-estuda-nao','Irmão '+i+': estuda não','NÃO')} &nbsp; Escola: ${L(p+'-escola','Irmão '+i+': escola','calc(100% - 340px)','placeholder="Nome da escola"')}`, 4)}</tr>`
+    html += `<tr>${td(`ESTUDA? ${C(p+'-estuda-sim','Irmão '+i+': estuda sim','SIM')} &nbsp; Escola: ${L(p+'-escola','Irmão '+i+': escola','calc(100% - 340px)','placeholder="Nome da escola"')}`, 4)}</tr>`
   }
   cont.innerHTML = html
 }
@@ -5777,7 +5773,7 @@ function renderForm07(form) {
       <p style="margin-top:6px"><strong>Art. 22.</strong> Aos pais incumbe o dever de sustento, guarda e educação dos filhos menores, cabendo-lhes ainda, no interesse destes, a obrigação de cumprir e fazer cumprir as determinações judiciais.</p>
     </blockquote>
     <p>Declarando que está ciente que foi advertido por este Conselho, sendo o fundamento relacionado a:</p>
-    ${['Violência psicológica (xingamentos e ofensas verbais, humilhação, ameaça, bullying, constrangimento e entre outros)','Violência física (agressões, castigo físico, lesão corporal, tratamento cruel ou degradante, dentre outras práticas)','Violência sexual (abuso, exploração, aliciamento ou assédio)','Violência Patrimonial','Violência Institucional','Negligência/Abandono','Outros'].map(v=>`<p><label><input type="checkbox" style="width:auto;display:inline"> ${v}${v==='Outros'?`: <input ${_INL_W('200px')} placeholder="__________________________">`:''}</label></p>`).join('')}
+    ${['Violência psicológica (xingamentos e ofensas verbais, humilhação, ameaça, bullying, constrangimento e entre outros)','Violência física (agressões, castigo físico, lesão corporal, tratamento cruel ou degradante, dentre outras práticas)','Violência sexual (abuso, exploração, aliciamento ou assédio)','Violência Patrimonial','Violência Institucional','Negligência/Abandono','Outros'].map(v=>`<p><label style="display:flex;align-items:center;gap:8px">${v}${v==='Outros'?`: <input ${_INL_W('200px')} placeholder="__________________________">`:''} <input type="checkbox" style="width:auto;display:inline"></label></p>`).join('')}
     <p style="margin-top:16px">Ciente: <input ${_INL_W('280px')} placeholder="Assinatura do(a) advertido(a)"></p>
     <p style="text-align:right;margin-top:24px">Salvador, <input ${_INL_W('30px')} placeholder="___"> de <input ${_INL_W('130px')} placeholder="______________"> de 20<input ${_INL_W('30px')} placeholder="__">.</p>
     ${_SIG3}
@@ -5834,9 +5830,9 @@ function renderForm10(form) {
     <p>O Conselho Tutelar XXXX, no uso de suas atribuições legais, em conformidade com o artigo 136, Inciso VII – "expedir notificações", da Lei Federal 8069/90 (Estatuto da Criança e do Adolescente), através do(a) Conselheiro(a) que abaixo subscreve, visando instruir o procedimento de atendimento, <strong>NOTIFICA</strong> o Senhor(a): <input ${_INL_W('280px')} placeholder="___________________________">, Residente <input ${_INL_W('240px')} placeholder="__________________"> Nº <input ${_INL_W('40px')} placeholder="___"> Bairro <input ${_INL_W('160px')} placeholder="_______________">, cidade <input ${_INL_W('140px')} placeholder="______________">, para que compareça no dia <input ${_INL_W('120px')} placeholder="__________ (_________)"> , às <input ${_INL_W('60px')} placeholder="_______">, para tratar de assuntos relacionados à criança/adolescente(s): <input ${_INL_W('280px')} placeholder="________________________">.</p>
     <p>Na sede deste Conselho, situado <input ${_INL_W('300px')} placeholder="(endereço do Conselho Tutelar)">.</p>
     <p style="font-weight:700;margin-top:12px">DEVERÁ COMPARECER COM OS SEGUINTES DOCUMENTOS:</p>
-    ${['Documentos de identificação pessoal (RG ou outro)','Carteira de Trabalho','Carteira de vacinação quando criança','Atestado de escolaridade','Certidão de nascimento da criança e/ou adolescente','Comprovante de residência','Relatório médico caso a criança ou adolescente tenha alguma enfermidade/transtorno'].map(d=>`<p><label><input type="checkbox" style="width:auto;display:inline"> ${d}</label></p>`).join('')}
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Outros: <input ${_INL_W('200px')} placeholder="____________________________"></label></p>
-    <p>Acompanhado da criança/adolescente(s): <label><input type="checkbox" style="width:auto;display:inline"> Sim</label> &nbsp; <label><input type="checkbox" style="width:auto;display:inline"> Não</label></p>
+    ${['Documentos de identificação pessoal (RG ou outro)','Carteira de Trabalho','Carteira de vacinação quando criança','Atestado de escolaridade','Certidão de nascimento da criança e/ou adolescente','Comprovante de residência','Relatório médico caso a criança ou adolescente tenha alguma enfermidade/transtorno'].map(d=>`<p><label style="display:flex;align-items:center;gap:8px">${d} <input type="checkbox" style="width:auto;display:inline"></label></p>`).join('')}
+    <p><label style="display:flex;align-items:center;gap:8px">Outros: <input ${_INL_W('200px')} placeholder="____________________________"> <input type="checkbox" style="width:auto;display:inline"></label></p>
+    <p>Acompanhado da criança/adolescente(s): <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto;display:inline"></label> &nbsp; <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto;display:inline"></label></p>
     <p style="font-style:italic;font-size:12px">Obs.: Alertamos que o não comparecimento implicará na adoção de Medidas Judiciais e representação junto ao Ministério Público.</p>
     <p style="text-align:right;margin-top:24px">Salvador, <input ${_INL_W('30px')} placeholder="____"> de <input ${_INL_W('130px')} placeholder="______________"> de 20<input ${_INL_W('30px')} placeholder="__"></p>
     ${_SIG}
@@ -5851,9 +5847,9 @@ function renderForm11(form) {
     <p>O Conselho Tutelar XXXX, no uso de suas atribuições legais, em conformidade com o artigo 136, Inciso VII – "expedir notificações", da Lei Federal 8069/90 (Estatuto da Criança e do Adolescente), através do(a) Conselheiro(a) que abaixo subscreve, visando instruir o procedimento de atendimento, <strong>NOTIFICA</strong> o Senhor(a): <input ${_INL_W('280px')} placeholder="___________________________">, Residente <input ${_INL_W('240px')} placeholder="__________________"> Nº <input ${_INL_W('40px')} placeholder="___"> Bairro <input ${_INL_W('160px')} placeholder="_______________">, cidade <input ${_INL_W('140px')} placeholder="______________">, para que compareça no dia <input ${_INL_W('120px')} placeholder="__________ (_______)"> , às <input ${_INL_W('60px')} placeholder="_______">, para tratar de assuntos relacionados à criança/adolescente(s): <input ${_INL_W('280px')} placeholder="________________________">.</p>
     <p>Na sede deste Conselho, situado <input ${_INL_W('300px')} placeholder="(endereço do Conselho Tutelar)">.</p>
     <p style="font-weight:700;margin-top:12px">DEVERÁ COMPARECER COM OS SEGUINTES DOCUMENTOS:</p>
-    ${['Documentos de identificação pessoal (RG ou outro)','Carteira de Trabalho','Carteira de vacinação quando criança','Atestado de escolaridade','Certidão de nascimento da criança e/ou adolescente','Comprovante de residência','Relatório médico caso a criança ou adolescente tenha alguma enfermidade/transtorno'].map(d=>`<p><label><input type="checkbox" style="width:auto;display:inline"> ${d}</label></p>`).join('')}
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Outros: <input ${_INL_W('200px')} placeholder="____________________________"></label></p>
-    <p>Acompanhado da criança/adolescente(s): <label><input type="checkbox" style="width:auto;display:inline"> Sim</label> &nbsp; <label><input type="checkbox" style="width:auto;display:inline"> Não</label></p>
+    ${['Documentos de identificação pessoal (RG ou outro)','Carteira de Trabalho','Carteira de vacinação quando criança','Atestado de escolaridade','Certidão de nascimento da criança e/ou adolescente','Comprovante de residência','Relatório médico caso a criança ou adolescente tenha alguma enfermidade/transtorno'].map(d=>`<p><label style="display:flex;align-items:center;gap:8px">${d} <input type="checkbox" style="width:auto;display:inline"></label></p>`).join('')}
+    <p><label style="display:flex;align-items:center;gap:8px">Outros: <input ${_INL_W('200px')} placeholder="____________________________"> <input type="checkbox" style="width:auto;display:inline"></label></p>
+    <p>Acompanhado da criança/adolescente(s): <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto;display:inline"></label> &nbsp; <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto;display:inline"></label></p>
     <p style="font-style:italic;font-size:12px">Obs.: Alertamos que o não comparecimento implicará na adoção de Medidas Judiciais e representação junto ao Ministério Público.</p>
     <p style="text-align:right;margin-top:24px">Salvador, <input ${_INL_W('30px')} placeholder="____"> de <input ${_INL_W('130px')} placeholder="______________"> de 20<input ${_INL_W('30px')} placeholder="__"></p>
     ${_SIG}
@@ -5917,9 +5913,9 @@ function renderForm24(form) {
     <p>Ilmo.(a) Senhor(a) Oficial de Registro,</p>
     <p>O Conselho Tutelar XXX da Criança e do Adolescente do Município de Salvador, no uso de suas atribuições legais, estabelecidas no Art. 136 da Lei Federal 8.069/1990 - Estatuto da Criança e do Adolescente (ECA), através do(a) Conselheiro(a) que abaixo subscreve, vem Requisitar desse Cartório a <input ${_INL_W('40px')} placeholder="___"> via da Certidão do(a) senhor(a) <input ${_INL_W('260px')} placeholder="________________________________">, nascido(a) em <input ${_INL_W('110px')} placeholder="___/___/____">, inscrito(a) sob o nº de CPF <input ${_INL_W('140px')} placeholder="___.___.___-__">, filho de <input ${_INL_W('260px')} placeholder="_________________________">.</p>
     <p style="font-weight:700;margin-top:12px">TIPO DE CERTIDÃO:</p>
-    <p>${['Nascimento','Casamento','Óbito'].map(t=>`<label><input type="checkbox" style="width:auto;display:inline"> ${t}</label> &nbsp;&nbsp;`).join('')}</p>
+    <p>${['Nascimento','Casamento','Óbito'].map(t=>`<label style="display:inline-flex;align-items:center;gap:6px">${t} <input type="checkbox" style="width:auto;display:inline"></label> &nbsp;&nbsp;`).join('')}</p>
     <p style="font-weight:700;margin-top:8px">MODALIDADE DA CERTIDÃO:</p>
-    <p>${['Simples','Inteiro teor','Busca'].map(t=>`<label><input type="checkbox" style="width:auto;display:inline"> ${t}</label> &nbsp;&nbsp;`).join('')}</p>
+    <p>${['Simples','Inteiro teor','Busca'].map(t=>`<label style="display:inline-flex;align-items:center;gap:6px">${t} <input type="checkbox" style="width:auto;display:inline"></label> &nbsp;&nbsp;`).join('')}</p>
     <p style="font-weight:700;margin-top:8px">DADOS DO REGISTRO:</p>
     <p>Data do evento (nascimento/casamento/óbito): <input ${_INL_W('150px')} placeholder="________________"></p>
     <p>Termo <input ${_INL_W('160px')} placeholder="__________________________"> Livro <input ${_INL_W('80px')} placeholder="_________"> Folha <input ${_INL_W('80px')} placeholder="__________"></p>
@@ -6058,16 +6054,16 @@ function renderForm34(form) {
   return _formHeader(form) + `<div class="card card-pad form-document"><div style="font-size:13px;line-height:1.8;font-family:'Times New Roman',serif">
     <p style="text-align:center;font-size:15px;font-weight:700;margin-bottom:24pt">INSPEÇÃO ANUAL – ACOLHIMENTO INSTITUCIONAL</p>
     <p style="text-align:center;font-size:12px;font-style:italic">ECA Art. 95. As entidades governamentais e não-governamentais referidas no art. 90 serão fiscalizadas pelo Judiciário, pelo Ministério Público e pelos Conselhos Tutelares.</p>
-    <p style="margin-top:8px">Ano: <input ${_INL_W('80px')} placeholder="______"> &nbsp;&nbsp; Modalidade: <label><input type="checkbox" style="width:auto"> Acolhimento Institucional</label> &nbsp; <label><input type="checkbox" style="width:auto"> Casa Lar</label></p>
+    <p style="margin-top:8px">Ano: <input ${_INL_W('80px')} placeholder="______"> &nbsp;&nbsp; Modalidade: <label style="display:inline-flex;align-items:center;gap:6px">Acolhimento Institucional <input type="checkbox" style="width:auto"></label> &nbsp; <label style="display:inline-flex;align-items:center;gap:6px">Casa Lar <input type="checkbox" style="width:auto"></label></p>
     <div style="display:grid;gap:8px;margin-top:12px">
       <p>1.1 Coordenador(a)/Gerente: <input ${_INL_W('280px')} placeholder="___________________________"></p>
       <p>1.2 Instituição Mantenedora: <input ${_INL_W('280px')} placeholder="___________________________"></p>
       <p>1.3 Site/E-mail: <input ${_INL_W('300px')} placeholder="________________________________"></p>
-      <p>1.4 Registro CMDCA: <label><input type="checkbox" style="width:auto"> SIM</label> <label><input type="checkbox" style="width:auto"> NÃO</label> &nbsp; Nº <input ${_INL_W('100px')} placeholder="_____"> Validade <input ${_INL_W('100px')} placeholder="_____"></p>
-      <p>1.5 Registro CMAS: <label><input type="checkbox" style="width:auto"> SIM</label> <label><input type="checkbox" style="width:auto"> NÃO</label> &nbsp; Nº <input ${_INL_W('100px')} placeholder="_____"> Validade <input ${_INL_W('100px')} placeholder="_____"></p>
-      <p>1.6 Laudo do Corpo de Bombeiros: <label><input type="checkbox" style="width:auto"> SIM</label> <label><input type="checkbox" style="width:auto"> NÃO</label> &nbsp; Nº <input ${_INL_W('80px')} placeholder="___"> Val. <input ${_INL_W('80px')} placeholder="_____"></p>
-      <p>1.7 Laudo da Vigilância Sanitária: <label><input type="checkbox" style="width:auto"> SIM</label> <label><input type="checkbox" style="width:auto"> NÃO</label> &nbsp; Validade <input ${_INL_W('100px')} placeholder="__________"></p>
-      <p>1.8 Tipo de orientação religiosa: <label><input type="checkbox" style="width:auto"> Católica</label> <label><input type="checkbox" style="width:auto"> Evangélica</label> <label><input type="checkbox" style="width:auto"> Espírita</label> <label><input type="checkbox" style="width:auto"> Ecumênica</label> <label><input type="checkbox" style="width:auto"> Não possui</label> <label><input type="checkbox" style="width:auto"> Outra: <input ${_INL_W('120px')} placeholder="__________"></label></p>
+      <p>1.4 Registro CMDCA: <label style="display:inline-flex;align-items:center;gap:6px">SIM <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">NÃO <input type="checkbox" style="width:auto"></label> &nbsp; Nº <input ${_INL_W('100px')} placeholder="_____"> Validade <input ${_INL_W('100px')} placeholder="_____"></p>
+      <p>1.5 Registro CMAS: <label style="display:inline-flex;align-items:center;gap:6px">SIM <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">NÃO <input type="checkbox" style="width:auto"></label> &nbsp; Nº <input ${_INL_W('100px')} placeholder="_____"> Validade <input ${_INL_W('100px')} placeholder="_____"></p>
+      <p>1.6 Laudo do Corpo de Bombeiros: <label style="display:inline-flex;align-items:center;gap:6px">SIM <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">NÃO <input type="checkbox" style="width:auto"></label> &nbsp; Nº <input ${_INL_W('80px')} placeholder="___"> Val. <input ${_INL_W('80px')} placeholder="_____"></p>
+      <p>1.7 Laudo da Vigilância Sanitária: <label style="display:inline-flex;align-items:center;gap:6px">SIM <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">NÃO <input type="checkbox" style="width:auto"></label> &nbsp; Validade <input ${_INL_W('100px')} placeholder="__________"></p>
+      <p>1.8 Tipo de orientação religiosa: <label style="display:inline-flex;align-items:center;gap:6px">Católica <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Evangélica <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Espírita <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Ecumênica <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não possui <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Outra: <input ${_INL_W('120px')} placeholder="__________"> <input type="checkbox" style="width:auto"></label></p>
       <p>1.9 Atendido(a) por: <input ${_INL_W('300px')} placeholder="________________________________"></p>
       <p style="margin-top:12px;font-weight:700">Observações da fiscalização:</p>
     </div>
@@ -6093,9 +6089,9 @@ function renderForm35(form) {
     <p>Após a análise dos fatos apresentados, bem como dos elementos probatórios e eventuais testemunhos colhidos, verifica-se que:</p>
     <textarea rows="4" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:4px" placeholder="Parecer da comissão…"></textarea>
     <p>Diante do exposto, considera-se que:</p>
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Houve descumprimento das normas éticas e disciplinares, sendo necessária a aplicação das medidas cabíveis.</label></p>
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Não houve descumprimento das normas, sendo arquivado o presente documento.</label></p>
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Necessária a realização de novas diligências para melhor apuração dos fatos.</label></p>
+    <p><label style="display:flex;align-items:center;gap:8px">Houve descumprimento das normas éticas e disciplinares, sendo necessária a aplicação das medidas cabíveis. <input type="checkbox" style="width:auto;display:inline"></label></p>
+    <p><label style="display:flex;align-items:center;gap:8px">Não houve descumprimento das normas, sendo arquivado o presente documento. <input type="checkbox" style="width:auto;display:inline"></label></p>
+    <p><label style="display:flex;align-items:center;gap:8px">Necessária a realização de novas diligências para melhor apuração dos fatos. <input type="checkbox" style="width:auto;display:inline"></label></p>
     <p>Recomenda-se que:</p>
     <textarea rows="4" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:4px" placeholder="Recomendações da comissão…"></textarea>
     <p style="font-weight:700;margin-top:12px">4. ASSINATURAS</p>
@@ -6126,10 +6122,10 @@ function renderForm36(form) {
     <textarea rows="4" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:4px" placeholder="Descreva o contexto em que ocorreu a infração…"></textarea>
     <p style="font-weight:700;margin-top:12px">4. AÇÕES CORRETIVAS E ADVERTÊNCIA</p>
     <p>A Comissão de Ética, após análise do caso, determina as seguintes ações corretivas:</p>
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Advertência verbal.</label></p>
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Advertência por escrito.</label></p>
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Reavaliação de conduta.</label></p>
-    <p><label><input type="checkbox" style="width:auto;display:inline"> Outras: <input ${_INL_W('200px')} placeholder="__________________________"></label></p>
+    <p><label style="display:flex;align-items:center;gap:8px">Advertência verbal. <input type="checkbox" style="width:auto;display:inline"></label></p>
+    <p><label style="display:flex;align-items:center;gap:8px">Advertência por escrito. <input type="checkbox" style="width:auto;display:inline"></label></p>
+    <p><label style="display:flex;align-items:center;gap:8px">Reavaliação de conduta. <input type="checkbox" style="width:auto;display:inline"></label></p>
+    <p><label style="display:flex;align-items:center;gap:8px">Outras: <input ${_INL_W('200px')} placeholder="__________________________"> <input type="checkbox" style="width:auto;display:inline"></label></p>
     <p style="font-weight:700;margin-top:12px">5. ORIENTAÇÕES FINAIS</p>
     <p>Reforçamos que o cumprimento das normas e do Regimento Interno é fundamental para a ética e a eficiência no desempenho das funções do Conselho Tutelar. O não cumprimento poderá resultar em medidas disciplinares mais severas.</p>
     <p style="font-weight:700;margin-top:12px">6. ASSINATURAS</p>
@@ -6166,42 +6162,42 @@ function renderForm39(form) {
     </div>
     <p style="font-weight:700;margin-top:12px;border-top:2px solid #1e3a5f;padding-top:8px">DADOS PESSOAIS</p>
     <p>Nome*: <input ${_INL_W('280px')} placeholder="__________________"> Apelido: <input ${_INL_W('150px')} placeholder="__________"></p>
-    <p>Nome Social: <input ${_INL_W('280px')} placeholder="__________________"> Já esteve acolhido? <label><input type="checkbox" style="width:auto"> Sim, onde: <input ${_INL_W('150px')} placeholder="__________"></label> <label><input type="checkbox" style="width:auto"> Não</label></p>
+    <p>Nome Social: <input ${_INL_W('280px')} placeholder="__________________"> Já esteve acolhido? <label style="display:inline-flex;align-items:center;gap:6px">Sim, onde: <input ${_INL_W('150px')} placeholder="__________"> <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label></p>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
       <p>Data de nasc.*: <input ${_INL_W('110px')} type="date"></p>
       <p>Idade*: <input ${_INL_W('50px')} placeholder="___"> &nbsp; Cidade: <input ${_INL_W('100px')} placeholder="________"> Estado: <input ${_INL_W('40px')} placeholder="__"></p>
-      <p>Sexo*: <label><input type="checkbox" style="width:auto"> Masc.</label> <label><input type="checkbox" style="width:auto"> Fem.</label> <label><input type="checkbox" style="width:auto"> Intersexo</label></p>
+      <p>Sexo*: <label style="display:inline-flex;align-items:center;gap:6px">Masc. <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Fem. <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Intersexo <input type="checkbox" style="width:auto"></label></p>
     </div>
-    <p>Identidade de gênero: <label><input type="checkbox" style="width:auto"> Transgênero/transexual</label> <label><input type="checkbox" style="width:auto"> Cisgênero</label> <label><input type="checkbox" style="width:auto"> Fluido</label> Outros: <input ${_INL_W('100px')} placeholder="______"></p>
+    <p>Identidade de gênero: <label style="display:inline-flex;align-items:center;gap:6px">Transgênero/transexual <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Cisgênero <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Fluido <input type="checkbox" style="width:auto"></label> Outros: <input ${_INL_W('100px')} placeholder="______"></p>
     <p>Genitora: <input ${_INL_W('220px')} placeholder="__________________"> Tel.: <input ${_INL_W('140px')} placeholder="(71) 9 9999-9999"></p>
     <p>Genitor: <input ${_INL_W('220px')} placeholder="__________________"> Tel.: <input ${_INL_W('140px')} placeholder="(71) 9 9999-9999"></p>
-    <p>Endereço: Rua <input ${_INL_W('260px')} placeholder="___________________________"> Bairro: <input ${_INL_W('150px')} placeholder="___________"> Ponto de Ref.: <input ${_INL_W('150px')} placeholder="____________"> <label><input type="checkbox" style="width:auto"> Desconhece</label></p>
+    <p>Endereço: Rua <input ${_INL_W('260px')} placeholder="___________________________"> Bairro: <input ${_INL_W('150px')} placeholder="___________"> Ponto de Ref.: <input ${_INL_W('150px')} placeholder="____________"> <label style="display:inline-flex;align-items:center;gap:6px">Desconhece <input type="checkbox" style="width:auto"></label></p>
     <p>Responsável: <input ${_INL_W('220px')} placeholder="___________________"> Grau de Parentesco: <input ${_INL_W('140px')} placeholder="_________"> Tel.: <input ${_INL_W('140px')} placeholder="(71) 9 9999-9999"></p>
     <p style="font-weight:700;margin-top:12px;border-top:2px solid #1e3a5f;padding-top:8px">DOCUMENTOS PESSOAIS</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-      ${['Certidão de Nascimento','Carteira de Identidade: ','CPF: ','Título Eleitor: ','Carteira Profissional: '].map(d=>`<p><label><input type="checkbox" style="width:auto"> ${d}${d.endsWith(': ')?`<input ${_INL_W('120px')} placeholder="número">`:''}</label></p>`).join('')}
-      <p><label><input type="checkbox" style="width:auto"> Não Possui</label></p>
+      ${['Certidão de Nascimento','Carteira de Identidade: ','CPF: ','Título Eleitor: ','Carteira Profissional: '].map(d=>`<p><label style="display:flex;align-items:center;gap:8px">${d}${d.endsWith(': ')?`<input ${_INL_W('120px')} placeholder="número">`:''} <input type="checkbox" style="width:auto"></label></p>`).join('')}
+      <p><label style="display:flex;align-items:center;gap:8px">Não Possui <input type="checkbox" style="width:auto"></label></p>
     </div>
-    <p>Está em posse de alguma documentação? <label><input type="checkbox" style="width:auto"> SIM</label> <label><input type="checkbox" style="width:auto"> NÃO</label> &nbsp; Se sim, qual? <input ${_INL_W('180px')} placeholder="______________"></p>
+    <p>Está em posse de alguma documentação? <label style="display:inline-flex;align-items:center;gap:6px">SIM <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">NÃO <input type="checkbox" style="width:auto"></label> &nbsp; Se sim, qual? <input ${_INL_W('180px')} placeholder="______________"></p>
     <p style="font-weight:700;margin-top:12px;border-top:2px solid #1e3a5f;padding-top:8px">DADOS DE SAÚDE</p>
     <div style="display:grid;gap:6px">
-      <p>Aparenta alguma deficiência? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label> <label><input type="checkbox" style="width:auto"> Desconhece</label> &nbsp; Se sim, qual? <input ${_INL_W('150px')} placeholder="___________"></p>
-      <p>Aparenta indícios ou relata transtorno mental? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label> <label><input type="checkbox" style="width:auto"> Desconhece</label> &nbsp; Qual? <input ${_INL_W('150px')} placeholder="___________"></p>
-      <p>Aparenta sinais de violência física? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label> &nbsp; Qual? <input ${_INL_W('180px')} placeholder="_______________"></p>
-      <p>Relata doença crônica? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label> <label><input type="checkbox" style="width:auto"> Desconhece</label> &nbsp; Qual? <input ${_INL_W('180px')} placeholder="_______________"></p>
-      <p>Faz tratamento ou usa medicação continuada? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label> &nbsp; Onde/qual? <input ${_INL_W('160px')} placeholder="___________"> Com medicação? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label></p>
-      <p>Faz uso de substância psicoativa? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label> &nbsp; Qual(is)? <input ${_INL_W('200px')} placeholder="___________________"></p>
+      <p>Aparenta alguma deficiência? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Desconhece <input type="checkbox" style="width:auto"></label> &nbsp; Se sim, qual? <input ${_INL_W('150px')} placeholder="___________"></p>
+      <p>Aparenta indícios ou relata transtorno mental? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Desconhece <input type="checkbox" style="width:auto"></label> &nbsp; Qual? <input ${_INL_W('150px')} placeholder="___________"></p>
+      <p>Aparenta sinais de violência física? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label> &nbsp; Qual? <input ${_INL_W('180px')} placeholder="_______________"></p>
+      <p>Relata doença crônica? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Desconhece <input type="checkbox" style="width:auto"></label> &nbsp; Qual? <input ${_INL_W('180px')} placeholder="_______________"></p>
+      <p>Faz tratamento ou usa medicação continuada? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label> &nbsp; Onde/qual? <input ${_INL_W('160px')} placeholder="___________"> Com medicação? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label></p>
+      <p>Faz uso de substância psicoativa? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label> &nbsp; Qual(is)? <input ${_INL_W('200px')} placeholder="___________________"></p>
     </div>
     <p style="font-weight:700;margin-top:12px;border-top:2px solid #1e3a5f;padding-top:8px">URGÊNCIA / MOTIVO DA SOLICITAÇÃO</p>
     <div style="display:grid;gap:6px">
-      ${['Violência Física','Violência Sexual','Negligência','Abandono','Situação de rua'].map(m=>`<p><label><input type="checkbox" style="width:auto"> ${m} (especifique): <input ${_INL_W('200px')} placeholder="___________________"></label></p>`).join('')}
+      ${['Violência Física','Violência Sexual','Negligência','Abandono','Situação de rua'].map(m=>`<p><label style="display:flex;align-items:center;gap:8px">${m} (especifique): <input ${_INL_W('200px')} placeholder="___________________"> <input type="checkbox" style="width:auto"></label></p>`).join('')}
     </div>
-    <p>Suposto agressor: <label><input type="checkbox" style="width:auto"> mãe</label> <label><input type="checkbox" style="width:auto"> pai</label> <label><input type="checkbox" style="width:auto"> padrasto</label> <label><input type="checkbox" style="width:auto"> madrasta</label> <label><input type="checkbox" style="width:auto"> avô(ó)</label> <label><input type="checkbox" style="width:auto"> irmão(ã)</label> <label><input type="checkbox" style="width:auto"> tio(a)</label> <label><input type="checkbox" style="width:auto"> outro: <input ${_INL_W('100px')} placeholder="______"></label></p>
-    <p>Houve registro de ocorrência (BO ou Termo Circunstanciado)? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label></p>
+    <p>Suposto agressor: <label style="display:inline-flex;align-items:center;gap:6px">mãe <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">pai <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">padrasto <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">madrasta <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">avô(ó) <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">irmão(ã) <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">tio(a) <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">outro: <input ${_INL_W('100px')} placeholder="______"> <input type="checkbox" style="width:auto"></label></p>
+    <p>Houve registro de ocorrência (BO ou Termo Circunstanciado)? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label></p>
     <p style="font-weight:700;margin-top:12px;border-top:2px solid #1e3a5f;padding-top:8px">DADOS ADICIONAIS</p>
-    <p>Tem situação de ameaça? <label><input type="checkbox" style="width:auto"> Sim, qual/onde? <input ${_INL_W('180px')} placeholder="__________________"></label> <label><input type="checkbox" style="width:auto"> Não</label> &nbsp; PPCAM acionado? <label><input type="checkbox" style="width:auto"> Sim</label> <label><input type="checkbox" style="width:auto"> Não</label></p>
-    <p>Atualmente matriculada(o)? <label><input type="checkbox" style="width:auto"> Sim, onde? <input ${_INL_W('160px')} placeholder="____________"> Série: <input ${_INL_W('50px')} placeholder="___"> Turno: <input ${_INL_W('80px')} placeholder="______"></label> <label><input type="checkbox" style="width:auto"> Não</label></p>
-    <p>Já recebeu algum benefício? <label><input type="checkbox" style="width:auto"> Sim, qual? <input ${_INL_W('180px')} placeholder="__________________"></label> <label><input type="checkbox" style="width:auto"> Não</label> <label><input type="checkbox" style="width:auto"> Desconhece</label></p>
+    <p>Tem situação de ameaça? <label style="display:inline-flex;align-items:center;gap:6px">Sim, qual/onde? <input ${_INL_W('180px')} placeholder="__________________"> <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label> &nbsp; PPCAM acionado? <label style="display:inline-flex;align-items:center;gap:6px">Sim <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label></p>
+    <p>Atualmente matriculada(o)? <label style="display:inline-flex;align-items:center;gap:6px">Sim, onde? <input ${_INL_W('160px')} placeholder="____________"> Série: <input ${_INL_W('50px')} placeholder="___"> Turno: <input ${_INL_W('80px')} placeholder="______"> <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label></p>
+    <p>Já recebeu algum benefício? <label style="display:inline-flex;align-items:center;gap:6px">Sim, qual? <input ${_INL_W('180px')} placeholder="__________________"> <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Não <input type="checkbox" style="width:auto"></label> <label style="display:inline-flex;align-items:center;gap:6px">Desconhece <input type="checkbox" style="width:auto"></label></p>
     <p style="font-size:11px;color:#666;margin-top:12px">* Informações obrigatórias. Ficha de fluxo de Solicitação de vagas construída entre o GT – Fluxo do Conselho Tutelar e a Supervisão Técnica das Unidades de Acolhimento.</p>
     ${_SIG}
     <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-outline" onclick="exportarWord()">📄 Word</button><button class="btn btn-primary" onclick="_imprimirFormularioAtual()">🖨️ Imprimir</button></div>
@@ -9470,7 +9466,7 @@ function _dashTela() {
     <div><label class="field-label">Sexo</label>${sel('sexo', _dash.sexo, [['', 'Todos'], ['Masculino', 'Masculino'], ['Feminino', 'Feminino']])}</div>
     <div><label class="field-label">Faixa etária</label>${sel('faixa', _dash.faixa, [['', 'Todas'], ...['0–5 anos', '6–11 anos', '12–14 anos', '15–17 anos', '18+ anos'].map(x => [x, x])])}</div>
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding-bottom:8px;cursor:pointer">
-      <input type="checkbox" ${_dash.comparar ? 'checked' : ''} onchange="_dashSet('comparar', this.checked)"> Comparar com período anterior</label>
+      Comparar com período anterior <input type="checkbox" ${_dash.comparar ? 'checked' : ''} onchange="_dashSet('comparar', this.checked)"></label>
     ${_dash.comparar && !_dash.ano ? '<span style="font-size:11px;color:var(--text-muted);padding-bottom:8px">Escolha um ano para comparar.</span>' : ''}
   </div>
   ${kpis}
