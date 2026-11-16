@@ -280,6 +280,51 @@ nav{flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:2px;overflow
 .f03-chip:has(input:checked){background:#eff6ff;border-color:var(--primary,#3b82f6);font-weight:600;color:var(--primary,#1d4ed8)}
 @media print{.f03-chip{border:none!important;background:transparent!important;padding:0!important}}
 .f03-assinaturas{break-inside:avoid;page-break-inside:avoid}
+.f03-th-row{background:#cfe2f7 !important}
+.f03-th-cell,
+.form-document .f03-th-cell,
+.form-document tr.f03-th-row td {
+  background-color:#cfe2f7 !important;
+  color:#0f2d59 !important;
+  font-weight:700 !important;
+  font-size:13.5px !important;
+  letter-spacing:0.4px !important;
+  padding:8px 10px !important;
+  border:1px solid #9ec3e6 !important;
+  border-left:5px solid #1e3a5f !important;
+  -webkit-print-color-adjust:exact !important;
+  print-color-adjust:exact !important;
+}
+@media print{
+  .f03-th-row{background:#dceaf7 !important}
+  .f03-th-cell,
+  .form-document .f03-th-cell,
+  .form-document tr.f03-th-row td {
+    background-color:#dceaf7 !important;
+    color:#0f2d59 !important;
+    border:1px solid #9ec3e6 !important;
+    border-left:5px solid #1e3a5f !important;
+    -webkit-print-color-adjust:exact !important;
+    print-color-adjust:exact !important;
+  }
+}
+/* Quadro de Violações do ECA (Art. 98 e Categorias) */
+.f03-origem-card{display:flex;flex-direction:column;padding:12px 14px;background:var(--card,#fff);border:1.5px solid var(--border,#cbd5e1);border-radius:10px;cursor:pointer;transition:all .18s ease;position:relative}
+.f03-origem-card:hover{border-color:var(--primary-light,#2d5a9e);background:#f8fafc}
+.f03-origem-card.ativo{border-color:var(--primary,#1e3a5f);background:#eff6ff;box-shadow:0 0 0 1px var(--primary,#1e3a5f)}
+.f03-origem-card .origem-tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--primary,#1e3a5f);margin-bottom:4px}
+.f03-origem-card .origem-titulo{font-size:13px;font-weight:700;color:var(--text,#1a2332);margin-bottom:4px;line-height:1.3}
+.f03-origem-card .origem-desc{font-size:11px;color:var(--text-muted,#6b7a90);line-height:1.4}
+.f03-cat-card{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--card,#fff);border:1px solid var(--border,#cbd5e1);border-radius:8px;cursor:pointer;transition:all .15s ease;user-select:none}
+.f03-cat-card:hover{border-color:#94a3b8;background:#f8fafc}
+.f03-cat-card.ativo{border-color:var(--primary,#1e3a5f);background:#eff6ff;font-weight:600}
+.f03-cat-badge{font-size:10.5px;font-weight:700;background:var(--primary,#1e3a5f);color:#fff;padding:2px 7px;border-radius:10px;display:none}
+.f03-cat-badge.show{display:inline-block}
+.f03-sub-painel{margin-top:4px;padding:12px 14px;background:#f8fafc;border:1px solid #c7d9ed;border-left:4px solid var(--primary,#1e3a5f);border-radius:8px;animation:f03FadeIn .2s ease}
+@keyframes f03FadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media print{
+  .f03-origem-card:not(.ativo),.f03-cat-card:not(.ativo),#f03-filtro-violacoes,.f03-btn-sub-acao{display:none!important}
+}
 .forms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .fill-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
 .fill-header button{display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:13px;transition:color .15s}
@@ -2798,6 +2843,471 @@ async function _statsCarregar() {
   } catch (e) { return [] }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  CLASSIFICAÇÃO DE VIOLAÇÕES DE DIREITOS SEGUNDO O ECA (ART. 98) & DISQUE 100
+// ════════════════════════════════════════════════════════════════════════════
+const ECA_ORIGENS = [
+  { id: 'sociedade_estado', num: 'I', art: 'Art. 98, I do ECA', titulo: 'Ação ou omissão da Sociedade ou do Estado', desc: 'Quando instituições, serviços públicos, organizações ou pessoas da sociedade deixam de assegurar os direitos ou os violam.' },
+  { id: 'pais_responsaveis', num: 'II', art: 'Art. 98, II do ECA', titulo: 'Falta, omissão ou abuso dos Pais ou Responsável', desc: 'Quando familiares, responsáveis legais ou cuidadores deixam de cumprir seus deveres ou praticam atos abusivos.' },
+  { id: 'propria_conduta', num: 'III', art: 'Art. 98, III do ECA', titulo: 'Em razão da própria conduta da Criança ou Adolescente', desc: 'Quando a situação de risco decorre de sua própria conduta (demanda medidas protetivas e acolhimento especializado).' }
+]
+
+const ECA_AGENTES = [
+  {
+    grupo: 'Pais / Responsáveis / Família (Art. 98, II)',
+    itens: ['Mãe','Pai','Padrasto ou madrasta','Responsável legal','Outro familiar','Cuidador(a)']
+  },
+  {
+    grupo: 'Sociedade / Estado / Instituições (Art. 98, I)',
+    itens: ['Instituição pública','Instituição privada','Agente público','Professor(a) ou profissional da educação','Profissional da saúde','Profissional da assistência social','Profissional de instituição de acolhimento','Pessoa desconhecida','Companheiro(a) ou namorado(a)','Colega ou outra criança/adolescente']
+  },
+  {
+    grupo: 'Própria Conduta (Art. 98, III)',
+    itens: ['A própria criança ou adolescente (situação que demande proteção)']
+  },
+  {
+    grupo: 'Outros',
+    itens: ['Não identificado','Outro']
+  }
+]
+
+const ECA_CATEGORIAS_VIOLACOES = [
+  {
+    id: 'negligencia', num: 1, icone: '🛡️',
+    nome: 'Negligência, abandono e omissão de cuidados',
+    subs: [
+      'Abandono material',
+      'Abandono afetivo ou desamparo emocional',
+      'Abandono físico',
+      'Negligência alimentar (falta de alimentação adequada)',
+      'Negligência de higiene e cuidados pessoais',
+      'Negligência médica ou de saúde',
+      'Negligência em tratamentos médicos necessários',
+      'Negligência em relação à saúde mental',
+      'Falta de vacinação e cuidados preventivos necessários',
+      'Falta de supervisão e proteção',
+      'Deixar a criança ou adolescente sozinho em situação de risco',
+      'Exposição a situações perigosas sem proteção adequada',
+      'Negligência quanto à frequência e permanência escolar',
+      'Falta de acesso a vestuário, moradia ou condições básicas',
+      'Omissão diante de violência sofrida pela criança ou adolescente',
+      'Omissão de socorro',
+      'Abandono em instituições, hospitais ou espaços públicos',
+      'Ausência de acompanhamento e proteção por responsáveis'
+    ]
+  },
+  {
+    id: 'violencia_fisica', num: 2, icone: '⚠️',
+    nome: 'Violência física e maus-tratos',
+    subs: [
+      'Agressão física',
+      'Espancamento',
+      'Tapas, socos, chutes e pontapés',
+      'Beliscões, puxões de cabelo e orelhas',
+      'Uso de objetos para agredir',
+      'Queimaduras provocadas intencionalmente',
+      'Ferimentos e lesões corporais',
+      'Castigos físicos',
+      'Punições corporais como forma de disciplina',
+      'Sacudir violentamente bebês ou crianças',
+      'Envenenamento ou intoxicação provocada',
+      'Privação de alimentação como punição',
+      'Privação de água, sono ou necessidades fisiológicas',
+      'Imobilização física abusiva',
+      'Confinamento ou cárcere privado',
+      'Tortura',
+      'Tratamento cruel, desumano ou degradante',
+      'Tentativa de homicídio',
+      'Homicídio',
+      'Exposição deliberada a risco à integridade física'
+    ]
+  },
+  {
+    id: 'violencia_psico', num: 3, icone: '🧠',
+    nome: 'Violência psicológica e emocional',
+    subs: [
+      'Ameaças',
+      'Humilhações',
+      'Xingamentos e ofensas',
+      'Insultos e palavras depreciativas',
+      'Intimidação',
+      'Constrangimento',
+      'Chantagem emocional',
+      'Manipulação psicológica',
+      'Rejeição ou abandono emocional',
+      'Desqualificação e desvalorização',
+      'Ridicularização',
+      'Discriminação no ambiente familiar',
+      'Isolamento social forçado',
+      'Controle excessivo e abusivo',
+      'Terror psicológico',
+      'Ameaças de abandono ou expulsão de casa',
+      'Exposição a conflitos familiares violentos',
+      'Exposição à violência doméstica e conjugal',
+      'Testemunho de agressões contra familiares',
+      'Alienação parental e instrumentalização da criança',
+      'Exigência de responsabilidades incompatíveis com a idade',
+      'Exploração emocional',
+      'Perseguição e bullying',
+      'Cyberbullying',
+      'Divulgação de fotos/informações para humilhar'
+    ]
+  },
+  {
+    id: 'violencia_sexual', num: 4, icone: '🛑',
+    nome: 'Violência sexual',
+    subs: [
+      'Abuso sexual',
+      'Estupro de vulnerável',
+      'Estupro',
+      'Assédio sexual',
+      'Importunação sexual',
+      'Exploração sexual',
+      'Exploração sexual comercial',
+      'Prostituição infantil ou exploração de adolescentes',
+      'Aliciamento para fins sexuais',
+      'Grooming (manipulação com finalidade sexual)',
+      'Aliciamento pela internet',
+      'Exposição a conteúdo pornográfico',
+      'Produção de imagens/vídeos sexuais de crianças/adolescentes',
+      'Divulgação ou compartilhamento de imagens íntimas',
+      'Sextorsão (chantagem sexual)',
+      'Registro não autorizado de conteúdo íntimo',
+      'Utilização de crianças e adolescentes em pornografia',
+      'Exploração sexual em viagens e turismo',
+      'Tráfico para exploração sexual',
+      'Assédio ou violência sexual no ambiente familiar',
+      'Assédio ou violência sexual no ambiente escolar',
+      'Assédio ou violência sexual em acolhimento institucional',
+      'Casamento infantil ou união precoce forçada',
+      'Práticas sexuais inadequadas à condição de desenvolvimento'
+    ]
+  },
+  {
+    id: 'saude_vida', num: 5, icone: '🏥',
+    nome: 'Violação do direito à vida e à saúde',
+    subs: [
+      'Impedimento ou dificuldade de acesso aos serviços de saúde',
+      'Recusa injustificada de atendimento médico',
+      'Omissão de atendimento de urgência e emergência',
+      'Falta de acompanhamento pré-natal em risco ao bebê',
+      'Falta de atendimento pediátrico necessário',
+      'Negação de tratamento médico indispensável',
+      'Negação de atendimento em saúde mental',
+      'Interrupção indevida de tratamento',
+      'Discriminação no atendimento de saúde',
+      'Violência obstétrica contra adolescentes gestantes',
+      'Falta de atendimento especializado para PcD',
+      'Falta de acesso a medicamentos necessários',
+      'Exposição a substâncias tóxicas ou ambientes insalubres',
+      'Exposição ao consumo de álcool, tabaco e drogas',
+      'Falta de acesso a serviços de prevenção e orientação',
+      'Violação do sigilo e da privacidade nos atendimentos',
+      'Negação de tratamento por deficiência ou discriminação'
+    ]
+  },
+  {
+    id: 'liberdade_dignidade', num: 6, icone: '🕊️',
+    nome: 'Violação da liberdade, respeito e dignidade',
+    subs: [
+      'Restrição ilegal do direito de ir e vir',
+      'Privação arbitrária de liberdade',
+      'Cárcere privado',
+      'Impedimento de convivência comunitária sem base legal',
+      'Impedimento de manifestação de opinião',
+      'Proibição abusiva de expressão',
+      'Restrição indevida à liberdade religiosa',
+      'Desrespeito à identidade pessoal',
+      'Desrespeito à identidade de gênero',
+      'Desrespeito à orientação sexual',
+      'Violação da intimidade e da vida privada',
+      'Exposição indevida da imagem',
+      'Divulgação não autorizada de dados pessoais',
+      'Constrangimento público',
+      'Tratamento discriminatório',
+      'Desrespeito à autonomia progressiva',
+      'Impedimento de brincar, esportes e lazer',
+      'Submissão a tratamento vexatório ou degradante'
+    ]
+  },
+  {
+    id: 'convivencia_familiar', num: 7, icone: '👨‍👩‍👧',
+    nome: 'Violação da convivência familiar e comunitária',
+    subs: [
+      'Abandono familiar',
+      'Rejeição ou exclusão do núcleo familiar',
+      'Expulsão de casa',
+      'Separação familiar indevida',
+      'Impedimento injustificado de convivência familiar',
+      'Descumprimento de determinação judicial de convivência',
+      'Subtração de criança ou adolescente',
+      'Sequestro ou retenção ilícita',
+      'Entrega irregular a terceiros',
+      'Adoção irregular',
+      'Guarda irregular',
+      'Tráfico de crianças e adolescentes',
+      'Rompimento indevido de vínculos familiares',
+      'Falta de reintegração familiar quando cabível',
+      'Ausência de medidas para preservar vínculos familiares',
+      'Negligência no acompanhamento em acolhimento',
+      'Institucionalização prolongada sem reavaliação'
+    ]
+  },
+  {
+    id: 'educacao', num: 8, icone: '📚',
+    nome: 'Violação do direito à educação',
+    subs: [
+      'Negação de matrícula escolar',
+      'Impedimento de acesso à escola',
+      'Exclusão escolar discriminatória',
+      'Recusa de matrícula por motivo de deficiência',
+      'Recusa por condição socioeconômica, racial ou familiar',
+      'Falta de oferta de educação inclusiva',
+      'Falta de profissional de apoio escolar assegurado',
+      'Falta de acessibilidade nas escolas',
+      'Negligência da escola diante de bullying',
+      'Violência física no ambiente escolar',
+      'Violência psicológica no ambiente escolar',
+      'Violência sexual no ambiente escolar',
+      'Discriminação por professores ou funcionários',
+      'Humilhação e exposição vexatória de estudantes',
+      'Suspensão ou transferência arbitrária',
+      'Impedimento de participação nas atividades escolares',
+      'Falta de transporte escolar quando devido',
+      'Falta de alimentação escolar',
+      'Falta de condições de segurança e infraestrutura',
+      'Omissão da escola diante de situações de violência',
+      'Falta de comunicação/notificação de maus-tratos',
+      'Ausência de oferta educacional adequada'
+    ]
+  },
+  {
+    id: 'alimentacao_moradia', num: 9, icone: '🏠',
+    nome: 'Violação à alimentação, moradia e dignidade',
+    subs: [
+      'Insegurança alimentar',
+      'Privação de alimentos',
+      'Desnutrição decorrente de negligência',
+      'Falta de acesso à alimentação adequada',
+      'Situação de rua',
+      'Ausência de moradia digna',
+      'Moradia em condições insalubres ou perigosas',
+      'Despejo ou expulsão do ambiente familiar',
+      'Falta de acesso à água potável',
+      'Falta de saneamento básico',
+      'Exposição a condições ambientais prejudiciais',
+      'Ausência de proteção social em vulnerabilidade'
+    ]
+  },
+  {
+    id: 'trabalho_infantil', num: 10, icone: '🔨',
+    nome: 'Exploração do trabalho infantil',
+    subs: [
+      'Trabalho infantil em geral',
+      'Trabalho doméstico infantil',
+      'Trabalho infantil em atividades rurais',
+      'Trabalho infantil nas ruas',
+      'Trabalho infantil no comércio',
+      'Trabalho em atividades perigosas ou insalubres',
+      'Trabalho noturno de adolescente em condições proibidas',
+      'Exploração econômica da criança ou adolescente',
+      'Trabalho forçado',
+      'Trabalho em condições análogas à escravidão',
+      'Utilização de crianças/adolescentes para mendicância',
+      'Utilização em atividades ilícitas ou tráfico',
+      'Utilização em atividades criminosas',
+      'Exploração artística/esportiva abusiva',
+      'Excesso de jornada prejudicial à escolarização',
+      'Trabalho em desacordo com a aprendizagem profissional'
+    ]
+  },
+  {
+    id: 'patrimonial', num: 11, icone: '💰',
+    nome: 'Violência patrimonial e exploração financeira',
+    subs: [
+      'Apropriação indevida de dinheiro da criança/adolescente',
+      'Apropriação de benefícios sociais destinados ao jovem',
+      'Apropriação indevida de pensão alimentícia',
+      'Utilização indevida de patrimônio do assistido',
+      'Exploração econômica',
+      'Retenção indevida de documentos',
+      'Fraudes envolvendo patrimônio de crianças/adolescentes',
+      'Uso do jovem para obtenção de vantagens financeiras',
+      'Coação para entrega de dinheiro ou bens',
+      'Exploração financeira por familiares ou terceiros'
+    ]
+  },
+  {
+    id: 'discriminacao', num: 12, icone: '⚖️',
+    nome: 'Discriminação e preconceito',
+    subs: [
+      'Racismo',
+      'Discriminação racial',
+      'Discriminação étnica',
+      'Discriminação religiosa / Intolerância religiosa',
+      'Discriminação por deficiência (Capacitismo)',
+      'Discriminação socioeconômica',
+      'Discriminação por origem ou nacionalidade (Xenofobia)',
+      'Discriminação por orientação sexual (LGBTfobia)',
+      'Discriminação por identidade de gênero',
+      'Discriminação por condição de saúde',
+      'Discriminação por situação familiar',
+      'Discriminação contra indígenas ou quilombolas',
+      'Discriminação contra população em situação de rua',
+      'Discriminação institucional'
+    ]
+  },
+  {
+    id: 'institucional', num: 13, icone: '🏛️',
+    nome: 'Violência institucional',
+    subs: [
+      'Violência praticada por agentes públicos',
+      'Abuso de autoridade',
+      'Tratamento humilhante ou degradante',
+      'Discriminação no atendimento institucional',
+      'Omissão ou negligência institucional',
+      'Revitimização durante atendimento ou investigação',
+      'Exposição desnecessária a relatos repetidos',
+      'Violação do sigilo de informações',
+      'Exposição indevida de dados e imagens',
+      'Atendimento inadequado em órgãos públicos',
+      'Acolhimento institucional em condições inadequadas',
+      'Castigos físicos ou psicológicos em instituições',
+      'Restrição ilegal de liberdade em instituições',
+      'Falta de fiscalização de entidades de acolhimento',
+      'Falta de encaminhamento aos órgãos de proteção',
+      'Descumprimento de medidas protetivas',
+      'Omissão de profissionais diante de violência',
+      'Falta de estrutura/serviços públicos indispensáveis'
+    ]
+  },
+  {
+    id: 'trafico_exploracao', num: 14, icone: '🚨',
+    nome: 'Tráfico de pessoas e outras formas de exploração',
+    subs: [
+      'Tráfico de crianças e adolescentes',
+      'Aliciamento para exploração sexual',
+      'Aliciamento para trabalho forçado',
+      'Tráfico para exploração laboral',
+      'Tráfico para adoção ilegal',
+      'Tráfico para remoção de órgãos',
+      'Desaparecimento de criança ou adolescente',
+      'Subtração de incapaz',
+      'Sequestro',
+      'Venda ou entrega ilegal de crianças',
+      'Recrutamento para atividades criminosas',
+      'Exploração em redes criminosas',
+      'Exploração para mendicância'
+    ]
+  },
+  {
+    id: 'digital', num: 15, icone: '💻',
+    nome: 'Violação de direitos no ambiente digital',
+    subs: [
+      'Cyberbullying',
+      'Aliciamento sexual pela internet',
+      'Exploração sexual online',
+      'Compartilhamento não autorizado de imagens íntimas',
+      'Produção/divulgação de pornografia infantojuvenil',
+      'Sextorsão / Chantagem virtual',
+      'Perseguição virtual (Stalking)',
+      'Ameaças pela internet',
+      'Exposição indevida de dados pessoais',
+      'Exposição da imagem sem respeito aos direitos',
+      'Assédio virtual',
+      'Indução ou incentivo à automutilação',
+      'Indução ou incentivo ao suicídio',
+      'Indução ou incentivo ao uso de drogas',
+      'Exposição a conteúdos violentos ou prejudiciais',
+      'Uso indevido de dados/imagens para fins comerciais',
+      'Fraudes e golpes digitais contra o assistido'
+    ]
+  },
+  {
+    id: 'propria_conduta', num: 16, icone: '🧒',
+    nome: 'Situações de risco decorrentes da conduta (Art. 98, III)',
+    subs: [
+      'Uso de álcool',
+      'Uso de tabaco ou cigarros eletrônicos (vapes)',
+      'Uso de substâncias psicoativas ou drogas ilícitas',
+      'Dependência química',
+      'Envolvimento com tráfico de drogas',
+      'Prática de atos infracionais',
+      'Envolvimento em grupos ou organizações criminosas',
+      'Fugas recorrentes do ambiente familiar/institucional',
+      'Saídas frequentes sem autorização em situação de risco',
+      'Situação de rua',
+      'Exposição voluntária a ambientes de risco',
+      'Exposição a situações de violência',
+      'Comportamentos autodestrutivos',
+      'Automutilação ou autolesão',
+      'Tentativa de suicídio / Ideação suicida',
+      'Sofrimento psíquico grave',
+      'Recusa persistente de alimentação',
+      'Exposição a exploração sexual ou econômica',
+      'Violência entre pares',
+      'Abandono escolar ou evasão escolar',
+      'Práticas perigosas à própria integridade',
+      'Gravidez na adolescência em desproteção/violência',
+      'Outras situações de risco da própria conduta'
+    ]
+  },
+  {
+    id: 'ato_infracional', num: 17, icone: '⚖️',
+    nome: 'Prática de ato infracional por adolescente (Art. 103)',
+    subs: [
+      'Ato infracional contra a pessoa',
+      'Ato infracional contra o patrimônio',
+      'Ato infracional relacionado a drogas',
+      'Ato infracional relacionado à violência',
+      'Ato infracional relacionado a ameaça ou intimidação',
+      'Ato infracional relacionado a tráfico de pessoas',
+      'Ato infracional contra a dignidade sexual',
+      'Ato infracional relacionado a crimes digitais',
+      'Ato infracional relacionado a armas',
+      'Ato infracional relativo a outros crimes/contravenções',
+      'Reincidência em atos infracionais',
+      'Descumprimento de medida socioeducativa'
+    ]
+  },
+  {
+    id: 'outras_violacoes', num: 18, icone: '📋',
+    nome: 'Outras violações e situações não especificadas',
+    subs: [
+      'Violação de outro direito previsto no ECA',
+      'Descumprimento de medida de proteção',
+      'Descumprimento de dever legal por pais ou responsáveis',
+      'Descumprimento de dever legal por agente público',
+      'Omissão de notificação de suspeita de maus-tratos',
+      'Violação de direito ainda em investigação',
+      'Outra situação não especificada'
+    ]
+  }
+]
+
+const ECA_SITUACAO_OCORRENCIA = [
+  'Violação em andamento',
+  'Violação recorrente',
+  'Violação ocorrida anteriormente',
+  'Suspeita de violação',
+  'Ameaça de violação de direitos',
+  'Situação de risco ou vulnerabilidade',
+  'Violação já comunicada a outro órgão',
+  'Não foi possível identificar'
+]
+
+const ECA_GRAU_URGENCIA = [
+  'Risco iminente à vida',
+  'Risco à integridade física',
+  'Risco de violência sexual',
+  'Risco de abandono ou desamparo',
+  'Risco de agravamento da situação de violência',
+  'Necessidade de atendimento urgente em saúde',
+  'Necessidade de proteção imediata',
+  'Sem risco imediato identificado',
+  'Não foi possível avaliar'
+]
+
 // Cada seção estatística é derivada de uma parte da ficha (exceto a descrição dos casos).
 // A mesma lista alimenta a tela e o PDF, então ambos mostram exatamente as mesmas seções.
 const F03_ESTAT_SECOES = [
@@ -2819,9 +3329,41 @@ const F03_ESTAT_SECOES = [
   { id:'neuroCond', titulo:'Condição Neurodivergente', v: (a,c) => F03_NEURO.filter((n,i)=>a['f03a-neuro-'+i]) },
   { id:'laudo', titulo:'Possui Laudo', v: (a,c) => [a['f03a-laudo-sim'] ? 'Sim' : 'Não'] },
   { id:'porta', titulo:'Porta de Entrada', v: (a,c) => F03_PORTA_ENTRADA.filter((p,i)=>c['f03c-porta-'+i]) },
+  { id:'origemViolacao', titulo:'Origem da Violação (Art. 98 ECA)', v: (a,c) => {
+      const r = []
+      if (c['f03c-origem-sociedade_estado']) r.push('Sociedade ou Estado (Art. 98, I)')
+      if (c['f03c-origem-pais_responsaveis']) r.push('Pais ou Responsável (Art. 98, II)')
+      if (c['f03c-origem-propria_conduta']) r.push('Própria Conduta (Art. 98, III)')
+      return r
+  } },
+  { id:'agente', titulo:'Agente Violador', v: (a,c) => {
+      const ag = c['f03c-agente-violador']
+      if (!ag) return []
+      if (ag === 'Outro' && c['f03c-agente-violador-outro']) return ['Outro: ' + c['f03c-agente-violador-outro']]
+      return [ag]
+  } },
+  { id:'violacao', titulo:'Natureza da Violação (Categorias ECA)', v: (a,c) => {
+      const res = []
+      ECA_CATEGORIAS_VIOLACOES.forEach(cat => {
+        if (c['f03c-cat-' + cat.id]) res.push(cat.nome)
+      })
+      if (!res.length && typeof F03_VIOLACOES !== 'undefined') {
+        F03_VIOLACOES.forEach((v, i) => { if (c['f03c-viol-' + i]) res.push(v) })
+      }
+      return res
+  } },
+  { id:'subviolacao', titulo:'Subcategorias / Detalhamento da Violação', v: (a,c) => {
+      const res = []
+      ECA_CATEGORIAS_VIOLACOES.forEach(cat => {
+        cat.subs.forEach((sub, sIdx) => {
+          if (c[`f03c-sub-${cat.id}-${sIdx}`]) res.push(sub)
+        })
+      })
+      return res
+  } },
+  { id:'urgencia', titulo:'Grau de Urgência', v: (a,c) => [c['f03c-grau-urgencia']] },
+  { id:'situacao', titulo:'Situação da Ocorrência', v: (a,c) => [c['f03c-situacao-ocorrencia']] },
   { id:'ident', titulo:'Identificação de Ocorrência', v: (a,c) => [c['f03c-ident-ocorrencia']] },
-  { id:'agente', titulo:'Agente Violador', v: (a,c) => [c['f03c-agente-violador']] },
-  { id:'violacao', titulo:'Tipo de Violência / Violação', v: (a,c) => F03_VIOLACOES.filter((v,i)=>c['f03c-viol-'+i]) },
   { id:'encaminhamento', titulo:'Ações e Encaminhamentos', v: (a,c) => { const m = _f03MigrarAcoes(c); return F03_ACOES_UNIFICADAS.filter(x => m[x.id]).map(x => x.label) } },
 ]
 
@@ -4788,7 +5330,7 @@ function renderForm03(form) {
   const L = (id, label, w, extra='') => `<input id="f03a-${id}" data-label="${label}" style="width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" ${extra}/>`
   const C = (id, label, txt) => `<label class="f03-check">${txt} <input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"></label>`
   const td = (html, span=1, extra='') => `<td style="padding:6px 8px;border:1px solid #ccc${extra}"${span>1?` colspan="${span}"`:''}>${html}</td>`
-  const th = (txt) => `<tr style="background:#f0f4f8"><td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">${txt}</td></tr>`
+  const th = (txt) => `<tr class="f03-th-row" style="background:#cfe2f7"><td class="f03-th-cell" style="padding:8px 10px;font-weight:700;font-size:13.5px;letter-spacing:0.4px;color:#0f2d59;background-color:#cfe2f7;border:1px solid #9ec3e6;border-left:5px solid #1e3a5f" colspan="4">${txt}</td></tr>`
   const genitor = (p, titulo) => `
       ${th(titulo)}
       <tr>${td(`Nome: ${L(p+'-nome', titulo+': nome', 'calc(100% - 60px)', `placeholder="Nome completo ${p==='mae'?'da mãe':'do pai'}"`)}`, 4)}</tr>
@@ -4926,27 +5468,161 @@ function renderForm03(form) {
           ${F03_PORTA_ENTRADA.map((p,i)=>box(`<span>${p}</span> <input type="checkbox" id="f03c-porta-${i}" data-label="Porta de entrada: ${p}" style="accent-color:var(--primary)" />`)).join('')}
         </div>
       </div>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🏷️ Identificação de Ocorrência</div>
-        <select id="f03c-ident-ocorrencia" data-label="Identificação de ocorrência" style="width:100%;margin-bottom:16px">
-          <option value="">-- Selecione a identificação --</option>
-          ${F03_IDENT_OCORRENCIA.map(g=>`<optgroup label="${esc(g.grupo)}">${g.itens.map(it=>`<option value="${esc(it)}">${esc(it)}</option>`).join('')}</optgroup>`).join('')}
-        </select>
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🧑 Agente Violador</div>
-        <select id="f03c-agente-violador" data-label="Agente violador" style="width:100%;margin-bottom:16px">
-          <option value="">-- Selecione o agente violador --</option>
-          ${F03_AGENTE_VIOLADOR.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('')}
-        </select>
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚠️ Natureza da Violação / Denúncia</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px">
-          ${F03_VIOLACOES.map((v,i)=>box(`<span>${v}</span> <input type="checkbox" id="f03c-viol-${i}" data-label="Violação: ${v}" style="accent-color:var(--primary)" />`)).join('')}
+      <!-- ══ QUADRO ESTRUTURADO: VIOLAÇÕES DE DIREITOS (ECA / ART. 98) ══ -->
+      <div style="background:var(--bg-subtle,#f8fafc);border:1px solid var(--border,#dde3ec);border-radius:12px;padding:16px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border,#dde3ec);padding-bottom:10px;margin-bottom:14px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--primary,#1e3a5f);display:flex;align-items:center;gap:6px">
+              <span>🛡️</span> Identificação e Tipificação de Violações de Direitos (ECA)
+            </div>
+            <div style="font-size:11.5px;color:var(--text-muted,#6b7a90);margin-top:2px">
+              Classificação por origem legal (Art. 98), agente violador, situação e desdobramento progressivo de violações.
+            </div>
+          </div>
+          <span class="so-tela" style="font-size:11px;background:var(--primary-subtle,#e8f0fe);color:var(--primary,#1e3a5f);font-weight:600;padding:3px 8px;border-radius:10px">
+            ECA Art. 98 / Disque 100
+          </span>
         </div>
-        <div><label class="field-label">Descrição da Situação</label>
-          <textarea id="f03c-descricao" data-label="Descrição da situação" rows="4" style="resize:vertical;min-height:115px" placeholder="Descreva detalhadamente a situação…"></textarea>
+
+        <!-- 1. ORIGEM DA VIOLAÇÃO (ART. 98 DO ECA) -->
+        <div style="margin-bottom:18px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--text,#1a2332);margin-bottom:4px;display:flex;align-items:center;gap:6px">
+            <span>⚖️</span> 1. Origem da Violação / Fundamentação Legal (Art. 98 do ECA)
+          </div>
+          <div style="font-size:11px;color:var(--text-muted,#6b7a90);margin-bottom:10px">
+            Selecione a(s) circunstância(s) que ensejaram a atuação protetiva (pode marcar mais de uma se houver concorrência de fatores):
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
+            ${ECA_ORIGENS.map(o => `
+              <div class="f03-origem-card" id="f03-origem-card-${o.id}" onclick="_f03ToggleOrigem('${o.id}')">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                  <div class="origem-tag">${o.art}</div>
+                  <input type="checkbox" id="f03c-origem-${o.id}" data-label="Origem ECA: ${o.titulo}" style="accent-color:var(--primary);cursor:pointer;margin:0" onclick="event.stopPropagation();_f03ToggleOrigem('${o.id}', this.checked)" />
+                </div>
+                <div class="origem-titulo">${o.titulo}</div>
+                <div class="origem-desc">${o.desc}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 2. IDENTIFICAÇÃO DO AGENTE VIOLADOR -->
+        <div style="margin-bottom:18px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--text,#1a2332);margin-bottom:4px;display:flex;align-items:center;gap:6px">
+            <span>🧑</span> 2. Identificação do Possível Agente Violador
+          </div>
+          <div style="font-size:11px;color:var(--text-muted,#6b7a90);margin-bottom:8px">
+            Identifique quem praticou a ação/omissão, ou indique se decorre de conduta do próprio assistido:
+          </div>
+          <div style="display:grid;grid-template-columns:1fr;gap:8px">
+            <select id="f03c-agente-violador" data-label="Agente violador" style="width:100%" onchange="_f03AgenteVioladorChange(this.value)">
+              <option value="">-- Selecione o agente violador --</option>
+              ${ECA_AGENTES.map(g => `<optgroup label="${esc(g.grupo)}">${g.itens.map(it => `<option value="${esc(it)}">${esc(it)}</option>`).join('')}</optgroup>`).join('')}
+            </select>
+            <div id="f03c-agente-outro-wrap" style="display:none;margin-top:6px">
+              <label class="field-label" style="font-size:11.5px">Especifique o Agente Violador:</label>
+              <input id="f03c-agente-violador-outro" data-label="Agente violador (outro)" placeholder="Informe quem é o agente violador..." style="width:100%" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. NATUREZA DA VIOLAÇÃO / DENÚNCIA (18 CATEGORIAS COM REVELAÇÃO PROGRESSIVA) -->
+        <div style="margin-bottom:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+            <div style="font-size:12.5px;font-weight:700;color:var(--text,#1a2332);display:flex;align-items:center;gap:6px">
+              <span>⚠️</span> 3. Natureza da Violação / Denúncia (Categorias do ECA)
+            </div>
+            <div class="so-tela" style="display:flex;align-items:center;gap:6px">
+              <input id="f03-filtro-violacoes" placeholder="🔍 Filtrar categorias ou subcategorias..." oninput="_f03FiltrarViolacoes(this.value)" style="width:230px;padding:4px 8px;font-size:11.5px;border:1px solid var(--border);border-radius:6px;background:var(--card,#fff)" />
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted,#6b7a90);margin-bottom:10px">
+            Clique nas categorias que se aplicam ao caso para abrir e marcar suas subcategorias específicas (organização limpa por demanda):
+          </div>
+
+          <!-- Grade limpa das 18 Categorias -->
+          <div id="f03-grid-categorias" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px;margin-bottom:12px">
+            ${ECA_CATEGORIAS_VIOLACOES.map((cat) => `
+              <div class="f03-cat-card" id="f03-cat-card-${cat.id}" onclick="_f03ToggleCat('${cat.id}')">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+                  <span style="font-size:16px;flex-shrink:0">${cat.icone}</span>
+                  <div style="font-size:12px;line-height:1.3;word-break:break-word">
+                    <span style="font-weight:600;color:var(--text,#1a2332)">${cat.num}. ${cat.nome}</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                  <span class="f03-cat-badge" id="f03-cat-badge-${cat.id}">0</span>
+                  <input type="checkbox" id="f03c-cat-${cat.id}" data-label="Violação (Cat. ${cat.num}): ${cat.nome}" style="accent-color:var(--primary);cursor:pointer;margin:0" onclick="event.stopPropagation();_f03ToggleCat('${cat.id}', this.checked)" />
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Container dinâmico das Subcategorias Desdobradas -->
+          <div id="f03-subcategorias-container" style="display:grid;gap:10px">
+            ${ECA_CATEGORIAS_VIOLACOES.map((cat) => `
+              <div class="f03-sub-painel" id="f03-sub-painel-${cat.id}" style="display:none">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #dce8f5">
+                  <div style="font-size:12px;font-weight:700;color:var(--primary,#1e3a5f);display:flex;align-items:center;gap:6px">
+                    <span>${cat.icone}</span> ${cat.num}. ${cat.nome} • Especificações:
+                  </div>
+                  <div class="so-tela" style="display:flex;gap:6px">
+                    <button type="button" class="btn btn-outline btn-sm f03-btn-sub-acao" onclick="_f03MarcarTodasSub('${cat.id}', true)" style="padding:2px 8px;font-size:10.5px">Marcar todas</button>
+                    <button type="button" class="btn btn-outline btn-sm f03-btn-sub-acao" onclick="_f03MarcarTodasSub('${cat.id}', false)" style="padding:2px 8px;font-size:10.5px">Limpar</button>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px">
+                  ${cat.subs.map((sub, sIdx) => `
+                    <label class="f03-check f03-chip f03-sub-item" id="f03-sub-item-${cat.id}-${sIdx}" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;border:1px solid var(--border,#cbd5e1);border-radius:6px;background:#fff;font-size:11.5px;margin-right:0">
+                      <span>${sub}</span>
+                      <input type="checkbox" id="f03c-sub-${cat.id}-${sIdx}" data-label="${cat.nome}: ${sub}" onchange="_f03UpdateSubCount('${cat.id}')" style="accent-color:var(--primary);width:auto" />
+                    </label>
+                  `).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 4. SITUAÇÃO DA OCORRÊNCIA E GRAU DE URGÊNCIA -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+          <div>
+            <label class="field-label" style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span>⏱️</span> Situação da Ocorrência
+            </label>
+            <select id="f03c-situacao-ocorrencia" data-label="Situação da ocorrência" style="width:100%">
+              <option value="">-- Selecione a situação --</option>
+              ${ECA_SITUACAO_OCORRENCIA.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="field-label" style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span>🚨</span> Grau de Urgência
+            </label>
+            <select id="f03c-grau-urgencia" data-label="Grau de urgência" style="width:100%">
+              <option value="">-- Selecione o grau de urgência --</option>
+              ${ECA_GRAU_URGENCIA.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- 5. IDENTIFICAÇÃO HISTÓRICA / CADASTRO DE OCORRÊNCIA (OPCIONAL/AUXILIAR) -->
+        <div style="margin-bottom:14px">
+          <label class="field-label" style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">
+            <span>🏷️</span> Identificação Complementar de Ocorrência
+          </label>
+          <select id="f03c-ident-ocorrencia" data-label="Identificação de ocorrência" style="width:100%">
+            <option value="">-- Selecione a identificação complementar (se aplicável) --</option>
+            ${F03_IDENT_OCORRENCIA.map(g=>`<optgroup label="${esc(g.grupo)}">${g.itens.map(it=>`<option value="${esc(it)}">${esc(it)}</option>`).join('')}</optgroup>`).join('')}
+          </select>
+        </div>
+
+        <!-- 6. DESCRIÇÃO DETALHADA DA SITUAÇÃO -->
+        <div>
+          <label class="field-label" style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">
+            <span>📝</span> Descrição Detalhada dos Fatos
+          </label>
+          <textarea id="f03c-descricao" data-label="Descrição da situação" rows="4" style="resize:vertical;min-height:115px" placeholder="Descreva detalhadamente a situação, relatos, contexto fático e circunstâncias da violação constatada…"></textarea>
         </div>
       </div>
       <div style="border-top:1px solid var(--border);padding-top:14px">
@@ -5107,7 +5783,7 @@ function _f03IrmaosRender(qtd) {
   const L = (id, label, w, extra='') => `<input id="f03a-${id}" data-label="${label}" style="width:${w};border:none;border-bottom:1px solid #999;background:transparent;font-family:inherit" ${extra}/>`
   const C = (id, label, txt) => `<label class="f03-check">${txt} <input type="checkbox" id="f03a-${id}" data-label="${label}" style="width:auto"></label>`
   const td = (html, span=1) => `<td style="padding:6px 8px;border:1px solid #ccc"${span>1?` colspan="${span}"`:''}>${html}</td>`
-  const th = (txt) => `<tr style="background:#f0f4f8"><td style="padding:6px 8px;font-weight:700;border:1px solid #ccc" colspan="4">${txt}</td></tr>`
+  const th = (txt) => `<tr class="f03-th-row" style="background:#cfe2f7"><td class="f03-th-cell" style="padding:8px 10px;font-weight:700;font-size:13.5px;letter-spacing:0.4px;color:#0f2d59;background-color:#cfe2f7;border:1px solid #9ec3e6;border-left:5px solid #1e3a5f" colspan="4">${txt}</td></tr>`
   let html = ''
   for (let i = 1; i <= n; i++) {
     const p = 'irmao' + i
@@ -5164,6 +5840,112 @@ function _f03ToggleAtendimento(el, retorno) {
   const aviso = document.getElementById('f03-retorno-aviso')
   if (aviso) aviso.style.display = destrava ? 'block' : 'none'
 }
+
+// ── INTERATIVIDADE DO QUADRO DE VIOLAÇÕES ECA (F03) ──
+function _f03ToggleOrigem(id, forceChecked) {
+  const chk = document.getElementById('f03c-origem-' + id)
+  const card = document.getElementById('f03-origem-card-' + id)
+  if (!chk || !card) return
+  if (typeof forceChecked === 'boolean') chk.checked = forceChecked
+  else chk.checked = !chk.checked
+  card.classList.toggle('ativo', chk.checked)
+}
+
+function _f03AgenteVioladorChange(val) {
+  const outroWrap = document.getElementById('f03c-agente-outro-wrap')
+  if (outroWrap) outroWrap.style.display = (val === 'Outro') ? 'block' : 'none'
+}
+
+function _f03ToggleCat(catId, forceChecked) {
+  const chk = document.getElementById('f03c-cat-' + catId)
+  const card = document.getElementById('f03-cat-card-' + catId)
+  const painel = document.getElementById('f03-sub-painel-' + catId)
+  if (!chk || !card) return
+  if (typeof forceChecked === 'boolean') chk.checked = forceChecked
+  else chk.checked = !chk.checked
+  card.classList.toggle('ativo', chk.checked)
+  if (painel) painel.style.display = chk.checked ? 'block' : 'none'
+  _f03UpdateSubCount(catId)
+}
+
+function _f03UpdateSubCount(catId) {
+  const painel = document.getElementById('f03-sub-painel-' + catId)
+  const badge = document.getElementById('f03-cat-badge-' + catId)
+  if (!painel || !badge) return
+  const marcados = painel.querySelectorAll('input[type="checkbox"]:checked').length
+  badge.textContent = marcados
+  if (marcados > 0) badge.classList.add('show')
+  else badge.classList.remove('show')
+}
+
+function _f03MarcarTodasSub(catId, marcar) {
+  const painel = document.getElementById('f03-sub-painel-' + catId)
+  if (!painel) return
+  painel.querySelectorAll('input[type="checkbox"]').forEach(c => { c.checked = !!marcar })
+  _f03UpdateSubCount(catId)
+}
+
+function _f03FiltrarViolacoes(termo) {
+  const t = (termo || '').toLowerCase().trim()
+  ECA_CATEGORIAS_VIOLACOES.forEach(cat => {
+    const card = document.getElementById('f03-cat-card-' + cat.id)
+    const painel = document.getElementById('f03-sub-painel-' + cat.id)
+    if (!card) return
+    if (!t) {
+      card.style.display = ''
+      if (painel) {
+        const chk = document.getElementById('f03c-cat-' + cat.id)
+        painel.style.display = chk?.checked ? 'block' : 'none'
+        painel.querySelectorAll('.f03-sub-item').forEach(el => { el.style.display = '' })
+      }
+      return
+    }
+    const catMatch = cat.nome.toLowerCase().includes(t)
+    let subsMatch = false
+    if (painel) {
+      painel.querySelectorAll('.f03-sub-item').forEach((el, sIdx) => {
+        const subTxt = (cat.subs[sIdx] || '').toLowerCase()
+        const match = subTxt.includes(t) || catMatch
+        el.style.display = match ? '' : 'none'
+        if (match) subsMatch = true
+      })
+    }
+    if (catMatch || subsMatch) {
+      card.style.display = ''
+      if (painel && subsMatch) painel.style.display = 'block'
+    } else {
+      card.style.display = 'none'
+      if (painel) painel.style.display = 'none'
+    }
+  })
+}
+
+function _f03SyncViolacoesUI() {
+  ECA_ORIGENS.forEach(o => {
+    const chk = document.getElementById('f03c-origem-' + o.id)
+    const card = document.getElementById('f03-origem-card-' + o.id)
+    if (chk && card) card.classList.toggle('ativo', !!chk.checked)
+  })
+
+  const agSel = document.getElementById('f03c-agente-violador')
+  if (agSel) _f03AgenteVioladorChange(agSel.value)
+
+  ECA_CATEGORIAS_VIOLACOES.forEach(cat => {
+    const chk = document.getElementById('f03c-cat-' + cat.id)
+    const card = document.getElementById('f03-cat-card-' + cat.id)
+    const painel = document.getElementById('f03-sub-painel-' + cat.id)
+    if (!chk || !card) return
+    let temSub = false
+    if (painel) {
+      temSub = painel.querySelectorAll('input[type="checkbox"]:checked').length > 0
+    }
+    if (temSub && !chk.checked) chk.checked = true
+    card.classList.toggle('ativo', !!chk.checked)
+    if (painel) painel.style.display = chk.checked ? 'block' : 'none'
+    _f03UpdateSubCount(cat.id)
+  })
+}
+
 async function _f03SalvarAtendente() {
   if (!_f03Ficha) return
   const novo = _f03Coletar('f03a-')
@@ -5371,6 +6153,7 @@ function _f03Render() {
   sec.style.display = podeVerComplemento ? 'block' : 'none'
   if (!podeVerComplemento) return
   _f03Aplicar(_f03MigrarAcoes(f.dados_conselheiro))
+  _f03SyncViolacoesUI()
   document.getElementById('f03-resp-nome').value = f.conselheiro_dest || ''
   _f03AtualizarAssinaturas()
   document.getElementById('f03-label-resp').textContent = `Responsável: ${f.conselheiro_dest || '—'}${podeEditarTudo ? '' : ' · somente leitura'}`
@@ -9286,7 +10069,7 @@ const DASH_GRUPOS = [
   { grupo: 'Perfil do Atendimento', cor: '#a78bfa', secoes: [['sexo','donut'],['faixa','donut'],['raca','donut'],['genero','donut'],['matriculado','donut'],['serie','bar']] },
   { grupo: 'Grupos Específicos', cor: '#2dd4bf', secoes: [['pcd','donut'],['neuro','donut'],['neuroCond','bar'],['laudo','donut']] },
   { grupo: 'Porta de Entrada', cor: '#ffb938', secoes: [['porta','bar']] },
-  { grupo: 'Identificação da Ocorrência', cor: '#7ed957', secoes: [['ident','bar'],['agente','donut'],['violacao','bar']] },
+  { grupo: 'Identificação da Ocorrência', cor: '#7ed957', secoes: [['origemViolacao','donut'],['agente','donut'],['urgencia','donut'],['situacao','bar'],['violacao','bar'],['subviolacao','bar'],['ident','bar']] },
   { grupo: 'Aplicação de Medidas', cor: '#4fc3f7', secoes: [['encaminhamento','bar']] },
 ]
 const DASH_CORES = ['#ff6b6b','#a78bfa','#ffb938','#7ed957','#4fc3f7','#2dd4bf','#f472b6','#94a3b8','#fb923c','#38bdf8']
