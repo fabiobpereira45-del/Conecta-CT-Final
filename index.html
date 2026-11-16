@@ -8611,59 +8611,176 @@ async function carregarRequisicoes() {
   refreshRequisicoes()
 }
 
-function renderRequisicoes() {
-  const role = currentUser.role
-  const list = requisicoes
-  const busca = (document.getElementById('req-search')?.value || '').toLowerCase()
-  const filtro = document.getElementById('req-status-filter')?.value || ''
-  const filtered = list.filter(r =>
-    (!busca || r.protocolo.toLowerCase().includes(busca) || r.solicitante.toLowerCase().includes(busca) || r.cartorio.toLowerCase().includes(busca) || r.tipo.toLowerCase().includes(busca)) &&
-    (!filtro || r.status === filtro)
-  )
+let _reqFiltros = {
+  busca: '',
+  cartorio: '',
+  status: '',
+  ordemCampo: 'data',
+  ordemDir: 'desc'
+};
+
+function _reqTimestamp(r) {
+  if (r.created_at) {
+    const t = new Date(r.created_at).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (r.data) {
+    const parts = r.data.split('/');
+    if (parts.length === 3) {
+      const horaParts = (r.hora || '00:00').split(':');
+      const d = new Date(parts[2], parts[1] - 1, parts[0], horaParts[0] || 0, horaParts[1] || 0);
+      if (!isNaN(d.getTime())) return d.getTime();
+    }
+  }
+  return 0;
+}
+
+function _reqObterListaCartorios() {
+  const set = new Set();
+  (requisicoes || []).forEach(r => {
+    if (r.cartorio) set.add(r.cartorio.trim());
+  });
+  if (typeof CARTORIOS_SALVADOR !== 'undefined' && Array.isArray(CARTORIOS_SALVADOR)) {
+    CARTORIOS_SALVADOR.forEach(c => {
+      if (c.oficio) set.add(c.oficio.trim());
+    });
+  }
+  return [...set].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+}
+
+function _reqObterFiltrados() {
+  const list = requisicoes || [];
+  const busca = (_reqFiltros.busca || '').toLowerCase().trim();
+  const cartorio = _reqFiltros.cartorio || '';
+  const status = _reqFiltros.status || '';
+
+  const filtrados = list.filter(r => {
+    if (cartorio && r.cartorio !== cartorio && !(r.cartorio || '').includes(cartorio)) return false;
+    if (status && r.status !== status) return false;
+    if (busca) {
+      const haystack = [
+        r.protocolo,
+        r.solicitante,
+        r.solicitanteCt,
+        r.cartorio,
+        r.subdistrito,
+        r.tipo,
+        r.status,
+        r.nomeAssistido
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(busca)) return false;
+    }
+    return true;
+  });
+
+  const campo = _reqFiltros.ordemCampo;
+  const dir = _reqFiltros.ordemDir === 'asc' ? 1 : -1;
+
+  filtrados.sort((a, b) => {
+    if (campo === 'data') {
+      const ta = _reqTimestamp(a);
+      const tb = _reqTimestamp(b);
+      return (ta - tb) * dir;
+    }
+    if (campo === 'protocolo') {
+      return (a.protocolo || '').localeCompare(b.protocolo || '', undefined, { numeric: true }) * dir;
+    }
+    if (campo === 'cartorio') {
+      return (a.cartorio || '').localeCompare(b.cartorio || '', 'pt-BR') * dir;
+    }
+    if (campo === 'solicitante') {
+      return (a.solicitante || '').localeCompare(b.solicitante || '', 'pt-BR') * dir;
+    }
+    if (campo === 'tipo') {
+      return (a.tipo || '').localeCompare(b.tipo || '', 'pt-BR') * dir;
+    }
+    if (campo === 'status') {
+      return (a.status || '').localeCompare(b.status || '', 'pt-BR') * dir;
+    }
+    return 0;
+  });
+
+  return filtrados;
+}
+
+function _reqAlternarOrdem(campo) {
+  if (_reqFiltros.ordemCampo === campo) {
+    _reqFiltros.ordemDir = _reqFiltros.ordemDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _reqFiltros.ordemCampo = campo;
+    _reqFiltros.ordemDir = (campo === 'data' ? 'desc' : 'asc');
+  }
+  const sel = document.getElementById('req-ordem-filter');
+  if (sel) {
+    const val = `${_reqFiltros.ordemCampo}-${_reqFiltros.ordemDir}`;
+    if ([...sel.options].some(o => o.value === val)) sel.value = val;
+  }
+  _reqFiltrarEAtualizar();
+}
+
+function _reqDefinirOrdemSelect(val) {
+  if (!val) return;
+  const [campo, dir] = val.split('-');
+  _reqFiltros.ordemCampo = campo;
+  _reqFiltros.ordemDir = dir;
+  _reqFiltrarEAtualizar();
+}
+
+function _reqThIcon(campo) {
+  if (_reqFiltros.ordemCampo !== campo) {
+    return '<span style="color:#94a3b8;font-size:11px;margin-left:4px">⇅</span>';
+  }
+  return _reqFiltros.ordemDir === 'asc'
+    ? '<span style="color:var(--primary);font-size:11px;margin-left:4px;font-weight:bold">▲</span>'
+    : '<span style="color:var(--primary);font-size:11px;margin-left:4px;font-weight:bold">▼</span>';
+}
+
+function _reqFiltrarEAtualizar() {
+  const container = document.getElementById('req-table-container');
+  const countEl = document.getElementById('req-total-count');
+  const filtered = _reqObterFiltrados();
+
+  if (countEl) {
+    countEl.textContent = `${filtered.length} de ${requisicoes.length} registro(s)${_vêTudo()?' · todos os conselhos':' · suas requisições'}`;
+  }
+  if (container) {
+    container.innerHTML = _reqRenderizarTabelaHtml(filtered);
+  }
+}
+
+function _reqRenderizarTabelaHtml(filtered) {
+  const role = currentUser.role;
+  if (filtered.length === 0) {
+    return `
+    <div class="card card-pad empty" style="text-align:center;padding:40px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="margin:0 auto 14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <p style="color:var(--text-muted)">Nenhuma requisição encontrada com os filtros selecionados.<br>Tente alterar o cartório, o status ou o termo de busca.</p>
+    </div>`;
+  }
+
   return `
-  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
-    <div>
-      <h2>Requisições de Certidão</h2>
-      <p>${list.length} registro(s)${_vêTudo()?' · todos os conselhos':' · suas requisições'}</p>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="btn-sync-requisicoes" class="btn btn-outline" onclick="sincronizarRespostasCartorios(false)">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        Sincronizar Respostas
-      </button>
-      <button class="btn btn-outline" onclick="downloadRequisicoesPDF()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Baixar PDF
-      </button>
-      <button class="btn btn-primary" onclick="navigate('forms');setTimeout(()=>openFormFill(41),100)">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Nova Requisição
-      </button>
-    </div>
-  </div>
-  <div class="card card-pad" style="margin-bottom:12px">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <input id="req-search" placeholder="Buscar por protocolo, solicitante, cartório…" style="flex:1;min-width:200px" oninput="refreshRequisicoes()" />
-      <select id="req-status-filter" style="width:160px" onchange="refreshRequisicoes()">
-        <option value="">Todos os status</option>
-        ${STATUS_REQUISICAO.map(s=>`<option value="${s}">${s}</option>`).join('')}
-      </select>
-    </div>
-  </div>
-  ${filtered.length === 0 ? `
-  <div class="card card-pad empty" style="text-align:center;padding:40px">
-    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="margin:0 auto 14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    <p style="color:var(--text-muted)">Nenhuma requisição encontrada.<br>Envie uma requisição de certidão para registrá-la aqui.</p>
-  </div>` : `
   <div class="card"><div class="table-wrap"><table>
     <thead><tr>
-      <th>Protocolo</th>
-      <th>Data</th>
-      ${role==='master'?'<th>Solicitante</th>':''}
-      <th>Cartório</th>
-      <th>Tipo</th>
-      <th>Status</th>
-      <th>Ações</th>
+      <th style="cursor:pointer;user-select:none;transition:background .15s" onclick="_reqAlternarOrdem('protocolo')" title="Clique para ordenar por Protocolo">
+        Protocolo ${_reqThIcon('protocolo')}
+      </th>
+      <th style="cursor:pointer;user-select:none;transition:background .15s" onclick="_reqAlternarOrdem('data')" title="Clique para ordenar por Data">
+        Data ${_reqThIcon('data')}
+      </th>
+      ${role==='master' ? `
+      <th style="cursor:pointer;user-select:none;transition:background .15s" onclick="_reqAlternarOrdem('solicitante')" title="Clique para ordenar por Solicitante">
+        Solicitante ${_reqThIcon('solicitante')}
+      </th>` : ''}
+      <th style="cursor:pointer;user-select:none;transition:background .15s" onclick="_reqAlternarOrdem('cartorio')" title="Clique para ordenar por Cartório">
+        Cartório ${_reqThIcon('cartorio')}
+      </th>
+      <th style="cursor:pointer;user-select:none;transition:background .15s" onclick="_reqAlternarOrdem('tipo')" title="Clique para ordenar por Tipo de Certidão">
+        Tipo ${_reqThIcon('tipo')}
+      </th>
+      <th style="cursor:pointer;user-select:none;transition:background .15s" onclick="_reqAlternarOrdem('status')" title="Clique para ordenar por Status">
+        Status ${_reqThIcon('status')}
+      </th>
+      <th style="text-align:right">Ações</th>
     </tr></thead>
     <tbody>
       ${filtered.map((r,i) => `<tr>
@@ -8681,8 +8798,8 @@ function renderRequisicoes() {
         <td style="font-size:12px"><div><strong>${esc(r.cartorio)}</strong>${r.subdistrito?`<br><span style="color:var(--text-muted)">${esc(r.subdistrito)}</span>`:''}</div></td>
         <td><span style="font-size:12px;background:var(--primary-subtle);color:var(--primary);padding:2px 8px;border-radius:12px">${esc(r.tipo)}</span></td>
         <td><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:${STATUS_COLORS[r.status] || 'var(--primary)'}22;color:${STATUS_COLORS[r.status] || 'var(--primary)'}">${esc(r.status)}</span></td>
-        <td>
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <td style="text-align:right">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
             <select style="font-size:11px;padding:4px 6px;width:auto" onchange="alterarStatusRequisicao('${r.id}',this.value)">
               ${STATUS_REQUISICAO.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
             </select>
@@ -8696,18 +8813,96 @@ function renderRequisicoes() {
         </td>
       </tr>`).join('')}
     </tbody>
-  </table></div></div>`}
-  `
+  </table></div></div>`;
+}
+
+function renderRequisicoes() {
+  const role = currentUser.role;
+  const list = requisicoes || [];
+  const cartoriosList = _reqObterListaCartorios();
+  const filtered = _reqObterFiltrados();
+
+  return `
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2>Requisições de Certidão</h2>
+      <p id="req-total-count">${filtered.length} de ${list.length} registro(s)${_vêTudo()?' · todos os conselhos':' · suas requisições'}</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="btn-sync-requisicoes" class="btn btn-outline" onclick="sincronizarRespostasCartorios(false)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Sincronizar Respostas
+      </button>
+      <button class="btn btn-outline" onclick="downloadRequisicoesPDF()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar PDF
+      </button>
+      <button class="btn btn-primary" onclick="navigate('forms');setTimeout(()=>openFormFill(41),100)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova Requisição
+      </button>
+    </div>
+  </div>
+
+  <!-- BARRA DE PESQUISA, FILTROS POR CARTÓRIO, STATUS E ORDENAÇÃO -->
+  <div class="card card-pad" style="margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;align-items:center">
+      <!-- BUSCA TEXTUAL -->
+      <div style="position:relative;grid-column:span 1">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted)">${I.search}</span>
+        <input id="req-search"
+          placeholder="Buscar protocolo, solicitante, cartório…"
+          value="${esc(_reqFiltros.busca)}"
+          style="width:100%;padding-left:34px"
+          oninput="_reqFiltros.busca=this.value; _reqFiltrarEAtualizar()" />
+      </div>
+
+      <!-- FILTRO DE CARTÓRIO -->
+      <div>
+        <select id="req-cartorio-filter" style="width:100%" onchange="_reqFiltros.cartorio=this.value; _reqFiltrarEAtualizar()">
+          <option value="">Cartório: Todos os cartórios</option>
+          ${cartoriosList.map(c => `<option value="${esc(c)}" ${_reqFiltros.cartorio===c?'selected':''}>${esc(c)}</option>`).join('')}
+        </select>
+      </div>
+
+      <!-- FILTRO DE STATUS -->
+      <div>
+        <select id="req-status-filter" style="width:100%" onchange="_reqFiltros.status=this.value; _reqFiltrarEAtualizar()">
+          <option value="">Status: Todos os status</option>
+          ${STATUS_REQUISICAO.map(s => `<option value="${s}" ${_reqFiltros.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+
+      <!-- SELETOR DE ORDENAÇÃO -->
+      <div>
+        <select id="req-ordem-filter" style="width:100%" onchange="_reqDefinirOrdemSelect(this.value)">
+          <option value="data-desc" ${_reqFiltros.ordemCampo==='data'&&_reqFiltros.ordemDir==='desc'?'selected':''}>📅 Data (Mais recentes primeiro)</option>
+          <option value="data-asc" ${_reqFiltros.ordemCampo==='data'&&_reqFiltros.ordemDir==='asc'?'selected':''}>📅 Data (Mais antigas primeiro)</option>
+          <option value="cartorio-asc" ${_reqFiltros.ordemCampo==='cartorio'&&_reqFiltros.ordemDir==='asc'?'selected':''}>🏛️ Cartório (A → Z)</option>
+          <option value="cartorio-desc" ${_reqFiltros.ordemCampo==='cartorio'&&_reqFiltros.ordemDir==='desc'?'selected':''}>🏛️ Cartório (Z → A)</option>
+          <option value="protocolo-desc" ${_reqFiltros.ordemCampo==='protocolo'&&_reqFiltros.ordemDir==='desc'?'selected':''}>🏷️ Protocolo (Decrescente)</option>
+          <option value="protocolo-asc" ${_reqFiltros.ordemCampo==='protocolo'&&_reqFiltros.ordemDir==='asc'?'selected':''}>🏷️ Protocolo (Crescente)</option>
+          <option value="tipo-asc" ${_reqFiltros.ordemCampo==='tipo'&&_reqFiltros.ordemDir==='asc'?'selected':''}>📄 Tipo (A → Z)</option>
+          <option value="status-asc" ${_reqFiltros.ordemCampo==='status'&&_reqFiltros.ordemDir==='asc'?'selected':''}>🚦 Status (A → Z)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTAINER DINÂMICO DA TABELA DE REQUISIÇÕES -->
+  <div id="req-table-container">
+    ${_reqRenderizarTabelaHtml(filtered)}
+  </div>
+  `;
 }
 
 function refreshRequisicoes() {
-  document.getElementById('content').innerHTML = renderRequisicoes()
-  attachRequisicaoEvents()
+  const contentEl = document.getElementById('content');
+  if (contentEl) contentEl.innerHTML = renderRequisicoes();
 }
 
 function attachRequisicaoEvents() {
-  const inp = document.getElementById('req-search')
-  if (inp) inp.addEventListener('input', refreshRequisicoes)
+  // Eventos já ligados inline para reatividade imediata
 }
 
 async function alterarStatusRequisicao(id, novoStatus) {
@@ -12844,7 +13039,8 @@ function downloadEstatisticasPDF() {
 
 function downloadRequisicoesPDF() {
   const now = new Date()
-  const rows = requisicoes.map(r=>`<tr>
+  const items = (typeof _reqObterFiltrados === 'function') ? _reqObterFiltrados() : requisicoes
+  const rows = items.map(r=>`<tr>
     <td style="font-family:monospace">${r.protocolo}</td>
     <td>${r.data} ${r.hora}</td>
     <td>${r.solicitante}<br><small style="color:#6b7a90">${r.solicitanteCt||''}</small></td>
