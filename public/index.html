@@ -1250,7 +1250,6 @@ const NAV_ALL = [
   { id:'dashboard', label:'Painel de Gráficos', icon:'pie', roles:['master','coordenador','conselheiro'] },
   { id:'daily', label:'Grandes Eventos', icon:'tent', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'agenda', label:'Agenda', icon:'calendar', roles:['master','coordenador','conselheiro','atendente'] },
-  { id:'reports', label:'Meus Relatórios', icon:'report', roles:['master','coordenador','conselheiro'] },
   { id:'general-stats', label:'Estatísticas Gerais', icon:'pie', roles:['master'] },
   { id:'duty-roster', label:'Escala de Plantões', icon:'clock', roles:['master','coordenador','conselheiro'] },
   { id:'photos', label:'Álbum de Fotos', icon:'image', roles:['master','coordenador','conselheiro'] },
@@ -1828,7 +1827,6 @@ function renderContent() {
     case 'fichas-inbox': el.innerHTML = renderFichasInbox(); break
     case 'fichas-consulta': el.innerHTML = renderConsultaFichas(); break
     case 'ficha-atendimento': formsFillActive = 3; if (typeof _f03ProtocoloPendente !== 'undefined') _f03ProtocoloPendente = null; el.innerHTML = renderForms(); break
-    case 'reports': el.innerHTML = renderReports(); break
     case 'users': el.innerHTML = renderUsers(); break
     case 'approvals': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando aprovações…</div>'; renderApprovals().then(html => { el.innerHTML = html }); break
     case 'duty-roster': el.innerHTML = renderDutyRoster(); attachDutyRosterEvents(); break
@@ -3327,7 +3325,7 @@ const F03_ESTAT_SECOES = [
   { id:'pcd', titulo:'Pessoa com Deficiência (PCD)', v: (a,c) => [a['f03a-pcd-sim'] ? 'Sim' : 'Não'] },
   { id:'neuro', titulo:'Neurodivergência', v: (a,c) => [a['f03a-neuro-sim'] ? 'Sim' : (a['f03a-neuro-investigacao'] ? 'Em investigação' : 'Não')] },
   { id:'neuroCond', titulo:'Condição Neurodivergente', v: (a,c) => F03_NEURO.filter((n,i)=>a['f03a-neuro-'+i]) },
-  { id:'laudo', titulo:'Possui Laudo', v: (a,c) => [a['f03a-laudo-sim'] ? 'Sim' : 'Não'] },
+  { id:'laudo', titulo:'Possui Laudo', v: (a,c) => (a['f03a-neuro-sim'] || a['f03a-neuro-investigacao']) ? [a['f03a-laudo-sim'] ? 'Sim' : 'Não'] : [] },
   { id:'porta', titulo:'Porta de Entrada', v: (a,c) => F03_PORTA_ENTRADA.filter((p,i)=>c['f03c-porta-'+i]) },
   { id:'origemViolacao', titulo:'Origem da Violação (Art. 98 ECA)', v: (a,c) => {
       const r = []
@@ -10105,6 +10103,119 @@ let lancamentosData = []; // Mantido para compatibilidade retroativa
 let grandesEventosData = null;
 let _geModalFilhos = []; // Estado temporário dos filhos no modal atual
 let _geModalOriginalIdx = undefined; // Se estamos editando um registro existente ou criando um novo
+let _geModalAnexos = []; // Documentos (PDF/imagem) anexados ao acolhimento no modal atual
+
+// Reduz uma foto (upload ou câmera) a um JPEG leve antes de guardar, sem perder qualidade
+// perceptível — reduz o tamanho em MB para não pesar o cadastro de Grandes Eventos.
+function _geComprimirImagemAnexo(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+      img.onload = () => {
+        const LARGURA_MAX = 1600;
+        const esc0 = Math.min(1, LARGURA_MAX / img.width);
+        const w = Math.max(1, Math.round(img.width * esc0)), h = Math.max(1, Math.round(img.height * esc0));
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const g = c.getContext('2d');
+        g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); // JPEG não tem transparência
+        g.drawImage(img, 0, 0, w, h);
+        // Reduz a qualidade progressivamente até caber em ~600 KB, sem comprometer a leitura do documento
+        let qualidade = 0.82, dataUrl = c.toDataURL('image/jpeg', qualidade);
+        while (dataUrl.length > 800 * 1024 && qualidade > 0.35) {
+          qualidade -= 0.1;
+          dataUrl = c.toDataURL('image/jpeg', qualidade);
+        }
+        resolve(dataUrl);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function _geRenderAnexosHtml() {
+  if (!_geModalAnexos.length) {
+    return '<span style="font-size:12px;color:var(--text-muted);font-style:italic">Nenhum documento anexado ainda.</span>';
+  }
+  return _geModalAnexos.map((a, idx) => {
+    const isPdf = a.mimeType === 'application/pdf';
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px">
+        <span style="display:flex;align-items:center;gap:8px;overflow:hidden;min-width:0">
+          ${isPdf
+            ? `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+            : `<img src="${a.dataUrl}" style="width:34px;height:34px;object-fit:cover;border-radius:6px;flex-shrink:0" />`}
+          <span style="overflow:hidden">
+            <strong style="display:block;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.filename)}</strong>
+            <span style="color:var(--text-muted);font-size:11px">${a.sizeFormatted}</span>
+          </span>
+        </span>
+        <button type="button" onclick="_geRemoverAnexo(${idx})" title="Remover anexo" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:2px 4px;display:flex;align-items:center;flex-shrink:0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function _geAtualizarListaAnexos() {
+  const el = document.getElementById('ge-anexos-lista');
+  if (el) el.innerHTML = _geRenderAnexosHtml();
+}
+
+async function _geHandleAnexos(ev) {
+  const files = Array.from(ev.target?.files || []);
+  ev.target.value = '';
+  for (const file of files) {
+    await _geAdicionarAnexo(file);
+  }
+}
+
+async function _geAdicionarAnexo(file) {
+  const LIMITE_ORIGINAL = 15 * 1024 * 1024;
+  if (file.size > LIMITE_ORIGINAL) {
+    showToast(`O arquivo "${file.name}" excede o limite de 15 MB.`);
+    return;
+  }
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  try {
+    let dataUrl;
+    if (isPdf) {
+      dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Não foi possível ler o PDF.'));
+        reader.readAsDataURL(file);
+      });
+    } else {
+      dataUrl = await _geComprimirImagemAnexo(file);
+    }
+    const sizeKb = Math.round((dataUrl.length * 0.75) / 1024); // estimativa do tamanho real do base64
+    const sizeStr = sizeKb >= 1024 ? (sizeKb / 1024).toFixed(1) + ' MB' : sizeKb + ' KB';
+    _geModalAnexos.push({
+      id: 'gea_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      filename: file.name,
+      dataUrl,
+      mimeType: isPdf ? 'application/pdf' : 'image/jpeg',
+      sizeFormatted: sizeStr
+    });
+    _geAtualizarListaAnexos();
+    showToast(`"${file.name}" anexado!`);
+  } catch (e) {
+    showToast(e.message || 'Não foi possível anexar o arquivo.');
+  }
+}
+
+function _geRemoverAnexo(idx) {
+  if (_geModalAnexos[idx]) {
+    const removido = _geModalAnexos[idx].filename;
+    _geModalAnexos.splice(idx, 1);
+    _geAtualizarListaAnexos();
+    showToast(`Anexo "${removido}" removido.`);
+  }
+}
 
 function _geGetFilhos(r) {
   if (!r) return [];
@@ -10982,6 +11093,9 @@ function showGrandesEventosModal(idx) {
   const filhosIniciais = _geGetFilhos(d);
   _geModalFilhos = filhosIniciais.length ? JSON.parse(JSON.stringify(filhosIniciais)) : [_geNovoFilhoVazio()];
 
+  // Carrega os anexos já salvos (se estiver editando)
+  _geModalAnexos = (editing && Array.isArray(d.anexos)) ? JSON.parse(JSON.stringify(d.anexos)) : [];
+
   const selectedCentro = GE_CENTROS_ACOLHIMENTO.find(c => c.nome === d.centroNome) || GE_CENTROS_ACOLHIMENTO[0];
 
   document.getElementById('modal-root').innerHTML = `
@@ -11283,6 +11397,27 @@ function showGrandesEventosModal(idx) {
         <textarea id="ge-in-obs" rows="2" placeholder="Observações de saúde, vestimenta, bolsas, etc.">${_geEscapeHtml(d.obs)}</textarea>
       </div>
 
+      <!-- SEÇÃO 7: DOCUMENTOS ANEXADOS -->
+      <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin:16px 0 10px 0;border-radius:0 4px 4px 0;display:flex;align-items:center;gap:8px">
+        <span>📎 7. DOCUMENTOS ANEXADOS (RG, COMPROVANTES, FOTOS)</span>
+      </div>
+      <div class="field-group" style="margin-bottom:16px">
+        <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px">
+          Aceita PDF e imagens (JPEG/PNG/WEBP). Fotos são reduzidas automaticamente de tamanho para não pesar o cadastro, sem perder qualidade de leitura.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('ge-anexo-upload-input').click()">
+            📁 Anexar Arquivo
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('ge-anexo-camera-input').click()">
+            📷 Usar Câmera
+          </button>
+          <input id="ge-anexo-upload-input" type="file" accept=".pdf,image/png,image/jpeg,image/webp" multiple style="display:none" onchange="_geHandleAnexos(event)" />
+          <input id="ge-anexo-camera-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="_geHandleAnexos(event)" />
+        </div>
+        <div id="ge-anexos-lista" style="display:flex;flex-direction:column;gap:6px">${_geRenderAnexosHtml()}</div>
+      </div>
+
       <!-- RODAPÉ DE AÇÕES DO MODAL -->
       <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border);padding-top:16px">
         <div>
@@ -11426,6 +11561,9 @@ function saveGrandesEventos(idx, emitirGuiaAposSalvar) {
   item.atvPontoCircuito = atvPontoCircuito;
   item.atvOutro = atvOutro;
   item.obs = obs;
+
+  // Documentos anexados (PDF/fotos)
+  item.anexos = JSON.parse(JSON.stringify(_geModalAnexos));
 
   if (!editing) {
     dados.unshift(item);
@@ -12640,8 +12778,8 @@ function _dashTela() {
   const sel = (id, atual, opts, extra = '') => `<select onchange="_dashSet('${id}', this.value)" ${extra}>${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === atual ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`
 
   const kpi = (rot, val, sub, cor, delta) => `
-    <div class="dash-kpi" style="border-top-color:${cor}">
-      <div class="dash-kpi-val" style="color:${cor}">${val}</div>
+    <div class="dash-kpi" style="--kpi-c:${cor}">
+      <div class="dash-kpi-val">${val}</div>
       <div class="dash-kpi-rot">${rot}</div>
       <div class="dash-kpi-sub">${sub}${delta ? ` <span class="dash-delta ${delta.cls}">${delta.txt}</span>` : ''}</div>
     </div>`
@@ -12686,51 +12824,66 @@ function _dashTela() {
     ? `<div class="card card-pad empty"><p style="font-weight:600;margin-bottom:4px">Nenhum atendimento encontrado neste filtro</p>
        <p style="font-size:12px">Os gráficos usam as Fichas de Atendimento (nº 03) já complementadas pelo conselheiro.</p></div>`
     : d.grupos.map(g => `
-      <div class="dash-grupo"><div class="dash-grupo-t" style="border-left-color:${g.cor}">${esc(g.grupo)}</div>
+      <div class="dash-grupo"><div class="dash-grupo-t" style="--g-c:${g.cor}">${esc(g.grupo)}</div>
         <div class="dash-grid">${g.secoes.map(s => `
           <div class="card card-pad dash-card ${s.tipo === 'bar' ? 'dash-wide' : ''}">
-            <div class="dash-card-t">${esc(s.titulo)}</div>
+            <div class="dash-card-t" style="--g-c:${g.cor}"><span class="dash-card-dot"></span>${esc(s.titulo)}</div>
             ${s.tipo === 'donut' ? donut(s) : bar(s, g.cor)}
           </div>`).join('')}</div></div>`).join('')
 
   return `
   <style>
-    .dash-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px}
-    .dash-kpi{background:var(--card);border:1px solid var(--border);border-top:4px solid;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
-    .dash-kpi-val{font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1.15;word-break:break-word}
-    .dash-kpi-rot{font-size:12px;font-weight:700;margin-top:4px}
-    .dash-kpi-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
-    .dash-delta{font-weight:700;font-size:11px;margin-left:4px}
-    .dash-delta.up{color:#16a34a}.dash-delta.down{color:#dc2626}.dash-delta.eq{color:var(--text-muted)}
-    .dash-grupo{margin-bottom:22px}
-    .dash-grupo-t{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-left:5px solid;padding-left:10px;margin-bottom:10px}
-    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+    .dash-hero{background:linear-gradient(135deg,var(--card) 0%,var(--card) 100%);border:1px solid var(--border);border-radius:18px;padding:18px 22px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+    .dash-hero h2{margin:0 0 4px;font-size:22px;letter-spacing:-.3px}
+    .dash-hero p{margin:0;color:var(--text-muted);font-size:13px}
+    .dash-filtros{margin-bottom:20px;display:flex;gap:16px;flex-wrap:wrap;align-items:end;border-radius:18px}
+    .dash-filtros .field-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px;display:block}
+    .dash-filtros select{border-radius:10px}
+    .dash-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px}
+    .dash-kpi{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 18px 15px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;transition:transform .15s ease,box-shadow .15s ease}
+    .dash-kpi:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(0,0,0,.12)}
+    .dash-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--kpi-c);border-radius:16px 16px 0 0}
+    .dash-kpi::after{content:'';position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:var(--kpi-c);opacity:.07}
+    .dash-kpi-val{font-size:28px;font-weight:800;letter-spacing:-.6px;line-height:1.12;word-break:break-word;color:var(--kpi-c);position:relative}
+    .dash-kpi-rot{font-size:12.5px;font-weight:700;margin-top:6px;color:var(--text);position:relative}
+    .dash-kpi-sub{font-size:11px;color:var(--text-muted);margin-top:3px;position:relative}
+    .dash-delta{font-weight:700;font-size:11px;margin-left:4px;padding:1px 6px;border-radius:999px}
+    .dash-delta.up{color:#16a34a;background:rgba(22,163,74,.12)}.dash-delta.down{color:#dc2626;background:rgba(220,38,38,.12)}.dash-delta.eq{color:var(--text-muted);background:rgba(128,128,128,.12)}
+    .dash-grupo{margin-bottom:26px}
+    .dash-grupo-t{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:7px 16px 7px 12px;border-radius:999px;margin-bottom:14px;background:color-mix(in srgb, var(--g-c) 14%, transparent);color:var(--g-c)}
+    .dash-grupo-t::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--g-c);flex-shrink:0}
+    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
     .dash-wide{grid-column:span 2}
     @media(max-width:760px){.dash-wide{grid-column:span 1}}
-    .dash-card-t{font-size:13px;font-weight:700;margin-bottom:12px}
-    .dash-donut-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-    .dash-donut{width:130px;height:130px;flex-shrink:0}
-    .dash-legenda{flex:1;min-width:150px;display:flex;flex-direction:column;gap:5px}
-    .dash-leg-item{display:flex;align-items:center;gap:6px;font-size:12px}
+    .dash-card{border-radius:16px;transition:box-shadow .15s ease,transform .15s ease}
+    .dash-card:hover{box-shadow:0 10px 24px rgba(0,0,0,.09);transform:translateY(-2px)}
+    .dash-card-t{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:14px}
+    .dash-card-dot{width:9px;height:9px;border-radius:50%;background:var(--g-c);flex-shrink:0}
+    .dash-donut-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+    .dash-donut{width:148px;height:148px;flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(0,0,0,.10))}
+    .dash-donut circle{transition:stroke-dasharray .4s ease}
+    .dash-legenda{flex:1;min-width:150px;display:flex;flex-direction:column;gap:2px}
+    .dash-leg-item{display:flex;align-items:center;gap:7px;font-size:12px;padding:4px 6px;border-radius:8px;transition:background .15s ease}
+    .dash-leg-item:hover{background:var(--border)}
     .dash-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-    .dash-leg-l{flex:1;min-width:0}
+    .dash-leg-l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .dash-leg-p{color:var(--text-muted);width:46px;text-align:right}
-    .dash-bars{display:flex;flex-direction:column;gap:7px}
+    .dash-bars{display:flex;flex-direction:column;gap:9px}
     .dash-bar-row{display:grid;grid-template-columns:minmax(110px,190px) 1fr minmax(96px,auto);gap:10px;align-items:center;font-size:12px}
-    .dash-bar-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .dash-bar-t{background:var(--border);border-radius:5px;height:14px;overflow:hidden}
-    .dash-bar-f{height:100%;border-radius:5px}
+    .dash-bar-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+    .dash-bar-t{background:var(--border);border-radius:8px;height:16px;overflow:hidden}
+    .dash-bar-f{height:100%;border-radius:8px;transition:width .5s ease}
     .dash-bar-v span{color:var(--text-muted);margin-left:4px}
     .dash-mais{font-size:11px;color:var(--text-muted);margin-top:4px}
   </style>
-  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+  <div class="dash-hero">
     <div><h2>Painel de Gráficos</h2><p>${esc(d.escopo)} · ${esc(d.rotulo)}${d.filtros.length ? ' · ' + esc(d.filtros.join(' · ')) : ''}</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${_btnWhatsApp("Painel de Gráficos")}<button class="btn btn-outline" onclick="dashExportarPDF()">${I.download} PDF</button>
       <button class="btn btn-primary" onclick="dashExportarPPTX()">📽️ Apresentação (PPTX)</button>
     </div>
   </div>
-  <div class="card card-pad" style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+  <div class="card card-pad dash-filtros">
     <div><label class="field-label">Ano</label>${sel('ano', _dash.ano, [['', 'Todos'], ...anos.map(a => [String(a), String(a)])])}</div>
     <div><label class="field-label">Período</label>${sel('per', _dash.per, DASH_PERIODOS, _dash.ano ? '' : 'disabled')}</div>
     ${role === 'master' ? `<div><label class="field-label">Conselho Tutelar</label>${sel('ct', _dash.ct, [['', 'Todos os 24 Conselhos'], ...cts.map(c => [c, c])])}</div>` : ''}
