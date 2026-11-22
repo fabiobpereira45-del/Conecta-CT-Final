@@ -1834,7 +1834,7 @@ function renderContent() {
     case 'duty-roster': el.innerHTML = renderDutyRoster(); attachDutyRosterEvents(); break
     case 'requisicoes': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando requisições…</div>'; carregarRequisicoes().then(() => { if (typeof sincronizarRespostasCartorios === 'function') sincronizarRespostasCartorios(true) }); break
     case 'councils': el.innerHTML = renderCouncils(); break
-    case 'general-stats': el.innerHTML = renderGeneralStats(); break
+    case 'general-stats': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando estatísticas…</div>'; renderGeneralStats().then(html => { if (document.getElementById('content')) el.innerHTML = html }); break
     case 'photos': el.innerHTML = renderPhotos(); attachPhotosEvents(); break
     case 'eca': el.innerHTML = renderEca(); attachEcaEvents(); break
     case 'rules': el.innerHTML = renderRules(); break
@@ -9712,7 +9712,29 @@ function filterCouncils(v) {
 // Os números de demonstração foram removidos: tudo começa em zero até haver dados reais.
 const _STATS_CT = Array.from({ length: 24 }, () => ({ at:0, ab:0, enc:0, pl:0, req:0, data:Array(12).fill(0) }))
 
-function renderGeneralStats() {
+let _gstCache = null // último cálculo real de "Estatísticas Gerais", reaproveitado pelo PDF
+
+// Extrai o numeral romano de um CT a partir de formatos variados já usados no sistema
+// (ex.: "CTXIII", "CT-I", "CT XIII – Narandiba") para permitir casar fichas/requisições com CONSELHOS_BAIRROS.
+function _gstExtrairNumCt(str) {
+  if (!str) return ''
+  const m = String(str).toUpperCase().match(/CT\s*-?\s*([IVXLCDM]+)/)
+  return m ? m[1] : ''
+}
+
+// "Plantões realizados": conta os fins de semana (sábado+domingo) já ocorridos no ano,
+// já que a escala de plantão cobre todos os 24 CTs em todo fim de semana.
+function _gstPlantoesRealizadosNoAno(ano) {
+  const hoje = new Date()
+  const fimAno = ano === hoje.getFullYear() ? hoje : new Date(ano, 11, 31)
+  let count = 0
+  for (let d = new Date(ano, 0, 1); d <= fimAno; d.setDate(d.getDate() + 1)) {
+    if (d.getDay() === 6) count++ // cada sábado representa um fim de semana de plantão
+  }
+  return count
+}
+
+async function renderGeneralStats() {
   const isMaster = currentUser?.role === 'master'
   const months   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
   const currentMonth = new Date().getMonth()
@@ -9777,19 +9799,43 @@ function renderGeneralStats() {
     </div>`
   }
 
-  // ── Visão Master: todos os 24 CTs ──
-  const totalAt  = _STATS_CT.reduce((s,c)=>s+c.at,  0)
-  const totalAb  = _STATS_CT.reduce((s,c)=>s+c.ab,  0)
-  const totalReq = _STATS_CT.reduce((s,c)=>s+c.req, 0)
-  const totalEnc = _STATS_CT.reduce((s,c)=>s+c.enc, 0)
-  const totalPl  = _STATS_CT.reduce((s,c)=>s+c.pl,  0)
+  // ── Visão Master: todos os 24 CTs (dados reais) ──
+  let fichas = []
+  try { fichas = await _statsCarregar() } catch(e) { fichas = [] }
+  if (!Array.isArray(requisicoes) || !requisicoes.length) {
+    try { await carregarRequisicoes() } catch(e) {}
+  }
+
+  const plantoesNoAno = _gstPlantoesRealizadosNoAno(year)
+
+  const statsPorCt = CONSELHOS_BAIRROS.map(c => {
+    const fichasCt = fichas.filter(f => _gstExtrairNumCt(f.ct_destino) === c.num)
+    const ag = _statsAgregar(fichasCt)
+    const enc = Object.values(ag.encaminhamento || {}).reduce((s,v)=>s+v, 0)
+    const ab = fichasCt.filter(f => f.status === 'em_atendimento').length
+    const req = requisicoes.filter(r => _gstExtrairNumCt(r.solicitanteCt) === c.num).length
+    const data = Array.from({ length: 12 }, (_, mes) => fichasCt.filter(f => {
+      const d = new Date(f.created_at)
+      return d.getFullYear() === year && d.getMonth() === mes
+    }).length)
+    return { at: fichasCt.length, ab, enc, req, pl: plantoesNoAno, data }
+  })
+
+  const totalAt  = statsPorCt.reduce((s,c)=>s+c.at,  0)
+  const totalAb  = statsPorCt.reduce((s,c)=>s+c.ab,  0)
+  const totalReq = requisicoes.length
+  const totalEnc = statsPorCt.reduce((s,c)=>s+c.enc, 0)
+  const totalPl  = plantoesNoAno
   const totalCons= CONSELHOS_BAIRROS.reduce((s,c)=>s+(c.conselheiros||[]).length, 0)
 
   // Soma mensal de todos os CTs
   const dataGlobal = Array.from({length: currentMonth+1}, (_,i) =>
-    _STATS_CT.reduce((s,c)=> s + (c.data[i]||0), 0)
+    statsPorCt.reduce((s,c)=> s + (c.data[i]||0), 0)
   )
   const maxVal = Math.max(...dataGlobal, 1)
+
+  // Guarda o último cálculo para o PDF reaproveitar os mesmos números reais
+  _gstCache = { statsPorCt, totalAt, totalAb, totalReq, totalEnc, totalPl, totalCons }
 
   return `
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
@@ -9829,14 +9875,15 @@ function renderGeneralStats() {
     </div>
   </div>
   <div class="card"><div class="table-wrap"><table>
-    <thead><tr><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
+    <thead><tr><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Requisições</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
     <tbody>
       ${CONSELHOS_BAIRROS.map((c,i)=>{
-        const s = _STATS_CT[i] || {at:0,ab:0,enc:0,pl:0}
+        const s = statsPorCt[i] || {at:0,ab:0,enc:0,pl:0,req:0}
         return `<tr>
           <td><strong>CT ${c.num}</strong><div style="font-size:11px;color:var(--text-muted)">${c.nome}</div></td>
           <td>${s.at}</td>
           <td><span style="color:var(--warning);font-weight:600">${s.ab}</span></td>
+          <td>${s.req}</td>
           <td>${s.enc}</td>
           <td>${s.pl}</td>
         </tr>`
@@ -13571,13 +13618,9 @@ function downloadEstatisticasPDF() {
   let titulo, subtitulo, statsCards, tableHtml, mensalHtml
 
   if (isMaster) {
-    // Visão global
-    const totalAt  = _STATS_CT.reduce((s,c)=>s+c.at, 0)
-    const totalAb  = _STATS_CT.reduce((s,c)=>s+c.ab, 0)
-    const totalReq = _STATS_CT.reduce((s,c)=>s+c.req,0)
-    const totalEnc = _STATS_CT.reduce((s,c)=>s+c.enc,0)
-    const totalPl  = _STATS_CT.reduce((s,c)=>s+c.pl, 0)
-    const totalCons= CONSELHOS_BAIRROS.reduce((s,c)=>s+(c.conselheiros||[]).length,0)
+    // Visão global (reaproveita os números reais já calculados pela tela de Estatísticas Gerais)
+    const cache = _gstCache || { statsPorCt: _STATS_CT, totalAt:0, totalAb:0, totalReq:0, totalEnc:0, totalPl:0, totalCons: CONSELHOS_BAIRROS.reduce((s,c)=>s+(c.conselheiros||[]).length,0) }
+    const { statsPorCt, totalAt, totalAb, totalReq, totalEnc, totalPl, totalCons } = cache
     titulo = 'Estatísticas Gerais – Todos os Conselhos'
     subtitulo = 'Visão consolidada · Salvador/BA'
     statsCards = [
@@ -13585,13 +13628,13 @@ function downloadEstatisticasPDF() {
       ['Requisições',totalReq,'#3b82f6'],['Encaminhamentos',totalEnc,'#16a34a'],
       ['Plantões',totalPl,'#7c3aed'],['Conselheiros',totalCons,'#0891b2']
     ]
-    const dataGlobal = Array.from({length:now.getMonth()+1},(_,i)=>_STATS_CT.reduce((s,c)=>s+(c.data[i]||0),0))
+    const dataGlobal = Array.from({length:now.getMonth()+1},(_,i)=>statsPorCt.reduce((s,c)=>s+(c.data[i]||0),0))
     mensalHtml = dataGlobal.map((v,i)=>months[i]+': <strong>'+v+'</strong>').join(' &nbsp;·&nbsp; ')
     tableHtml = `<table>
-      <thead><tr style="background:#f4f6f9"><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
-      <tbody>${CONSELHOS_BAIRROS.map((c,i)=>{const s=_STATS_CT[i]||{at:0,ab:0,enc:0,pl:0};return`
+      <thead><tr style="background:#f4f6f9"><th>Conselho</th><th>Atendimentos</th><th>Em Aberto</th><th>Requisições</th><th>Encaminhamentos</th><th>Plantões</th></tr></thead>
+      <tbody>${CONSELHOS_BAIRROS.map((c,i)=>{const s=statsPorCt[i]||{at:0,ab:0,enc:0,pl:0,req:0};return`
         <tr><td><strong>CT ${c.num}</strong> <span style="color:#6b7a90;font-size:11px">${c.nome}</span></td>
-        <td>${s.at}</td><td style="color:#d97706;font-weight:600">${s.ab}</td><td>${s.enc}</td><td>${s.pl}</td></tr>`}).join('')}
+        <td>${s.at}</td><td style="color:#d97706;font-weight:600">${s.ab}</td><td>${s.req}</td><td>${s.enc}</td><td>${s.pl}</td></tr>`}).join('')}
       </tbody></table>`
   } else {
     // Visão do CT
