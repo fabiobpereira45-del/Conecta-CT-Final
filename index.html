@@ -1249,6 +1249,7 @@ const NAV_ALL = [
   { id:'statistics', label:'Minhas Estatísticas', icon:'chart', roles:['master','coordenador','conselheiro'] },
   { id:'dashboard', label:'Painel de Gráficos', icon:'pie', roles:['master','coordenador','conselheiro'] },
   { id:'daily', label:'Grandes Eventos', icon:'tent', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'ge-stats', label:'Estatísticas de Grandes Eventos', icon:'pie', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'agenda', label:'Agenda', icon:'calendar', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'general-stats', label:'Estatísticas Gerais', icon:'pie', roles:['master'] },
   { id:'duty-roster', label:'Escala de Plantões', icon:'clock', roles:['master','coordenador','conselheiro'] },
@@ -1822,6 +1823,7 @@ function renderContent() {
     case 'statistics': el.innerHTML = renderStatistics(); break
     case 'dashboard': el.innerHTML = renderDashboard(); break
     case 'daily': case 'grandes-eventos': el.innerHTML = renderGrandesEventos(); break
+    case 'ge-stats': el.innerHTML = renderGeEstatisticas(); break
     case 'agenda': el.innerHTML = renderAgenda(); break
     case 'forms': el.innerHTML = renderForms(); attachFormsEvents(); break
     case 'fichas-inbox': el.innerHTML = renderFichasInbox(); break
@@ -3678,6 +3680,9 @@ function renderGrandesEventos() {
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Exportar Planilha
       </button>
+      <button class="btn btn-outline" onclick="showPulseirinhaModal()">
+        🪪 Pulseirinha de Identificação
+      </button>
       <button class="btn btn-primary" onclick="showGrandesEventosModal()">
         ${I.plus} Novo Acolhimento
       </button>
@@ -4083,6 +4088,165 @@ function _geExportarCsv() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   showToast('Planilha exportada com sucesso!');
+}
+
+// ── ESTATÍSTICAS DE GRANDES EVENTOS ──
+function _gestAgrupar(itens, rotular) {
+  const dict = {};
+  itens.forEach(it => {
+    const vals = rotular(it);
+    (Array.isArray(vals) ? vals : [vals]).filter(Boolean).forEach(v => { dict[v] = (dict[v] || 0) + 1; });
+  });
+  return Object.entries(dict).sort((a, b) => b[1] - a[1]).map(([label, valor]) => ({ label, valor }));
+}
+function _gestFaixaEtaria(idadeStr) {
+  const n = parseInt(String(idadeStr || '').replace(/\D/g, ''), 10);
+  if (isNaN(n)) return null;
+  return n <= 5 ? '0–5 anos' : n <= 11 ? '6–11 anos' : n <= 14 ? '12–14 anos' : n <= 17 ? '15–17 anos' : '18+ anos';
+}
+
+function renderGeEstatisticas() {
+  const dados = _loadGrandesEventos();
+  const filhos = dados.flatMap(d => _geGetFilhos(d));
+  const totalFamilias = dados.length;
+  const totalCriancas = filhos.length || dados.reduce((a, d) => a + Math.max(1, _geGetFilhos(d).length), 0);
+  const totalAcolhidos = dados.filter(d => d.status === 'Acolhido').length;
+
+  if (!dados.length) {
+    return `
+    <div class="page-header"><h2>Estatísticas de Grandes Eventos</h2><p>Salvador Acolhe · Carnaval e Réveillon</p></div>
+    <div class="card card-pad empty"><p style="font-weight:600;margin-bottom:4px">Nenhum acolhimento cadastrado ainda</p>
+      <p style="font-size:12px">Cadastre acolhimentos em "Grandes Eventos" para que as estatísticas sejam geradas aqui.</p></div>`;
+  }
+
+  const top = arr => arr[0] || null;
+
+  const gOperacao = [
+    { tipo: 'donut', titulo: 'Operação', entries: _gestAgrupar(dados, d => d.operacao || 'Não informado') },
+    { tipo: 'donut', titulo: 'Status do Acolhimento', entries: _gestAgrupar(dados, d => d.status || 'Não informado') },
+  ];
+  const gFontes = [
+    { tipo: 'bar', titulo: 'Centro de Acolhimento Institucional', entries: _gestAgrupar(dados, d => d.centroNome) },
+    { tipo: 'bar', titulo: 'Circuito / Posto', entries: _gestAgrupar(dados, d => d.centroCircuito) },
+    { tipo: 'donut', titulo: 'Atividade da Família no Evento', entries: _gestAgrupar(dados, d => d.atvTipo) },
+  ];
+  const gCriancas = [
+    { tipo: 'donut', titulo: 'Sexo', entries: _gestAgrupar(filhos, f => f.sexo) },
+    { tipo: 'donut', titulo: 'Faixa Etária', entries: _gestAgrupar(filhos, f => _gestFaixaEtaria(f.idade)) },
+    { tipo: 'bar', titulo: 'Raça / Cor', entries: _gestAgrupar(filhos, f => f.cor) },
+    { tipo: 'donut', titulo: 'Situação Escolar (Matriculado)', entries: _gestAgrupar(filhos, f => f.estuda) },
+    { tipo: 'donut', titulo: 'Pessoa com Deficiência (PCD)', entries: _gestAgrupar(filhos, f => f.pcd) },
+    { tipo: 'donut', titulo: 'Neurodivergência', entries: _gestAgrupar(filhos, f => f.neuro === 'Sim' ? 'Sim' : (f.neuro === 'Investigação' ? 'Em investigação' : 'Não')) },
+  ];
+  const gFamilia = [
+    { tipo: 'bar', titulo: 'Grau de Parentesco do Responsável', entries: _gestAgrupar(dados, d => d.respParentesco) },
+    { tipo: 'donut', titulo: 'Situação de Moradia', entries: _gestAgrupar(dados, d => d.respMoradia) },
+    { tipo: 'donut', titulo: 'Recebe Benefício Social', entries: _gestAgrupar(dados, d => d.respBeneficioSocial) },
+    { tipo: 'bar', titulo: 'Bairro de Residência da Família', entries: _gestAgrupar(dados, d => d.endBairro) },
+  ];
+
+  const grupos = [
+    { grupo: 'Operação e Status', cor: '#2563eb', secoes: gOperacao },
+    { grupo: 'Fontes de Atendimento', cor: '#d97706', secoes: gFontes },
+    { grupo: 'Perfil das Crianças e Adolescentes', cor: '#16a34a', secoes: gCriancas },
+    { grupo: 'Perfil da Família / Responsável', cor: '#7c3aed', secoes: gFamilia },
+  ].map(g => ({ ...g, secoes: g.secoes.filter(s => s.entries.length) })).filter(g => g.secoes.length);
+
+  const donut = (s) => {
+    const tot = s.entries.reduce((a, e) => a + e.valor, 0);
+    let off = 0;
+    const arcos = s.entries.map((e, i) => {
+      const p = _dashPct(e.valor, tot);
+      const seg = `<circle r="15.9155" cx="21" cy="21" fill="none" stroke="${DASH_CORES[i % DASH_CORES.length]}" stroke-width="6" stroke-dasharray="${p} ${100 - p}" stroke-dashoffset="${25 - off}"/>`;
+      off += p;
+      return seg;
+    }).join('');
+    return `<div class="dash-donut-wrap">
+      <svg viewBox="0 0 42 42" class="dash-donut"><circle r="15.9155" cx="21" cy="21" fill="none" stroke="var(--border)" stroke-width="6"/>${arcos}
+        <text x="21" y="22.5" text-anchor="middle" font-size="6.5" font-weight="700" fill="var(--text)">${tot}</text></svg>
+      <div class="dash-legenda">${s.entries.map((e, i) => `
+        <div class="dash-leg-item"><span class="dash-dot" style="background:${DASH_CORES[i % DASH_CORES.length]}"></span>
+          <span class="dash-leg-l">${esc(e.label)}</span><strong>${e.valor}</strong><span class="dash-leg-p">${_dashFmtPct(_dashPct(e.valor, tot))}</span></div>`).join('')}</div>
+    </div>`;
+  };
+  const bar = (s, cor) => {
+    const max = s.entries[0].valor;
+    return `<div class="dash-bars">${s.entries.slice(0, 15).map(e => `
+      <div class="dash-bar-row"><div class="dash-bar-l" title="${esc(e.label)}">${esc(e.label)}</div>
+        <div class="dash-bar-t"><div class="dash-bar-f" style="width:${(e.valor / max * 100).toFixed(1)}%;background:${cor}"></div></div>
+        <div class="dash-bar-v"><strong>${e.valor}</strong> <span>${_dashFmtPct(_dashPct(e.valor, s.entries.reduce((a,x)=>a+x.valor,0)))}</span></div></div>`).join('')}
+      ${s.entries.length > 15 ? `<div class="dash-mais">+ ${s.entries.length - 15} itens menores</div>` : ''}</div>`;
+  };
+
+  const kpi = (rot, val, sub, cor) => `
+    <div class="dash-kpi" style="--kpi-c:${cor}">
+      <div class="dash-kpi-val">${val}</div>
+      <div class="dash-kpi-rot">${rot}</div>
+      <div class="dash-kpi-sub">${sub}</div>
+    </div>`;
+
+  const centroTop = top(_gestAgrupar(dados, d => d.centroNome));
+  const operacaoTop = top(_gestAgrupar(dados, d => d.operacao));
+
+  const corpo = grupos.map(g => `
+    <div class="dash-grupo"><div class="dash-grupo-t" style="--g-c:${g.cor}">${esc(g.grupo)}</div>
+      <div class="dash-grid">${g.secoes.map(s => `
+        <div class="card card-pad dash-card ${s.tipo === 'bar' ? 'dash-wide' : ''}">
+          <div class="dash-card-t" style="--g-c:${g.cor}"><span class="dash-card-dot"></span>${esc(s.titulo)}</div>
+          ${s.tipo === 'donut' ? donut(s) : bar(s, g.cor)}
+        </div>`).join('')}</div></div>`).join('');
+
+  return `
+  <style>
+    .dash-hero{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px 22px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+    .dash-hero h2{margin:0 0 4px;font-size:22px;letter-spacing:-.3px}
+    .dash-hero p{margin:0;color:var(--text-muted);font-size:13px}
+    .dash-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:26px}
+    .dash-kpi{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 18px 15px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;transition:transform .15s ease,box-shadow .15s ease}
+    .dash-kpi:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(0,0,0,.12)}
+    .dash-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--kpi-c);border-radius:16px 16px 0 0}
+    .dash-kpi::after{content:'';position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:var(--kpi-c);opacity:.07}
+    .dash-kpi-val{font-size:28px;font-weight:800;letter-spacing:-.6px;line-height:1.12;word-break:break-word;color:var(--kpi-c);position:relative}
+    .dash-kpi-rot{font-size:12.5px;font-weight:700;margin-top:6px;color:var(--text);position:relative}
+    .dash-kpi-sub{font-size:11px;color:var(--text-muted);margin-top:3px;position:relative}
+    .dash-grupo{margin-bottom:26px}
+    .dash-grupo-t{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:7px 16px 7px 12px;border-radius:999px;margin-bottom:14px;background:color-mix(in srgb, var(--g-c) 14%, transparent);color:var(--g-c)}
+    .dash-grupo-t::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--g-c);flex-shrink:0}
+    .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+    .dash-wide{grid-column:span 2}
+    @media(max-width:760px){.dash-wide{grid-column:span 1}}
+    .dash-card{border-radius:16px;transition:box-shadow .15s ease,transform .15s ease}
+    .dash-card:hover{box-shadow:0 10px 24px rgba(0,0,0,.09);transform:translateY(-2px)}
+    .dash-card-t{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:14px}
+    .dash-card-dot{width:9px;height:9px;border-radius:50%;background:var(--g-c);flex-shrink:0}
+    .dash-donut-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+    .dash-donut{width:148px;height:148px;flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(0,0,0,.10))}
+    .dash-legenda{flex:1;min-width:150px;display:flex;flex-direction:column;gap:2px}
+    .dash-leg-item{display:flex;align-items:center;gap:7px;font-size:12px;padding:4px 6px;border-radius:8px;transition:background .15s ease}
+    .dash-leg-item:hover{background:var(--border)}
+    .dash-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+    .dash-leg-l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .dash-leg-p{color:var(--text-muted);width:46px;text-align:right}
+    .dash-bars{display:flex;flex-direction:column;gap:9px}
+    .dash-bar-row{display:grid;grid-template-columns:minmax(110px,190px) 1fr minmax(96px,auto);gap:10px;align-items:center;font-size:12px}
+    .dash-bar-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+    .dash-bar-t{background:var(--border);border-radius:8px;height:16px;overflow:hidden}
+    .dash-bar-f{height:100%;border-radius:8px;transition:width .5s ease}
+    .dash-bar-v span{color:var(--text-muted);margin-left:4px}
+    .dash-mais{font-size:11px;color:var(--text-muted);margin-top:4px}
+  </style>
+  <div class="dash-hero">
+    <h2>Estatísticas de Grandes Eventos</h2>
+    <p>Salvador Acolhe · Carnaval e Réveillon · dados de todos os acolhimentos cadastrados</p>
+  </div>
+  <div class="dash-kpis">
+    ${kpi('Crianças Acolhidas', totalCriancas, `em ${totalFamilias} atendimentos/famílias`, '#ff6b6b')}
+    ${kpi('Famílias Atendidas', totalFamilias, 'cadastros de acolhimento', '#ffb938')}
+    ${kpi('Acolhidos no Momento', totalAcolhidos, `de ${totalFamilias} registros`, '#7ed957')}
+    ${kpi('Operação Principal', operacaoTop ? operacaoTop.label : '—', operacaoTop ? _dashFmtPct(_dashPct(operacaoTop.valor, totalFamilias)) + ' dos atendimentos' : 'sem dados', '#4fc3f7')}
+    ${kpi('Centro mais Acionado', centroTop ? centroTop.label : '—', centroTop ? _dashFmtPct(_dashPct(centroTop.valor, totalFamilias)) + ' dos atendimentos' : 'sem dados', '#a78bfa')}
+  </div>
+  ${corpo}`;
 }
 
 // ── AGENDA ──
@@ -11598,6 +11762,220 @@ function deleteGrandesEventos(idx) {
   closeModal();
   navigate('daily');
   showToast('Registro excluído.');
+}
+
+// ── PULSEIRINHA DE IDENTIFICAÇÃO (CRIANÇA/ADOLESCENTE EM GRANDES EVENTOS) ──
+let gePulseirinhasData = null;
+let _pulsFoto = null; // dataURL da foto do responsável (opcional), já comprimida
+
+function _loadGePulseirinhas() {
+  if (gePulseirinhasData !== null) return gePulseirinhasData;
+  try {
+    const s = localStorage.getItem('cct_ge_pulseirinhas');
+    gePulseirinhasData = s ? JSON.parse(s) : [];
+  } catch(e) { gePulseirinhasData = []; }
+  if (!Array.isArray(gePulseirinhasData)) gePulseirinhasData = [];
+  return gePulseirinhasData;
+}
+function _saveGePulseirinhas() {
+  try { localStorage.setItem('cct_ge_pulseirinhas', JSON.stringify(gePulseirinhasData || [])); }
+  catch(e) { console.warn('Erro ao salvar cct_ge_pulseirinhas', e); }
+}
+
+async function _pulsBuscarCep(inputCep) {
+  const digitos = (inputCep?.value || '').replace(/\D/g, '').slice(0, 8);
+  if (inputCep) inputCep.value = digitos.length > 5 ? digitos.slice(0, 5) + '-' + digitos.slice(5) : digitos;
+  if (digitos.length !== 8) return;
+  const logEl = document.getElementById('puls-end-logradouro');
+  const baiEl = document.getElementById('puls-end-bairro');
+  const cidEl = document.getElementById('puls-end-cidade');
+  const ufEl  = document.getElementById('puls-end-uf');
+  const stEl  = document.getElementById('puls-cep-feedback');
+  if (stEl) { stEl.textContent = 'Buscando endereço via CEP…'; stEl.style.color = 'var(--primary)'; stEl.style.display = 'block'; }
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
+    const data = await res.json();
+    if (data.erro) {
+      if (stEl) { stEl.textContent = 'CEP não encontrado.'; stEl.style.color = '#ef4444'; }
+      showToast('CEP não encontrado.');
+      return;
+    }
+    if (logEl && data.logradouro) logEl.value = data.logradouro;
+    if (baiEl && data.bairro) baiEl.value = data.bairro;
+    if (cidEl && data.localidade) cidEl.value = data.localidade;
+    if (ufEl && data.uf) ufEl.value = data.uf;
+    if (stEl) { stEl.textContent = `✓ Endereço preenchido: ${data.logradouro || ''}, ${data.bairro || ''}`; stEl.style.color = '#16a34a'; }
+  } catch(e) {
+    if (stEl) { stEl.textContent = 'Não foi possível buscar o CEP agora.'; stEl.style.color = '#ef4444'; }
+  }
+}
+
+async function _pulsHandleFoto(ev) {
+  const file = ev.target?.files?.[0];
+  ev.target.value = '';
+  if (!file) return;
+  try {
+    _pulsFoto = await _geComprimirImagemAnexo(file);
+    const prev = document.getElementById('puls-foto-preview');
+    if (prev) prev.innerHTML = `<img src="${_pulsFoto}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" />`;
+    showToast('Foto do responsável anexada!');
+  } catch(e) {
+    showToast(e.message || 'Não foi possível processar a foto.');
+  }
+}
+
+function _pulsRemoverFoto() {
+  _pulsFoto = null;
+  const prev = document.getElementById('puls-foto-preview');
+  if (prev) prev.innerHTML = '';
+}
+
+function showPulseirinhaModal() {
+  _pulsFoto = null;
+  document.getElementById('modal-root').innerHTML = `
+  <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box" style="max-width:640px;width:95vw;max-height:92vh;overflow-y:auto;padding:24px">
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:16px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:24px">🪪</span>
+            <h3 style="margin:0;font-size:18px;font-weight:700">Pulseirinha de Identificação</h3>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+            Identificação rápida da criança/adolescente e do responsável durante o evento
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="closeModal()" style="border:none;font-size:16px">✕</button>
+      </div>
+
+      <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin-bottom:10px;border-radius:0 4px 4px 0">
+        👶 DADOS DA CRIANÇA / ADOLESCENTE
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="field-group"><label class="field-label">Nome Completo *</label><input id="puls-crianca-nome" placeholder="Nome da criança/adolescente" /></div>
+        <div class="field-group"><label class="field-label">Idade</label><input id="puls-crianca-idade" placeholder="Ex: 7 anos" /></div>
+      </div>
+
+      <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin-bottom:10px;border-radius:0 4px 4px 0">
+        👨‍👩‍👧 DADOS DO RESPONSÁVEL
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field-group"><label class="field-label">Nome Completo *</label><input id="puls-resp-nome" placeholder="Nome do responsável" /></div>
+        <div class="field-group"><label class="field-label">Grau de Parentesco</label>
+          <select id="puls-resp-parentesco">${GE_PARENTESCOS.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px">
+        <div class="field-group"><label class="field-label">Telefone *</label><input id="puls-resp-tel" placeholder="(71) 9____-____" /></div>
+        <div class="field-group">
+          <label class="field-label">Foto do Responsável (opcional)</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('puls-foto-upload-input').click()">📁 Anexar</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('puls-foto-camera-input').click()">📷 Câmera</button>
+            <div id="puls-foto-preview"></div>
+            <input id="puls-foto-upload-input" type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="_pulsHandleFoto(event)" />
+            <input id="puls-foto-camera-input" type="file" accept="image/*" capture="user" style="display:none" onchange="_pulsHandleFoto(event)" />
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#cfe2f7;border-left:5px solid #1e3a5f;color:#0f2d59;padding:7px 12px;font-weight:700;font-size:12px;letter-spacing:0.5px;margin-bottom:10px;border-radius:0 4px 4px 0">
+        📍 ENDEREÇO (BUSCA POR CEP)
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:12px;margin-bottom:8px">
+        <div class="field-group">
+          <label class="field-label">CEP</label>
+          <div style="display:flex;gap:6px">
+            <input id="puls-end-cep" placeholder="00000-000" maxlength="9" oninput="_pulsBuscarCep(this)" />
+            <button class="btn btn-outline" type="button" onclick="_pulsBuscarCep(document.getElementById('puls-end-cep'))" title="Buscar CEP">🔍</button>
+          </div>
+        </div>
+        <div class="field-group"><label class="field-label">Logradouro</label><input id="puls-end-logradouro" placeholder="Rua / Avenida" /></div>
+        <div class="field-group"><label class="field-label">Número</label><input id="puls-end-numero" placeholder="Nº" /></div>
+      </div>
+      <div id="puls-cep-feedback" style="display:none;font-size:11.5px;margin-bottom:8px"></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="field-group"><label class="field-label">Bairro</label><input id="puls-end-bairro" placeholder="Bairro" /></div>
+        <div class="field-group"><label class="field-label">Cidade</label><input id="puls-end-cidade" value="Salvador" /></div>
+        <div class="field-group"><label class="field-label">UF</label><input id="puls-end-uf" value="BA" maxlength="2" /></div>
+      </div>
+
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:16px">
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarPulseirinha()">🖨️ Salvar e Imprimir Pulseirinha</button>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+function salvarPulseirinha() {
+  const criancaNome = document.getElementById('puls-crianca-nome')?.value.trim();
+  if (!criancaNome) { showToast('Informe o nome da criança/adolescente.'); return; }
+  const respNome = document.getElementById('puls-resp-nome')?.value.trim();
+  if (!respNome) { showToast('Informe o nome do responsável.'); return; }
+  const respTel = document.getElementById('puls-resp-tel')?.value.trim();
+  if (!respTel) { showToast('Informe o telefone do responsável.'); return; }
+
+  const registro = {
+    id: 'puls_' + Date.now(),
+    criancaNome,
+    criancaIdade: document.getElementById('puls-crianca-idade')?.value.trim() || '',
+    respNome,
+    respParentesco: document.getElementById('puls-resp-parentesco')?.value || 'Genitora (Mãe)',
+    respTel,
+    respFoto: _pulsFoto || null,
+    endCep: document.getElementById('puls-end-cep')?.value.trim() || '',
+    endLogradouro: document.getElementById('puls-end-logradouro')?.value.trim() || '',
+    endNumero: document.getElementById('puls-end-numero')?.value.trim() || '',
+    endBairro: document.getElementById('puls-end-bairro')?.value.trim() || '',
+    endCidade: document.getElementById('puls-end-cidade')?.value.trim() || 'Salvador',
+    endUf: document.getElementById('puls-end-uf')?.value.trim() || 'BA',
+    criadoEm: new Date().toISOString(),
+    conselheiro: (typeof currentUser !== 'undefined' && currentUser?.name) ? currentUser.name : ''
+  };
+
+  const dados = _loadGePulseirinhas();
+  dados.unshift(registro);
+  _saveGePulseirinhas();
+  showToast('Pulseirinha registrada com sucesso!');
+  _imprimirPulseirinha(registro);
+  closeModal();
+}
+
+function _imprimirPulseirinha(registro) {
+  const endereco = [registro.endLogradouro, registro.endNumero].filter(Boolean).join(', ') +
+    (registro.endBairro ? ' · ' + registro.endBairro : '') +
+    (registro.endCidade ? ' · ' + registro.endCidade + '/' + registro.endUf : '');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pulseirinha de Identificação</title>
+  <style>
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font-family:Arial,sans-serif;margin:16px;color:#1a2332}
+    .tag{width:340px;border:2.5px dashed #1e3a5f;border-radius:14px;padding:16px;display:flex;gap:12px}
+    .tag img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #cbd5e1;flex-shrink:0}
+    .tag h2{margin:0 0 4px;font-size:16px;color:#1e3a5f}
+    .tag p{margin:2px 0;font-size:12px}
+    .tag .lbl{color:#6b7a90;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+    .rod{margin-top:10px;font-size:10px;color:#6b7a90;text-align:center}
+    @media print{body{margin:6mm}}
+  </style></head><body>
+  <div class="tag">
+    ${registro.respFoto ? `<img src="${registro.respFoto}">` : ''}
+    <div>
+      <div class="lbl">Criança / Adolescente</div>
+      <h2>${esc(registro.criancaNome)}${registro.criancaIdade ? ' · ' + esc(registro.criancaIdade) : ''}</h2>
+      <div class="lbl">Responsável</div>
+      <p><strong>${esc(registro.respNome)}</strong> (${esc(registro.respParentesco)})</p>
+      <p>📞 ${esc(registro.respTel)}</p>
+      ${endereco.trim() ? `<p class="lbl">Endereço</p><p>${esc(endereco)}</p>` : ''}
+    </div>
+  </div>
+  <div class="rod">Conselho Tutelar · Salvador Acolhe · ${new Date().toLocaleDateString('pt-BR')}</div>
+  <script>window.print();<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else showToast('Permita pop-ups para imprimir a pulseirinha.');
 }
 
 // ── MODAL DE HISTÓRICO FAMILIAR COMPLETO (TODAS AS EDIÇÕES / ANOS) ──
