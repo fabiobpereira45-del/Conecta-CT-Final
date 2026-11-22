@@ -9504,20 +9504,19 @@ async function rejectUser(id) {
 function _councilCardHtml(c, idx, isMaster) {
   const nomeCurto = c.nome.replace(/^CT [IVXLCDM]+ – /,'')
   return `
-  <div class="card council-card" data-search="${c.nome.toLowerCase()} ${(c.bairros||[]).join(' ').toLowerCase()} ${(c.coordenador||'').toLowerCase()} ${(c.conselheiros||[]).join(' ').toLowerCase()}">
-    <!-- cabeçalho do card -->
-    <div style="background:linear-gradient(135deg,#1a3a6b 0%,#2563eb 100%);padding:14px 16px;border-radius:10px 10px 0 0;display:flex;align-items:center;gap:10px">
-      <div style="width:44px;height:44px;border-radius:50%;background:#c9a227;border:2px solid #fff3;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:11px;flex-shrink:0;text-align:center;line-height:1.1">${c.num}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nomeCurto}</div>
-        <div style="font-size:10.5px;color:rgba(255,255,255,.75);margin-top:2px">${c.regiao||''}</div>
-      </div>
-      ${isMaster ? `<div style="display:flex;gap:5px;flex-shrink:0">
-        <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:3px 9px;font-size:11px" onclick="showEditCouncilModal(${idx})">Editar</button>
-      </div>` : ''}
-    </div>
-    <!-- corpo -->
+  <details class="card council-card" style="padding:0;overflow:hidden" data-search="${c.nome.toLowerCase()} ${(c.bairros||[]).join(' ').toLowerCase()} ${(c.coordenador||'').toLowerCase()} ${(c.conselheiros||[]).join(' ').toLowerCase()}">
+    <!-- cabeçalho enxuto: só número + nome, clique revela o resto -->
+    <summary class="council-summary" style="background:linear-gradient(135deg,#1a3a6b 0%,#2563eb 100%);padding:12px 16px;display:flex;align-items:center;gap:12px">
+      <div style="width:38px;height:38px;border-radius:50%;background:#c9a227;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:11px;flex-shrink:0;text-align:center;line-height:1.1">${c.num}</div>
+      <div style="flex:1;min-width:0;font-size:14px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nomeCurto}</div>
+      <svg class="council-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" style="flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <!-- corpo: só aparece quando o card é expandido -->
     <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="font-size:11px;color:var(--text-muted)">${c.regiao||''}</div>
+        ${isMaster ? `<button class="btn btn-outline btn-sm" style="flex-shrink:0" onclick="event.preventDefault();event.stopPropagation();showEditCouncilModal(${idx})">Editar</button>` : ''}
+      </div>
       ${c.endereco ? `<div style="font-size:12px;display:flex;gap:6px;align-items:flex-start;color:var(--text)"><span style="font-size:14px;flex-shrink:0">📍</span><span>${c.endereco} – Salvador/BA</span></div>` : ''}
       <div style="display:flex;gap:16px;flex-wrap:wrap">
         ${c.telefone ? `<div style="font-size:12px;display:flex;gap:4px;align-items:center;color:var(--text)"><span>📞</span><span>${c.telefone}</span></div>` : ''}
@@ -9555,7 +9554,7 @@ function _councilCardHtml(c, idx, isMaster) {
         </div>
       </details>` : ''}
     </div>
-  </div>`
+  </details>`
 }
 
 function renderCouncils() {
@@ -9564,6 +9563,17 @@ function renderCouncils() {
   const totalCons    = CONSELHOS_BAIRROS.reduce((s,c)=>s+(c.conselheiros||[]).length,0)
 
   return `
+  <style>
+    .council-card{border-radius:10px;transition:box-shadow .15s ease}
+    .council-card:hover{box-shadow:0 8px 20px rgba(0,0,0,.09)}
+    .council-summary{cursor:pointer;list-style:none;border-radius:10px}
+    .council-card:not([open]) .council-summary{border-radius:10px}
+    .council-card[open] .council-summary{border-radius:10px 10px 0 0}
+    .council-summary::-webkit-details-marker{display:none}
+    .council-summary::marker{content:''}
+    .council-chevron{transition:transform .2s ease}
+    .council-card[open] .council-chevron{transform:rotate(180deg)}
+  </style>
   <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
       <h2>Conselhos e Bairros</h2>
