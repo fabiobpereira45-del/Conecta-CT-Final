@@ -11890,6 +11890,7 @@ function _pulsRemoverFoto() {
 
 function showPulseirinhaModal() {
   _pulsFoto = null;
+  _pulsContadorSessao = 0;
   document.getElementById('modal-root').innerHTML = `
   <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
     <div class="modal-box" style="max-width:640px;width:95vw;max-height:92vh;overflow-y:auto;padding:24px">
@@ -11959,16 +11960,48 @@ function showPulseirinhaModal() {
         <div class="field-group"><label class="field-label">UF</label><input id="puls-end-uf" value="BA" maxlength="2" /></div>
       </div>
 
-      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:16px">
-        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="salvarPulseirinha()">💾 Salvar Dados da Pulseirinha</button>
+      <div id="puls-contador-sessao" style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;${_pulsContadorSessao ? '' : 'display:none'}">
+        ✓ ${_pulsContadorSessao} pulseirinha(s) registrada(s) nesta sessão.
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-top:1px solid var(--border);padding-top:16px">
+        <button class="btn btn-outline" onclick="closeModal(); navigate('ge-stats')">Concluir e Ver Estatísticas</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="salvarPulseirinha(true)">👪 Salvar e Adicionar Outra Criança (mesmo responsável)</button>
+          <button class="btn btn-primary" onclick="salvarPulseirinha(false)">💾 Salvar e Novo Cadastro</button>
+        </div>
       </div>
 
     </div>
   </div>`;
 }
 
-function salvarPulseirinha() {
+let _pulsContadorSessao = 0;
+
+function _pulsLimparCampos(manterResponsavel) {
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  setVal('puls-crianca-nome', '');
+  setVal('puls-crianca-idade', '');
+  if (!manterResponsavel) {
+    setVal('puls-resp-nome', '');
+    setVal('puls-resp-parentesco', 'Genitora (Mãe)');
+    setVal('puls-resp-tel', '');
+    setVal('puls-end-cep', '');
+    setVal('puls-end-logradouro', '');
+    setVal('puls-end-numero', '');
+    setVal('puls-end-bairro', '');
+    setVal('puls-end-cidade', 'Salvador');
+    setVal('puls-end-uf', 'BA');
+    const fb = document.getElementById('puls-cep-feedback');
+    if (fb) fb.style.display = 'none';
+    _pulsRemoverFoto();
+  }
+  const contador = document.getElementById('puls-contador-sessao');
+  if (contador) { contador.textContent = `✓ ${_pulsContadorSessao} pulseirinha(s) registrada(s) nesta sessão.`; contador.style.display = 'block'; }
+  const nomeEl = document.getElementById('puls-crianca-nome');
+  if (nomeEl) nomeEl.focus();
+}
+
+function salvarPulseirinha(mesmoResponsavel) {
   const criancaNome = document.getElementById('puls-crianca-nome')?.value.trim();
   if (!criancaNome) { showToast('Informe o nome da criança/adolescente.'); return; }
   const respNome = document.getElementById('puls-resp-nome')?.value.trim();
@@ -11997,9 +12030,11 @@ function salvarPulseirinha() {
   const dados = _loadGePulseirinhas();
   dados.unshift(registro);
   _saveGePulseirinhas();
-  showToast('Dados da pulseirinha registrados com sucesso!');
-  closeModal();
-  navigate('ge-stats');
+  _pulsContadorSessao++;
+  showToast(mesmoResponsavel
+    ? `Pulseirinha de "${criancaNome}" salva! Informe a próxima criança do(a) mesmo(a) responsável.`
+    : `Pulseirinha de "${criancaNome}" salva! Formulário pronto para um novo cadastro.`);
+  _pulsLimparCampos(mesmoResponsavel);
 }
 
 // ── MODAL DE HISTÓRICO FAMILIAR COMPLETO (TODAS AS EDIÇÕES / ANOS) ──
