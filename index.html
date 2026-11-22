@@ -2167,6 +2167,54 @@ function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 }
 
+// ── CAPITALIZAÇÃO AUTOMÁTICA (nomes próprios, cidades e início de frase após pontuação) ──
+// Conectores que ficam em minúsculo no meio do nome (ex.: "Maria DA Silva" → "Maria da Silva"),
+// exceto quando são a primeira palavra do campo.
+const _CAP_CONECTORES = new Set(['de', 'da', 'do', 'das', 'dos', 'e'])
+
+function _capitalizarNome(texto) {
+  if (!texto) return texto
+  return texto.split(' ').map((palavra, i) => {
+    if (!palavra) return palavra
+    const low = palavra.toLowerCase()
+    if (i > 0 && _CAP_CONECTORES.has(low)) return low
+    return low.charAt(0).toUpperCase() + low.slice(1)
+  }).join(' ')
+}
+
+// Capitaliza a primeira letra do texto e a primeira letra após ., ! ou ? — usado em
+// campos de observações/texto livre, sem mexer no restante do que a pessoa escreveu.
+function _capitalizarFrases(texto) {
+  if (!texto) return texto
+  return texto.replace(/(^\s*[a-zà-öø-ÿ])|([.!?]\s+)([a-zà-öø-ÿ])/g, (m, g1, g2, g3) => {
+    return g1 ? g1.toUpperCase() : g2 + g3.toUpperCase()
+  })
+}
+
+// Aplica a correção automaticamente ao sair do campo (blur), em qualquer input/textarea do
+// sistema cujo id/placeholder/name indique nome de pessoa, cidade, bairro, endereço etc.
+// Usa delegação em fase de captura porque o evento "blur" não faz bubbling.
+const _CAP_PADRAO_IGNORAR = /cpf|cnpj|rg\b|cep|e-?mail|senha|password|protocolo|whatsapp|instagram|tel\d?|telefone|numero|dam\b|matricula|c[oó]digo/
+const _CAP_PADRAO_ALVO = /nome|crian[cç]a|filho|m[ãa]e|pai\b|respons[áa]vel|conselheiro|testemunha|agente|cidade|bairro|logradouro|endere[cç]o|cart[óo]rio|escola|centro|parentesco|requerente/
+document.addEventListener('blur', (ev) => {
+  const el = ev.target
+  if (!el || !el.tagName) return
+  const tag = el.tagName
+  if (tag !== 'INPUT' && tag !== 'TEXTAREA') return
+  const hay = (String(el.id || '') + ' ' + String(el.placeholder || '') + ' ' + String(el.name || '')).toLowerCase()
+  if (tag === 'INPUT') {
+    const type = (el.type || 'text').toLowerCase()
+    if (type !== 'text' && type !== 'search') return
+    if (_CAP_PADRAO_IGNORAR.test(hay) || !_CAP_PADRAO_ALVO.test(hay)) return
+    const novo = _capitalizarNome(el.value)
+    if (novo !== el.value) el.value = novo
+  } else {
+    if (_CAP_PADRAO_IGNORAR.test(hay)) return
+    const novo = _capitalizarFrases(el.value)
+    if (novo !== el.value) el.value = novo
+  }
+}, true)
+
 // ── Sessão Supabase Auth (REST, sem biblioteca) ──
 let _sbSession = null
 function _sessSave(s) {
