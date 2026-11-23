@@ -226,18 +226,6 @@
   .eca-painel p{color:var(--muted);margin:0}
   .eca-link{text-align:center;margin-top:22px}
 
-  /* ── história ── */
-  .linha-tempo{position:relative;max-width:900px;margin:0 auto;padding-left:34px}
-  .linha-tempo::before{content:'';position:absolute;left:11px;top:6px;bottom:6px;width:3px;background:linear-gradient(var(--gold),var(--navy-2));border-radius:3px}
-  .marco{position:relative;margin-bottom:26px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 22px}
-  .marco::before{content:'';position:absolute;left:-30px;top:22px;width:17px;height:17px;border-radius:50%;background:#fff;border:4px solid var(--gold)}
-  .marco .ano{font:900 1.3rem Nunito;color:var(--gold)}
-  .marco h4{margin:2px 0 4px;color:var(--navy);font-size:1.1rem}
-  .marco p{margin:0;color:var(--muted);font-size:.93rem}
-  .marco.hoje{background:linear-gradient(135deg,var(--navy),var(--navy-2));border:0}
-  .marco.hoje h4,.marco.hoje p{color:#fff}
-  .marco.hoje .ano{color:var(--gold-2)}
-
   /* ── FAQ ── */
   .faq{max-width:860px;margin:0 auto;display:grid;gap:10px}
   .faq details{background:#fff;border:1px solid var(--line);border-radius:14px;padding:0 20px}
@@ -263,8 +251,8 @@
 
   /* ── alto contraste ── */
   body.contraste{--bg:#000;--card:#000;--ink:#fff;--muted:#ffeb3b;--line:#ffeb3b;--sky:#000;--navy:#ffeb3b;--navy-2:#ffeb3b}
-  body.contraste .hero,body.contraste .denuncie,body.contraste footer,body.contraste .res-topo,body.contraste .marco.hoje{background:#000!important}
-  body.contraste .alt,body.contraste header.top,body.contraste .finder,body.contraste .res-card,body.contraste .busca input,body.contraste details.ct,body.contraste .feat,body.contraste .proj,body.contraste .ev,body.contraste .eca-painel,body.contraste .marco,body.contraste .faq details,body.contraste .lista-box,body.contraste nav.menu{background:#000!important;color:#fff;border-color:#ffeb3b}
+  body.contraste .hero,body.contraste .denuncie,body.contraste footer,body.contraste .res-topo{background:#000!important}
+  body.contraste .alt,body.contraste header.top,body.contraste .finder,body.contraste .res-card,body.contraste .busca input,body.contraste details.ct,body.contraste .feat,body.contraste .proj,body.contraste .ev,body.contraste .eca-painel,body.contraste .faq details,body.contraste .lista-box,body.contraste nav.menu{background:#000!important;color:#fff;border-color:#ffeb3b}
   body.contraste a{color:#ffeb3b}
 
   .revela{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
@@ -300,7 +288,6 @@
       <a href="#projetos">Projetos</a>
       <a href="#agenda">Agenda</a>
       <a href="#eca">ECA</a>
-      <a href="#historia">História</a>
       <a href="#duvidas">Dúvidas</a>
     </nav>
     <a class="btn btn-navy btn-sm btn-denuncia" href="#denuncie">Como denunciar</a>
@@ -488,20 +475,8 @@
   </div>
 </section>
 
-<!-- ═══ HISTÓRIA ═══ -->
-<section class="sec alt" id="historia">
-  <div class="wrap">
-    <div class="sec-head revela">
-      <span class="tag">Nossa história</span>
-      <h2>Da “situação irregular” à proteção integral</h2>
-      <p>O Conselho Tutelar nasce de uma mudança profunda: crianças deixam de ser vistas como “menores” e passam a ser reconhecidas como cidadãs, com direitos.</p>
-    </div>
-    <div class="linha-tempo" id="linha-tempo"></div>
-  </div>
-</section>
-
 <!-- ═══ FAQ ═══ -->
-<section class="sec" id="duvidas">
+<section class="sec alt" id="duvidas">
   <div class="wrap">
     <div class="sec-head revela">
       <span class="tag">Dúvidas frequentes</span>
@@ -527,7 +502,6 @@
           <li><a href="#conselhos">Os 24 Conselhos</a></li>
           <li><a href="#projetos">Projetos</a></li>
           <li><a href="#agenda">Agenda</a></li>
-          <li><a href="#historia">História</a></li>
         </ul>
       </div>
       <div>
@@ -595,18 +569,6 @@ const ECA_ARTIGOS = [
   { aba: 'Dignidade', art: 'Art. 18', texto: 'É dever de todos velar pela dignidade da criança e do adolescente, pondo-os a salvo de qualquer tratamento desumano, violento, aterrorizante, vexatório ou constrangedor.', nota: 'A proteção não é tarefa apenas da família ou do Estado — é responsabilidade de todos nós.' },
   { aba: 'Prevenir é dever', art: 'Art. 70', texto: 'É dever de todos prevenir a ocorrência de ameaça ou violação dos direitos da criança e do adolescente.', nota: 'Por isso, ao suspeitar de uma violação, comunique o Conselho Tutelar ou ligue para o Disque 100.' },
   { aba: 'O Conselho Tutelar', art: 'Art. 131', texto: 'O Conselho Tutelar é órgão permanente e autônomo, não jurisdicional, encarregado pela sociedade de zelar pelo cumprimento dos direitos da criança e do adolescente, definidos nesta Lei.', nota: 'Cada Conselho é formado por cinco membros escolhidos pela população local.' },
-]
-
-const HISTORIA = [
-  { ano: '1927', titulo: 'Código de Menores', texto: 'O primeiro código brasileiro voltado à infância trata a criança pobre como “menor” a ser corrigido, com foco na punição e no recolhimento.' },
-  { ano: '1979', titulo: 'Doutrina da situação irregular', texto: 'Um novo Código de Menores mantém a lógica de intervir apenas quando a criança está em “situação irregular”, sem reconhecê-la como sujeito de direitos.' },
-  { ano: '1988', titulo: 'Constituição Federal · Art. 227', texto: 'A Constituição Cidadã estabelece a prioridade absoluta dos direitos de crianças e adolescentes como dever da família, da sociedade e do Estado.' },
-  { ano: '1989', titulo: 'Convenção da ONU', texto: 'A Convenção sobre os Direitos da Criança é adotada pela ONU em 20 de novembro e se torna o tratado de direitos humanos mais ratificado do mundo.' },
-  { ano: '1990', titulo: 'Nasce o ECA e o Conselho Tutelar', texto: 'Em 13 de julho é sancionada a Lei 8.069, o Estatuto da Criança e do Adolescente, que adota a proteção integral e cria os Conselhos Tutelares em todos os municípios.' },
-  { ano: '1991', titulo: 'CONANDA', texto: 'É criado o Conselho Nacional dos Direitos da Criança e do Adolescente, responsável por diretrizes nacionais da política de proteção.' },
-  { ano: '2012', titulo: 'Valorização da função', texto: 'A Lei 12.696 assegura direitos sociais aos conselheiros, amplia o mandato para quatro anos e institui o processo de escolha unificado em todo o país.' },
-  { ano: '2015', titulo: 'Primeira escolha unificada', texto: 'Pela primeira vez, todos os municípios brasileiros escolhem seus conselheiros tutelares no mesmo dia.' },
-  { ano: 'Hoje', titulo: 'Salvador: 24 Conselhos, 120 conselheiros', texto: 'A capital baiana conta com 24 Conselhos Tutelares distribuídos pelas regiões da cidade, garantindo atendimento próximo a cada comunidade.', hoje: true },
 ]
 
 const FAQ = [
@@ -863,10 +825,6 @@ function mostraArtigo(i) {
 }
 document.getElementById('eca-tabs').innerHTML = ECA_ARTIGOS.map((a, i) => `<button type="button" role="tab" onclick="mostraArtigo(${i})">${esc(a.aba)}</button>`).join('')
 mostraArtigo(1)
-
-// ── história ──
-document.getElementById('linha-tempo').innerHTML = HISTORIA.map(h => `
-  <div class="marco revela ${h.hoje ? 'hoje' : ''}"><div class="ano">${esc(h.ano)}</div><h4>${esc(h.titulo)}</h4><p>${esc(h.texto)}</p></div>`).join('')
 
 // ── FAQ ──
 document.getElementById('faq').innerHTML = FAQ.map(f => `<details class="revela"><summary>${esc(f.p)}</summary><p>${esc(f.r)}</p></details>`).join('')
