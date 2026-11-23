@@ -348,22 +348,22 @@
     <div class="sec-head revela">
       <span class="tag">Serviço</span>
       <h2>Qual é o Conselho Tutelar do seu bairro?</h2>
-      <p>Cada bairro de Salvador é atendido por um Conselho Tutelar. Digite o nome do seu bairro e veja endereço, telefones e como chegar.</p>
+      <p>Cada bairro de Salvador é atendido por um Conselho Tutelar. Digite o nome do seu bairro ou o seu CEP e veja endereço, telefones e como chegar.</p>
     </div>
     <div class="finder revela">
       <div>
-        <h3>Busque pelo bairro</h3>
-        <p style="color:var(--muted);margin:0">Também funciona com o nome do conselho (ex.: “Narandiba”).</p>
+        <h3>Busque pelo bairro ou CEP</h3>
+        <p style="color:var(--muted);margin:0">Também funciona com o CEP (8 números) ou o nome do conselho (ex.: “Narandiba”).</p>
         <div class="busca">
           <span class="lupa" aria-hidden="true">🔎</span>
-          <label class="sr-only" for="busca-bairro">Nome do bairro</label>
-          <input id="busca-bairro" type="search" placeholder="Ex.: Liberdade, Pituba, Cajazeiras…" autocomplete="off" list="lista-bairros">
+          <label class="sr-only" for="busca-bairro">Nome do bairro ou CEP</label>
+          <input id="busca-bairro" type="search" placeholder="Bairro ou CEP — ex.: Liberdade" autocomplete="off" list="lista-bairros">
           <datalist id="lista-bairros"></datalist>
         </div>
         <div class="sugestoes" id="sugestoes" aria-label="Bairros populares"></div>
       </div>
       <div class="resultado" id="resultado" aria-live="polite">
-        <div class="res-vazio"><span>🗺️</span><p>O resultado aparece aqui.<br>Comece digitando o nome do seu bairro.</p></div>
+        <div class="res-vazio"><span>🗺️</span><p>O resultado aparece aqui.<br>Comece digitando o bairro ou o CEP.</p></div>
       </div>
     </div>
   </div>
@@ -614,7 +614,7 @@ const FAQ = [
   { p: 'O Conselho Tutelar tira a guarda dos pais?', r: 'Não. Decisões sobre guarda, perda do poder familiar e adoção são exclusivas da Justiça. O Conselho aplica medidas de proteção e, quando necessário, comunica o Ministério Público e o Judiciário.' },
   { p: 'Quem pode procurar o Conselho Tutelar?', r: 'Qualquer pessoa: a própria criança ou adolescente, familiares, vizinhos, professores, profissionais de saúde ou qualquer cidadão que saiba de uma ameaça ou violação de direitos.' },
   { p: 'O atendimento é pago?', r: 'Nunca. Todo atendimento do Conselho Tutelar é público e gratuito.' },
-  { p: 'Como sei qual Conselho atende meu bairro?', r: 'Use a ferramenta “Encontre seu CT” no topo desta página: digite o nome do seu bairro e veja o endereço e os telefones do Conselho responsável.' },
+  { p: 'Como sei qual Conselho atende meu bairro?', r: 'Use a ferramenta “Encontre seu CT” no topo desta página: digite o nome do seu bairro ou o CEP e veja o endereço e os telefones do Conselho responsável.' },
   { p: 'O Conselho funciona fora do horário comercial?', r: 'Sim. Além do expediente, os Conselhos de Salvador mantêm escala de plantão, inclusive nos fins de semana. Em emergências, ligue também para o 190.' },
   { p: 'Como me torno conselheiro(a) tutelar?', r: 'Pelo processo de escolha unificado, realizado a cada quatro anos. O ECA exige reconhecida idoneidade moral, idade superior a 21 anos e residência no município, além dos requisitos definidos em lei municipal.' },
 ]
@@ -713,11 +713,54 @@ function cartaoResultado(c, bairro) {
   </div>`
 }
 
+// CEP → bairro (ViaCEP) → Conselho. Os nomes de bairro dos Correios nem sempre batem com os
+// da nossa lista, então tentamos igualdade, depois "um contém o outro", e por fim mostramos opções.
+async function buscaCep(cep) {
+  const out = document.getElementById('resultado')
+  out.innerHTML = '<div class="res-vazio"><span>⏳</span><p>Consultando o CEP…</p></div>'
+  let dados
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    dados = await r.json()
+  } catch (e) {
+    out.innerHTML = '<div class="res-vazio"><span>📡</span><p>Não foi possível consultar o CEP agora.<br>Tente digitar o nome do bairro.</p></div>'
+    return
+  }
+  if (document.getElementById('busca-bairro').value.replace(/\D/g, '') !== cep) return
+  if (!dados || dados.erro) {
+    out.innerHTML = '<div class="res-vazio"><span>🤔</span><p>CEP não encontrado.<br>Confira os números ou digite o nome do bairro.</p></div>'
+    return
+  }
+  if (norm(dados.localidade) !== 'salvador') {
+    out.innerHTML = `<div class="res-vazio"><span>🧭</span><p>Este CEP é de <strong>${esc(dados.localidade)}/${esc(dados.uf)}</strong>.<br>Procure o Conselho Tutelar do seu município ou ligue para o <strong>Disque 100</strong>.</p></div>`
+    return
+  }
+  const chave = s => norm(s).replace(/[^a-z0-9]/g, '')
+  const b = chave(dados.bairro)
+  const achado = b && (indiceBairros.find(i => chave(i.bairro) === b)
+    || indiceBairros.find(i => {
+      const k = chave(i.bairro)
+      return (b.length >= 5 && k.includes(b)) || (k.length >= 5 && b.includes(k))
+    }))
+  const rua = [dados.logradouro, dados.bairro].filter(Boolean).join(' · ')
+  if (achado) {
+    out.innerHTML = `<p style="margin:0 0 8px;color:var(--muted);font-size:.9rem">📮 CEP ${cep.slice(0, 5)}-${cep.slice(5)}: ${esc(rua)}</p>` + cartaoResultado(achado.ct, achado.bairro)
+    return
+  }
+  out.innerHTML = `<div class="res-vazio"><span>📮</span><p>O CEP fica em <strong>${esc(rua || 'Salvador')}</strong>, mas esse bairro não está na nossa lista com o mesmo nome.<br>Tente digitar um bairro vizinho ou ligue para o <strong>Disque 100</strong>.</p></div>`
+}
+
 function buscaBairro(texto) {
   const out = document.getElementById('resultado')
+  const digitos = String(texto).replace(/\D/g, '')
+  if (digitos.length === 8 && /^[\d\s.-]+$/.test(String(texto).trim())) { buscaCep(digitos); return }
+  if (/^[\d\s.-]+$/.test(String(texto).trim()) && digitos.length) {
+    out.innerHTML = '<div class="res-vazio"><span>📮</span><p>Digite os 8 números do CEP.</p></div>'
+    return
+  }
   const q = norm(texto)
   if (q.length < 2) {
-    out.innerHTML = '<div class="res-vazio"><span>🗺️</span><p>O resultado aparece aqui.<br>Comece digitando o nome do seu bairro.</p></div>'
+    out.innerHTML = '<div class="res-vazio"><span>🗺️</span><p>O resultado aparece aqui.<br>Comece digitando o bairro ou o CEP.</p></div>'
     return
   }
   const exato = indiceBairros.find(i => norm(i.bairro) === q)
