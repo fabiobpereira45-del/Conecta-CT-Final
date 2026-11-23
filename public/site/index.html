@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Conselho Tutelar de Salvador · Proteção integral à criança e ao adolescente</title>
-<meta name="description" content="Portal público dos 24 Conselhos Tutelares de Salvador/BA: encontre o conselho do seu bairro, saiba como denunciar, conheça o ECA, projetos, agenda e a história da proteção à infância.">
-<meta name="theme-color" content="#14305c">
+<meta name="description" content="Portal público dos 24 Conselhos Tutelares de Salvador/BA: encontre o conselho do seu bairro ou CEP, saiba como denunciar, conheça o ECA, os projetos e a agenda.">
+<meta name="theme-color" content="#101626">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Conselho Tutelar de Salvador">
 <meta property="og:description" content="Encontre o Conselho Tutelar do seu bairro, saiba como denunciar e conheça seus direitos.">
@@ -14,7 +14,8 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Familjen+Grotesk:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js')</script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -25,273 +26,412 @@
 }
 </script>
 <style>
+  /* ═══════════ TOKENS ═══════════ */
   :root{
-    --navy:#14305c; --navy-2:#1f4a8a; --sky:#e8f0fb; --gold:#e0a91b; --gold-2:#f6c945;
-    --coral:#f2665a; --green:#2fae73; --lilac:#8b6cf0; --teal:#1aa6a6;
-    --ink:#16233a; --muted:#5d6b82; --line:#e3e8f0; --bg:#f7f9fc; --card:#ffffff;
-    --radius:18px; --shadow:0 10px 30px rgba(20,48,92,.08); --fs:1;
+    --papel:#F3EEE3; --papel-2:#EAE3D2; --tinta:#101626; --muted:#5A5649;
+    --linha:#101626; --linha-suave:rgba(16,22,38,.2);
+    --tomate:#E4431B; --tomate-txt:#B22F0C; --on-tomate:#101626; --manteiga:#F0CF6B; --hl:#F0CF6B;
+    --escuro:#101626; --sobre-escuro:#F3EEE3; --muted-escuro:#B8BDC9;
+    --foco:#B22F0C; --sh:var(--tinta);
+    --serif:'Fraunces',Georgia,'Times New Roman',serif;
+    --sans:'Familjen Grotesk',system-ui,'Segoe UI',sans-serif;
+    --mono:'DM Mono',ui-monospace,Consolas,monospace;
+    --pad:clamp(20px,4vw,56px); --max:1320px; --hdr:68px; --fs:1;
+    --ease:cubic-bezier(.2,.8,.2,1);
   }
   *{box-sizing:border-box}
-  html{scroll-behavior:smooth;font-size:calc(16px * var(--fs))}
-  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
-  h1,h2,h3,h4{font-family:Nunito,Inter,sans-serif;line-height:1.15;margin:0 0 .5em;letter-spacing:-.01em}
-  a{color:var(--navy-2)}
-  img{max-width:100%}
-  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
-  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-  :focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:6px}
+  html{font-size:calc(16px * var(--fs));scroll-behavior:smooth;scroll-padding-top:calc(var(--hdr) + 16px)}
+  body{margin:0;background:var(--papel);color:var(--tinta);font-family:var(--sans);font-size:1.0625rem;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body::before{content:'';position:fixed;inset:0;z-index:100;pointer-events:none;opacity:.07;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  body.trava{overflow:hidden}
+  h1,h2,h3,h4,p,ul,ol,dl,dd,figure,blockquote{margin:0}
+  ul,ol{padding:0;list-style:none}
+  a{color:inherit}
+  img{max-width:100%;display:block}
+  button{font:inherit;color:inherit}
+  .wrap{max-width:var(--max);margin:0 auto;padding-inline:var(--pad)}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  :focus-visible{outline:3px solid var(--foco);outline-offset:3px}
+  .mono{font:500 .75rem/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase}
+  .pular{position:absolute;left:12px;top:-60px;z-index:200;background:var(--tinta);color:var(--papel);padding:10px 16px;font-weight:600}
+  .pular:focus{top:12px}
 
-  /* ── faixa de emergência ── */
-  .alerta{background:var(--navy);color:#fff;font-size:.82rem}
-  .alerta .wrap{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:7px;padding-bottom:7px}
-  .alerta strong{color:var(--gold-2)}
-  .alerta .a11y{display:flex;gap:6px;align-items:center}
-  .alerta button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:2px 9px;font:inherit;cursor:pointer}
-  .alerta button:hover{background:rgba(255,255,255,.22)}
+  /* ═══════════ BOTÕES E LINKS ═══════════ */
+  .btn{display:inline-flex;align-items:center;gap:.7em;font:600 1rem/1 var(--sans);padding:1.05em 1.4em;border:2px solid var(--tinta);background:var(--papel);color:var(--tinta);border-radius:0;box-shadow:5px 5px 0 var(--sh);text-decoration:none;cursor:pointer;transition:transform .18s var(--ease),box-shadow .18s var(--ease),background .18s,color .18s}
+  .btn:hover{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--sh)}
+  .btn:active{transform:translate(5px,5px);box-shadow:0 0 0 var(--sh)}
+  .btn .seta{display:inline-block;transition:transform .22s var(--ease)}
+  .btn:hover .seta{transform:translateX(5px)}
+  .btn-primario{background:var(--tomate);color:var(--on-tomate)}
+  .btn-linha{background:transparent;box-shadow:none}
+  .btn-linha:hover{background:var(--tinta);color:var(--papel);transform:none;box-shadow:none}
+  .btn-pq{padding:.8em 1.1em;font-size:.92rem;box-shadow:4px 4px 0 var(--sh)}
+  .btn[disabled]{opacity:.45;pointer-events:none}
+  .lnk{font-weight:600;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:.28em;transition:color .15s,text-decoration-thickness .15s}
+  .lnk:hover{color:var(--tomate-txt);text-decoration-thickness:4px}
 
-  /* ── cabeçalho ── */
-  header.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  header.top .wrap{display:flex;align-items:center;gap:18px;height:72px}
-  .marca{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);flex-shrink:0}
-  .marca img{width:46px;height:46px;object-fit:contain}
-  .marca b{font-family:Nunito;font-size:1.05rem;display:block;line-height:1.1}
-  .marca small{color:var(--muted);font-size:.75rem}
-  nav.menu{margin-left:auto;display:flex;gap:2px}
-  nav.menu a{text-decoration:none;color:var(--ink);font-weight:600;font-size:.9rem;padding:8px 11px;border-radius:10px}
-  nav.menu a:hover{background:var(--sky);color:var(--navy)}
-  .btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:12px 22px;font:600 .95rem Inter,sans-serif;cursor:pointer;text-decoration:none;transition:transform .15s,box-shadow .15s}
-  .btn:hover{transform:translateY(-2px)}
-  .btn-gold{background:var(--gold);color:#1b1300;box-shadow:0 8px 20px rgba(224,169,27,.35)}
-  .btn-navy{background:var(--navy);color:#fff}
-  .btn-ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35)}
-  .btn-sm{padding:8px 16px;font-size:.85rem}
-  .hamb{display:none;margin-left:auto;background:none;border:0;font-size:1.6rem;cursor:pointer;color:var(--navy)}
-  @media(max-width:1060px){
-    nav.menu{display:none;position:absolute;top:72px;left:0;right:0;background:#fff;flex-direction:column;padding:10px 22px 18px;border-bottom:1px solid var(--line);box-shadow:var(--shadow)}
-    nav.menu.aberto{display:flex}
-    .hamb{display:block}
-    header.top .btn-denuncia{display:none}
+  /* ═══════════ FAIXA DE EMERGÊNCIA ═══════════ */
+  .emerg{background:var(--escuro);color:var(--sobre-escuro)}
+  .emerg .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap;padding-block:9px}
+  .emerg .mono{font-size:.72rem}
+  .emerg a{color:var(--manteiga);text-decoration:underline;text-underline-offset:.25em}
+  .emerg .ctl{display:flex;gap:6px}
+  .emerg .ctl button{background:transparent;border:1px solid rgba(243,238,227,.45);color:var(--sobre-escuro);padding:3px 10px;cursor:pointer;font:500 .72rem var(--mono);letter-spacing:.08em;text-transform:uppercase}
+  .emerg .ctl button:hover{background:var(--sobre-escuro);color:var(--escuro)}
+  .emerg :focus-visible{outline-color:var(--manteiga)}
+
+  /* ═══════════ CABEÇALHO ═══════════ */
+  .cab{position:sticky;top:0;z-index:60;background:var(--papel);border-bottom:2px solid var(--tinta)}
+  .cab-in{display:flex;align-items:center;gap:24px;height:var(--hdr)}
+  .marca{display:flex;align-items:center;gap:12px;text-decoration:none;flex-shrink:0}
+  .marca img{width:44px;height:44px;object-fit:contain}
+  .marca b{display:block;font:700 1.2rem/1 var(--serif);letter-spacing:-.02em}
+  .marca .mono{font-size:.62rem;color:var(--muted);margin-top:4px;display:block}
+  .menu{margin-left:auto;display:flex;gap:2px;align-items:center}
+  .menu a{font:500 .74rem var(--mono);letter-spacing:.09em;text-transform:uppercase;text-decoration:none;padding:10px 11px;position:relative}
+  .menu a i{font-style:normal;color:var(--tomate-txt);margin-right:5px}
+  .menu a::after{content:'';position:absolute;left:11px;right:11px;bottom:4px;height:2px;background:var(--tinta);transform:scaleX(0);transform-origin:left;transition:transform .25s var(--ease)}
+  .menu a:hover::after{transform:scaleX(1)}
+  .btn-menu{display:none;margin-left:auto;background:var(--tinta);color:var(--papel);border:0;padding:11px 18px;font:500 .78rem var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+  @media(max-width:1180px){
+    .btn-menu{display:block}
+    .menu{display:none;position:absolute;top:100%;left:0;right:0;height:calc(100dvh - var(--hdr));overflow:auto;background:var(--papel);flex-direction:column;align-items:stretch;gap:0;padding:8px var(--pad) 40px;margin:0;border-bottom:2px solid var(--tinta)}
+    .menu.aberto{display:flex}
+    .menu a{font:600 clamp(1.7rem,6vw,2.4rem)/1 var(--serif);letter-spacing:-.02em;text-transform:none;padding:20px 0;border-bottom:1px solid var(--linha-suave)}
+    .menu a i{font:500 .75rem var(--mono);vertical-align:super;margin-right:12px}
+    .menu a::after{display:none}
   }
 
-  /* ── hero ── */
-  .hero{position:relative;overflow:hidden;background:radial-gradient(1200px 500px at 85% -10%,#2f63b3 0%,transparent 60%),linear-gradient(135deg,var(--navy) 0%,#183a6f 55%,#1f4a8a 100%);color:#fff;padding:84px 0 120px}
-  .hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
-  .hero h1{font-size:clamp(2.1rem,4.6vw,3.6rem);font-weight:900}
-  .hero h1 em{font-style:normal;color:var(--gold-2)}
-  .hero p.lead{font-size:1.15rem;color:#d7e3f7;max-width:560px}
-  .hero .acoes{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
-  .selo{display:inline-flex;gap:8px;align-items:center;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:6px 14px;border-radius:999px;font-size:.8rem;font-weight:600;margin-bottom:18px}
-  .hero-arte{position:relative;display:flex;justify-content:center}
-  .hero-arte .disco{width:min(380px,80vw);aspect-ratio:1;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 80px rgba(0,0,0,.35),0 0 0 14px rgba(255,255,255,.08),0 0 0 30px rgba(255,255,255,.05)}
-  .hero-arte .disco img{width:72%}
-  .bolha{position:absolute;border-radius:50%;opacity:.9;animation:flutua 7s ease-in-out infinite}
-  .b1{width:70px;height:70px;background:var(--coral);top:6%;left:4%}
-  .b2{width:42px;height:42px;background:var(--gold-2);bottom:12%;right:8%;animation-delay:-2s}
-  .b3{width:26px;height:26px;background:var(--green);top:18%;right:2%;animation-delay:-4s}
-  @keyframes flutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
-  .onda{position:absolute;left:0;right:0;bottom:-1px;line-height:0}
-  @media(max-width:860px){.hero .wrap{grid-template-columns:1fr}.hero-arte{order:-1}.hero{padding:50px 0 100px}}
+  /* ═══════════ HERO ═══════════ */
+  .hero{position:relative;overflow:hidden;border-bottom:2px solid var(--tinta);padding:clamp(40px,7vw,100px) 0 clamp(60px,8vw,128px)}
+  .hero::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(90deg,transparent 0 calc(100%/12 - 1px),var(--linha-suave) calc(100%/12 - 1px) calc(100%/12))}
+  .hero .wrap{position:relative;z-index:1}
+  .kicker{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:clamp(22px,3vw,40px)}
+  .kicker::before{content:'';width:14px;height:14px;background:var(--tomate)}
+  .kicker span+span::before{content:'/';margin-right:14px;opacity:.5}
+  .gigante{position:absolute;right:-1vw;bottom:-.07em;z-index:0;font:900 clamp(14rem,34vw,34rem)/.75 var(--serif);font-variation-settings:'opsz' 144,'SOFT' 0,'WONK' 1;letter-spacing:-.07em;color:var(--tomate);user-select:none;pointer-events:none}
+  .rot{position:absolute;right:var(--pad);top:clamp(24px,4vw,56px);writing-mode:vertical-rl;color:var(--muted);z-index:1}
+  .tit-hero{font:800 clamp(3rem,8.4vw,8.6rem)/.92 var(--serif);font-variation-settings:'opsz' 144;letter-spacing:-.03em;word-spacing:.14em;max-width:11.5em}
+  .tit-hero .ln{display:block;overflow:hidden;padding-bottom:.3em;margin-bottom:-.3em}
+  .tit-hero .ln>span{display:block}
+  .tit-hero em{font-style:italic;font-weight:600;background:linear-gradient(transparent 64%,var(--hl) 64% 90%,transparent 90%)}
+  .js .tit-hero .ln>span{transform:translateY(108%);animation:sobe .95s var(--ease) forwards}
+  .js .tit-hero .ln:nth-child(2)>span{animation-delay:.1s}
+  .js .tit-hero .ln:nth-child(3)>span{animation-delay:.2s}
+  @keyframes sobe{to{transform:none}}
+  .lead{font-size:clamp(1.1rem,1.7vw,1.4rem);line-height:1.5;max-width:34em;margin-top:clamp(24px,3vw,40px)}
+  .acoes{display:flex;flex-wrap:wrap;gap:22px 28px;align-items:center;margin-top:clamp(28px,3.4vw,44px)}
+  @media(max-width:760px){
+    .gigante{position:relative;right:auto;bottom:auto;display:block;font-size:min(46vw,13rem);line-height:.8;margin:0 0 -.04em -.04em}
+    .rot{display:none}
+  }
 
-  /* ── números ── */
-  .numeros{margin-top:-70px;position:relative;z-index:2}
-  .numeros .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-  .num{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;border-top:5px solid var(--c);text-align:center}
-  .num b{display:block;font-family:Nunito;font-size:2.6rem;font-weight:900;color:var(--c);line-height:1}
-  .num span{color:var(--muted);font-weight:600;font-size:.9rem}
-  @media(max-width:760px){.numeros .grid{grid-template-columns:repeat(2,1fr)}}
+  /* fita em movimento */
+  .fita{background:var(--tomate);color:var(--on-tomate);border-bottom:2px solid var(--tinta);overflow:hidden;white-space:nowrap}
+  .fita .trilho{display:inline-flex;animation:corre 46s linear infinite;padding:.85em 0}
+  .fita:hover .trilho{animation-play-state:paused}
+  .fita span{padding-right:2.4em;font:500 .8rem var(--mono);letter-spacing:.14em;text-transform:uppercase}
+  @keyframes corre{to{transform:translateX(-50%)}}
 
-  /* ── seções ── */
-  section.sec{padding:90px 0}
-  .sec-head{text-align:center;max-width:720px;margin:0 auto 44px}
-  .sec-head .tag{display:inline-block;font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--navy-2);background:var(--sky);padding:5px 14px;border-radius:999px;margin-bottom:14px}
-  .sec-head h2{font-size:clamp(1.8rem,3.2vw,2.6rem);font-weight:900;color:var(--navy)}
-  .sec-head p{color:var(--muted);font-size:1.05rem}
-  .alt{background:#fff}
+  /* régua de números */
+  .regua{border-bottom:2px solid var(--tinta)}
+  .regua .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+  .regua .it{padding:clamp(22px,3vw,40px) clamp(14px,2.4vw,32px);border-left:1px solid var(--linha)}
+  .regua .it:first-child{border-left:0;padding-left:0}
+  .regua b{display:block;font:700 clamp(2.8rem,6.2vw,5.8rem)/.9 var(--serif);letter-spacing:-.045em;font-variant-numeric:tabular-nums;font-variation-settings:'opsz' 144}
+  .regua .mono{display:block;margin-top:12px;color:var(--muted);font-size:.7rem}
+  @media(max-width:760px){
+    .regua .wrap{grid-template-columns:1fr 1fr}
+    .regua .it:nth-child(3){border-left:0;padding-left:0}
+    .regua .it:nth-child(n+3){border-top:1px solid var(--linha)}
+  }
 
-  /* ── encontre seu conselho ── */
-  .finder{background:linear-gradient(135deg,#fff 0%,#f2f7ff 100%);border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);padding:34px;display:grid;grid-template-columns:1fr 1.1fr;gap:30px;align-items:start}
-  .finder h3{font-size:1.6rem;color:var(--navy)}
-  .busca{position:relative;margin-top:14px}
-  .busca input{width:100%;font:500 1.05rem Inter,sans-serif;padding:16px 18px 16px 50px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink)}
-  .busca input:focus{border-color:var(--navy-2);outline:none;box-shadow:0 0 0 4px rgba(31,74,138,.12)}
-  .busca .lupa{position:absolute;left:18px;top:50%;transform:translateY(-50%);font-size:1.1rem}
-  .sugestoes{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-  .sugestoes button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:500 .82rem Inter,sans-serif;cursor:pointer;color:var(--navy-2)}
-  .sugestoes button:hover{background:var(--sky)}
-  .resultado{min-height:220px}
-  .res-vazio{height:100%;min-height:220px;border:2px dashed var(--line);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:20px}
-  .res-vazio span{font-size:2.4rem}
-  .res-card{background:#fff;border-radius:18px;border:1px solid var(--line);overflow:hidden;animation:surge .35s ease}
-  @keyframes surge{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  .res-topo{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;padding:18px 20px;display:flex;gap:14px;align-items:center}
-  .res-topo .sigla{width:52px;height:52px;border-radius:50%;background:var(--gold);color:#1b1300;font-weight:900;display:flex;align-items:center;justify-content:center;font-family:Nunito;flex-shrink:0}
-  .res-topo h4{margin:0;font-size:1.2rem}
-  .res-topo small{opacity:.8}
-  .res-corpo{padding:18px 20px;display:grid;gap:10px;font-size:.95rem}
-  .res-corpo .linha{display:flex;gap:10px}
-  .res-corpo .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-  .multi{display:grid;gap:8px}
-  .multi button{text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;cursor:pointer;font:500 .95rem Inter,sans-serif}
-  .multi button:hover{border-color:var(--navy-2);background:var(--sky)}
-  @media(max-width:860px){.finder{grid-template-columns:1fr;padding:22px}}
+  /* ═══════════ SEÇÕES (base) ═══════════ */
+  .sec{padding:clamp(72px,10vw,150px) 0;border-bottom:2px solid var(--tinta)}
+  .sec-top{display:flex;align-items:center;gap:16px;margin-bottom:clamp(28px,4.4vw,64px)}
+  .sec-top b{font-weight:500;color:var(--tomate-txt)}
+  .sec-top::after{content:'';flex:1;border-top:1px solid currentColor;opacity:.45}
+  .tit{font:600 clamp(2.4rem,5.8vw,5.6rem)/.98 var(--serif);font-variation-settings:'opsz' 144;letter-spacing:-.028em;word-spacing:.12em}
+  .tit em{font-style:italic;font-weight:500}
+  .g12{display:grid;grid-template-columns:repeat(12,1fr);gap:0 clamp(16px,2.4vw,32px)}
+  .alt{background:var(--papel-2)}
+  .escuro{--papel:#101626;--tinta:#F3EEE3;--muted:#B8BDC9;--linha:#F3EEE3;--linha-suave:rgba(243,238,227,.22);--tomate-txt:#F0CF6B;--foco:#F0CF6B;
+    background:var(--escuro);color:var(--sobre-escuro)}
+  .js .rv{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+  .js .rv.in{opacity:1;transform:none}
+  .intro{max-width:30em;color:var(--muted);font-size:1.1rem}
+  .escuro .intro{color:var(--muted-escuro)}
 
-  /* ── o que fazemos ── */
-  .cards-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-  .cards-4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-  .feat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;transition:transform .2s,box-shadow .2s}
-  .feat:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
-  .feat .ic{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:color-mix(in srgb,var(--c) 15%,#fff);margin-bottom:14px}
-  .feat h3{font-size:1.15rem;color:var(--navy)}
-  .feat p{color:var(--muted);margin:0;font-size:.95rem}
-  @media(max-width:960px){.cards-3,.cards-4{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:600px){.cards-3,.cards-4{grid-template-columns:1fr}}
-  .duas-col{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:30px}
-  .lista-box{border-radius:var(--radius);padding:26px;border:1px solid var(--line);background:#fff}
-  .lista-box h3{display:flex;gap:10px;align-items:center}
-  .lista-box ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
-  .lista-box li{display:flex;gap:10px;align-items:flex-start}
-  .lista-box li::before{content:var(--ico);flex-shrink:0}
-  .sim{--ico:'✅'} .nao{--ico:'✖️'}
-  .nao{background:#fff8f7;border-color:#fbd5d1}
-  @media(max-width:760px){.duas-col{grid-template-columns:1fr}}
+  /* ═══════════ 01 ENCONTRE ═══════════ */
+  .campo-rot{display:block;color:var(--muted);margin-bottom:6px}
+  .campo{width:100%;background:transparent;border:0;border-bottom:3px solid var(--tinta);border-radius:0;color:inherit;font:500 clamp(1.7rem,4.6vw,3.6rem)/1.15 var(--serif);letter-spacing:-.02em;padding:.25em 0}
+  .campo::placeholder{color:inherit;opacity:.4}
+  .campo:focus{outline:none;border-bottom-color:var(--tomate);box-shadow:0 5px 0 var(--tomate)}
+  .campo::-webkit-search-cancel-button{display:none}
+  .sug{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;align-items:center}
+  .sug .mono{color:var(--muted);margin-right:6px}
+  .sug button{background:transparent;border:1px solid var(--tinta);padding:.4em .9em;font:500 .85rem var(--sans);cursor:pointer;color:inherit;transition:background .15s,color .15s}
+  .sug button:hover{background:var(--tinta);color:var(--papel)}
+  .resultado{margin-top:clamp(32px,4vw,56px);min-height:160px}
+  .res-vazio{border:1px dashed var(--linha-suave);padding:34px;color:var(--muted);background:repeating-linear-gradient(135deg,transparent 0 11px,var(--linha-suave) 11px 12px);max-width:34em}
+  .res-vazio strong{color:var(--tinta)}
+  .ficha{--papel:#F3EEE3;--tinta:#101626;--muted:#5A5649;--linha:#101626;--linha-suave:rgba(16,22,38,.2);--tomate-txt:#B22F0C;--foco:#B22F0C;--sh:#101626;
+    background:#F3EEE3;color:#101626;border:2px solid #F3EEE3;box-shadow:10px 10px 0 var(--tomate);animation:surge .45s var(--ease)}
+  @keyframes surge{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .ficha-topo{padding:26px clamp(20px,3vw,36px) 22px;border-bottom:2px solid #101626}
+  .ficha-topo .mono{color:var(--tomate-txt)}
+  .ficha-topo h3{font:700 clamp(1.9rem,3.6vw,3rem)/1 var(--serif);letter-spacing:-.03em;margin-top:8px}
+  .ficha dl{padding:6px clamp(20px,3vw,36px)}
+  .ficha dl>div{display:grid;grid-template-columns:8.5rem 1fr;gap:16px;padding:13px 0;border-bottom:1px solid var(--linha-suave)}
+  .ficha dl>div:last-child{border-bottom:0}
+  .ficha dt{font:500 .7rem/1.7 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .ficha .acoes{padding:6px clamp(20px,3vw,36px) 28px;margin:0;gap:16px}
+  .ficha-msg{padding:6px 0 14px;color:var(--muted-escuro)}
+  .opcoes{max-width:44em}
+  .opcoes p{margin-bottom:8px;color:var(--muted-escuro)}
+  .opcoes button{display:flex;justify-content:space-between;gap:16px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--linha-suave);color:inherit;padding:18px 0;font:500 1.35rem var(--serif);cursor:pointer;transition:padding .2s var(--ease),color .2s}
+  .opcoes button:last-child{border-bottom:1px solid var(--linha-suave)}
+  .opcoes button:hover{padding-left:14px;color:var(--manteiga)}
+  .opcoes small{font:400 .85rem var(--sans);opacity:.75;align-self:center}
+  @media(max-width:560px){.ficha dl>div{grid-template-columns:1fr;gap:2px}}
 
-  /* ── denuncie ── */
-  .denuncie{background:linear-gradient(135deg,#7a1f2b 0%,#b23a3a 55%,var(--coral) 120%);color:#fff;border-radius:28px;padding:46px;display:grid;grid-template-columns:1.1fr 1fr;gap:34px;align-items:center;box-shadow:0 30px 60px rgba(178,58,58,.25)}
-  .denuncie h2{font-size:clamp(1.8rem,3vw,2.5rem);font-weight:900}
-  .denuncie p{color:#ffe3e0}
-  .canais{display:grid;gap:12px}
-  .canal{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:16px 18px;display:flex;gap:16px;align-items:center;text-decoration:none;color:#fff;transition:background .15s}
-  .canal:hover{background:rgba(255,255,255,.2)}
-  .canal b{font-family:Nunito;font-size:2rem;font-weight:900;min-width:78px}
-  .canal small{display:block;opacity:.85}
-  .passos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
-  .passo{background:rgba(0,0,0,.15);border-radius:14px;padding:14px;font-size:.88rem}
-  .passo b{display:block;font-family:Nunito;font-size:1.4rem;color:var(--gold-2)}
-  @media(max-width:860px){.denuncie{grid-template-columns:1fr;padding:28px}.passos{grid-template-columns:1fr}}
+  /* ═══════════ 02 O QUE FAZEMOS ═══════════ */
+  .atrib{border-bottom:2px solid var(--tinta);margin-top:clamp(36px,5vw,72px)}
+  .atrib .lin{position:relative;display:grid;grid-template-columns:5rem minmax(0,5fr) minmax(0,6fr);gap:12px clamp(16px,2.4vw,32px);padding:clamp(22px,2.6vw,36px) 0;align-items:baseline;transition:background .2s}
+  .atrib .lin::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--tinta)}
+  .js .atrib .lin::before{transform:scaleX(0);transform-origin:left;transition:transform 1s var(--ease)}
+  .js .atrib .lin.in::before{transform:scaleX(1)}
+  .atrib .num{font:500 .85rem var(--mono);color:var(--tomate-txt)}
+  .atrib h3{font:600 clamp(1.6rem,2.8vw,2.4rem)/1.05 var(--serif);letter-spacing:-.025em;transition:transform .3s var(--ease)}
+  .atrib p{color:var(--muted)}
+  .atrib .lin:hover h3{transform:translateX(10px)}
+  .atrib .lin:hover{background:linear-gradient(90deg,transparent,var(--papel-2))}
+  .duas{margin-top:clamp(56px,8vw,112px);row-gap:36px}
+  .duas .a{grid-column:1 / span 7}
+  .duas .b{grid-column:9 / span 4;border:2px solid var(--tinta);padding:clamp(22px,2.6vw,36px);background:var(--hl)}
+  .duas h3{font:600 clamp(1.6rem,2.6vw,2.2rem)/1.05 var(--serif);letter-spacing:-.025em;margin-bottom:22px}
+  .duas li{display:grid;grid-template-columns:1.6rem 1fr;gap:6px;padding:11px 0;border-top:1px solid var(--linha-suave)}
+  .duas li::before{content:'+';font:700 1.3rem/1.2 var(--serif);color:var(--tomate-txt)}
+  .duas .b li::before{content:'×';color:var(--tinta)}
+  .duas .b li{border-top-color:rgba(16,22,38,.3)}
+  @media(max-width:900px){.duas .a,.duas .b{grid-column:1 / -1}}
 
-  /* ── conselhos ── */
-  .filtro-ct{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:26px}
-  .filtro-ct input{flex:1;min-width:240px;max-width:520px;font:500 1rem Inter,sans-serif;padding:13px 18px;border:2px solid var(--line);border-radius:999px}
-  .filtro-ct input:focus{border-color:var(--navy-2);outline:none}
-  .ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;align-items:start}
-  details.ct{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:box-shadow .2s}
-  details.ct:hover,details.ct[open]{box-shadow:var(--shadow)}
-  details.ct summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px}
-  details.ct summary::-webkit-details-marker{display:none}
-  details.ct summary::marker{content:''}
-  .ct .sig{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;font:900 .82rem Nunito;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ct .nm{flex:1;min-width:0}
-  .ct .nm b{display:block;font-family:Nunito;font-size:1.05rem;color:var(--navy)}
-  .ct .nm small{color:var(--muted);font-size:.78rem}
-  .ct .chev{transition:transform .2s;color:var(--muted)}
-  details.ct[open] .chev{transform:rotate(180deg)}
-  .ct-corpo{padding:4px 16px 18px;display:grid;gap:9px;font-size:.9rem;border-top:1px solid var(--line);padding-top:14px}
-  .ct-corpo .linha{display:flex;gap:8px}
-  .chips{display:flex;flex-wrap:wrap;gap:5px}
-  .chips span{font-size:.75rem;background:var(--sky);color:var(--navy);padding:3px 10px;border-radius:999px}
-  .ct-corpo h5{margin:6px 0 2px;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-  .pessoas{display:grid;gap:3px}
-  .pessoas span{font-size:.88rem}
-  .coord{background:#fff7e0;border-radius:6px;padding:0 6px;font-size:.7rem;font-weight:700;color:#8a6200;margin-left:4px}
-  .nada{text-align:center;color:var(--muted);padding:30px;display:none}
+  /* ═══════════ 03 DENUNCIE ═══════════ */
+  .sec.denuncie{background:var(--tomate);color:var(--on-tomate);--tinta:#101626;--linha:#101626;--linha-suave:rgba(16,22,38,.3);--tomate-txt:#101626;--muted:#2A1A14;--foco:#101626}
+  .denuncie .sec-top b{color:inherit}
+  .denuncie h2{grid-column:1 / span 7}
+  .denuncie .txt{grid-column:1 / span 6;margin-top:clamp(24px,3vw,40px);font-size:1.2rem;max-width:30em}
+  .passos{grid-column:1 / span 6;margin-top:clamp(32px,5vw,64px);counter-reset:p;display:grid;gap:0}
+  .passos li{counter-increment:p;display:grid;grid-template-columns:4.4rem 1fr;gap:12px;align-items:center;padding:18px 0;border-top:2px solid var(--tinta)}
+  .passos li:last-child{border-bottom:2px solid var(--tinta)}
+  .passos li::before{content:counter(p);font:800 3rem/.9 var(--serif);letter-spacing:-.04em}
+  .canais{grid-column:8 / span 5;grid-row:1 / span 3;align-self:start}
+  .canal{display:grid;grid-template-columns:auto 1fr auto;gap:6px 20px;align-items:center;padding:22px 0;border-top:2px solid var(--tinta);text-decoration:none;transition:background .2s,color .2s,padding .25s var(--ease)}
+  .canal:last-child{border-bottom:2px solid var(--tinta)}
+  .canal .n{font:900 clamp(2.4rem,4vw,3.2rem)/.9 var(--serif);letter-spacing:-.04em}
+  .canal .d b{display:block;font-weight:700;font-size:1.1rem}
+  .canal .d small{font-size:.92rem;opacity:.85}
+  .canal .s{font:500 1.6rem var(--serif);transition:transform .25s var(--ease)}
+  .canal:hover{background:var(--tinta);color:var(--tomate);padding-inline:18px}
+  .canal:hover .s{transform:translate(4px,-4px)}
+  .canal.grande .n{font-size:clamp(5.5rem,13vw,12rem);line-height:.74;letter-spacing:-.07em}
+  .canal.grande{grid-template-columns:1fr auto;padding-top:30px}
+  .canal.grande .d{grid-column:1 / -1;grid-row:2}
+  .denuncie :focus-visible{outline-color:#101626}
+  @media(max-width:1000px){
+    .denuncie h2,.denuncie .txt,.passos,.canais{grid-column:1 / -1;grid-row:auto}
+    .canais{margin-top:44px}
+  }
 
-  /* ── projetos ── */
-  .proj{border-radius:var(--radius);overflow:hidden;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column}
-  .proj .capa{height:130px;display:flex;align-items:center;justify-content:center;font-size:3.2rem;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 55%,#fff))}
-  .proj .txt{padding:22px;flex:1}
-  .proj .txt h3{color:var(--navy);font-size:1.15rem}
-  .proj .txt p{color:var(--muted);font-size:.93rem;margin:0}
+  /* ═══════════ 04 CONSELHOS ═══════════ */
+  .cabec{row-gap:28px;align-items:end;margin-bottom:clamp(32px,4vw,56px)}
+  .cabec h2{grid-column:1 / span 7}
+  .cabec .lado{grid-column:9 / span 4}
+  @media(max-width:900px){.cabec h2,.cabec .lado{grid-column:1 / -1}}
+  .filtro{margin-top:18px}
+  .filtro .campo{font-size:clamp(1.3rem,2.2vw,1.7rem);border-bottom-width:2px}
+  .ct-cab,.ct summary{display:grid;grid-template-columns:4.2rem minmax(0,2.4fr) minmax(0,2.2fr) 11rem 2.6rem;gap:0 clamp(12px,2vw,28px);align-items:center}
+  .ct-cab{padding:12px 0;border-top:2px solid var(--tinta);color:var(--muted)}
+  .ct{border-top:1px solid var(--linha)}
+  .ct:last-of-type{border-bottom:2px solid var(--tinta)}
+  .ct summary{list-style:none;cursor:pointer;padding:20px 0;transition:background .2s}
+  .ct summary::-webkit-details-marker{display:none}
+  .ct summary::marker{content:''}
+  .ct summary:hover{background:linear-gradient(90deg,transparent,var(--papel-2))}
+  .ct[open]{background:var(--papel-2)}
+  .ct .n{font:500 .95rem var(--mono);color:var(--tomate-txt)}
+  .ct .nome{font:600 clamp(1.4rem,2.4vw,2rem)/1.1 var(--serif);letter-spacing:-.025em}
+  .ct .reg{font-size:.92rem;color:var(--muted)}
+  .ct .eq{font:500 .72rem/1.6 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .ct .eq span{display:block}
+  .ct .t{font:500 2rem/1 var(--serif);text-align:right;transition:transform .3s var(--ease)}
+  .ct[open] .t{transform:rotate(45deg)}
+  .ct-corpo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:34px clamp(20px,3vw,44px);padding:6px 0 36px calc(4.2rem + clamp(12px,2vw,28px))}
+  .ct-corpo h4{font:500 .7rem var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+  .ct-corpo dl>div{padding:9px 0;border-top:1px solid var(--linha-suave);font-size:.97rem}
+  .ct-corpo dt{font:500 .68rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .ct-corpo .acoes{margin-top:18px;gap:14px}
+  .pess li{display:grid;grid-template-columns:2.2rem 1fr;gap:4px;padding:8px 0;border-top:1px solid var(--linha-suave);font-size:.97rem}
+  .pess li i{font:500 .72rem var(--mono);color:var(--muted);font-style:normal;padding-top:4px}
+  .pess .coord{display:block;font:500 .66rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--tomate-txt)}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tags span{border:1px solid var(--linha);padding:.22em .6em;font:400 .78rem var(--mono)}
+  .nada{display:none;padding:34px 0;color:var(--muted)}
+  @media(max-width:900px){
+    .ct-cab{display:none}
+    .ct summary{grid-template-columns:3rem minmax(0,1fr) 2.2rem;row-gap:4px}
+    .ct .reg{display:none}
+    .ct .n{grid-row:1 / span 2}
+    .ct .nome{grid-column:2}
+    .ct .eq{grid-column:2;grid-row:2}
+    .ct .t{grid-column:3;grid-row:1 / span 2}
+    .ct-corpo{grid-template-columns:1fr;padding:6px 0 32px 0}
+  }
 
-  /* ── agenda ── */
-  .agenda{display:grid;gap:12px;max-width:880px;margin:0 auto}
-  .ev{display:flex;gap:18px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;transition:transform .15s}
-  .ev:hover{transform:translateX(4px)}
-  .ev .data{min-width:74px;text-align:center;border-radius:12px;background:var(--sky);padding:8px 6px;color:var(--navy)}
-  .ev .data b{display:block;font:900 1.5rem Nunito;line-height:1}
-  .ev .data small{font-weight:700;font-size:.72rem;text-transform:uppercase}
-  .ev h4{margin:0 0 2px;font-size:1.05rem;color:var(--ink)}
-  .ev p{margin:0;color:var(--muted);font-size:.88rem}
-  .ev .tipo{margin-left:auto;font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--c) 15%,#fff);color:var(--c);white-space:nowrap}
-  .ev.passado{opacity:.55}
-  .nota{text-align:center;color:var(--muted);font-size:.82rem;margin-top:16px}
-  @media(max-width:600px){.ev{flex-wrap:wrap}.ev .tipo{margin-left:0}}
+  /* ═══════════ 05 PROJETOS ═══════════ */
+  .proj-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(14px,2vw,24px)}
+  .proj{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-height:340px;padding:clamp(22px,2.6vw,34px);border:2px solid var(--tinta);background:var(--papel)}
+  .proj:nth-child(1){grid-column:span 7;background:var(--escuro);color:var(--sobre-escuro);--tomate-txt:#F0CF6B}
+  .proj:nth-child(2){grid-column:span 5}
+  .proj:nth-child(3){grid-column:span 5;background:var(--hl)}
+  .proj:nth-child(4){grid-column:span 7}
+  .proj .topo{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+  .proj .topo .mono{color:var(--tomate-txt)}
+  .proj .nn{font:800 clamp(4rem,8vw,7.5rem)/.8 var(--serif);letter-spacing:-.06em;opacity:.95;font-variation-settings:'opsz' 144}
+  .proj h3{font:600 clamp(1.7rem,2.8vw,2.6rem)/1.02 var(--serif);letter-spacing:-.03em;margin:34px 0 12px}
+  .proj p{max-width:34em}
+  .proj:nth-child(1) p{color:var(--muted-escuro)}
+  @media(max-width:900px){.proj:nth-child(n){grid-column:1 / -1;min-height:0}}
 
-  /* ── ECA ── */
-  .eca-tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:22px}
-  .eca-tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 16px;font:600 .9rem Inter,sans-serif;cursor:pointer;color:var(--navy)}
-  .eca-tabs button.ativo{background:var(--navy);color:#fff;border-color:var(--navy)}
-  .eca-painel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:34px;max-width:900px;margin:0 auto;box-shadow:var(--shadow);min-height:220px}
-  .eca-painel .art{font:800 .8rem Inter;letter-spacing:.12em;color:var(--gold);text-transform:uppercase}
-  .eca-painel blockquote{margin:10px 0 16px;font-family:Nunito;font-size:clamp(1.15rem,2vw,1.45rem);font-weight:700;color:var(--navy);line-height:1.45;border-left:5px solid var(--gold);padding-left:18px}
-  .eca-painel p{color:var(--muted);margin:0}
-  .eca-link{text-align:center;margin-top:22px}
+  /* ═══════════ 06 AGENDA ═══════════ */
+  .agenda-l{grid-column:1 / span 4;align-self:start;position:sticky;top:calc(var(--hdr) + 28px)}
+  .agenda-l .intro{margin-top:22px}
+  .agenda-r{grid-column:6 / span 7}
+  .ag-ano{font:500 .78rem var(--mono);letter-spacing:.14em;color:var(--tomate-txt);padding:26px 0 10px;border-bottom:2px solid var(--tinta)}
+  .ag-ano:first-child{padding-top:0}
+  .ev{display:grid;grid-template-columns:6.4rem 1fr auto;gap:8px 26px;align-items:center;padding:22px 0;border-bottom:1px solid var(--linha-suave);transition:padding .25s var(--ease)}
+  .ev:hover{padding-left:10px}
+  .ev time{display:block}
+  .ev time b{display:block;font:700 clamp(2.4rem,4vw,3.4rem)/.9 var(--serif);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+  .ev time span{font:500 .72rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .ev h3{font:600 1.35rem/1.15 var(--serif);letter-spacing:-.015em;margin-bottom:4px}
+  .ev p{color:var(--muted);font-size:.97rem}
+  .ev .tp{font:500 .68rem var(--mono);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;color:var(--muted)}
+  .ev .tp i{font-style:normal;color:var(--tomate-txt);margin-right:6px}
+  .ev.passado{opacity:.5}
+  .nota{margin-top:26px;color:var(--muted);font-size:.9rem}
+  @media(max-width:900px){
+    .agenda-l,.agenda-r{grid-column:1 / -1;position:static}
+    .agenda-r{margin-top:36px}
+    .ev{grid-template-columns:5rem 1fr}
+    .ev .tp{grid-column:2}
+  }
 
-  /* ── FAQ ── */
-  .faq{max-width:860px;margin:0 auto;display:grid;gap:10px}
-  .faq details{background:#fff;border:1px solid var(--line);border-radius:14px;padding:0 20px}
-  .faq summary{cursor:pointer;list-style:none;padding:18px 0;font-weight:700;color:var(--navy);display:flex;justify-content:space-between;gap:12px}
+  /* ═══════════ 07 ECA ═══════════ */
+  .eca-l{grid-column:1 / span 5}
+  .eca-r{grid-column:7 / span 6}
+  .eca-abas{margin-top:clamp(28px,4vw,48px);border-bottom:1px solid var(--linha-suave)}
+  .eca-abas button{display:grid;grid-template-columns:5.2rem 1fr;gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--linha-suave);padding:16px 0;cursor:pointer;color:var(--muted-escuro);transition:color .2s,padding .25s var(--ease)}
+  .eca-abas button .a{font:500 .8rem var(--mono);letter-spacing:.06em;padding-top:5px}
+  .eca-abas button .b{font:500 1.25rem/1.2 var(--serif)}
+  .eca-abas button:hover{color:var(--sobre-escuro);padding-left:8px}
+  .eca-abas button[aria-selected="true"]{color:var(--sobre-escuro);box-shadow:inset 4px 0 0 var(--tomate);padding-left:18px}
+  .eca-painel .art{color:var(--manteiga)}
+  .eca-painel blockquote{margin:24px 0 30px;font:italic 400 clamp(1.55rem,2.9vw,2.6rem)/1.22 var(--serif);font-variation-settings:'opsz' 144;letter-spacing:-.01em;word-spacing:.08em;text-indent:-.45em}
+  .eca-painel .nota-eca{color:var(--muted-escuro);max-width:34em;padding-top:18px;border-top:1px solid var(--linha-suave)}
+  .eca-painel .nota-eca b{color:var(--sobre-escuro);font-weight:600}
+  .eca-r .acoes{margin-top:36px}
+  @media(max-width:900px){.eca-l,.eca-r{grid-column:1 / -1}.eca-r{margin-top:44px}}
+
+  /* ═══════════ 08 DÚVIDAS ═══════════ */
+  .duv-l{grid-column:1 / span 4;align-self:start}
+  .duv-r{grid-column:6 / span 7}
+  .faq details{border-top:1px solid var(--linha)}
+  .faq details:last-child{border-bottom:2px solid var(--tinta)}
+  .faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:20px;align-items:baseline;padding:24px 0;font:600 clamp(1.25rem,2vw,1.6rem)/1.15 var(--serif);letter-spacing:-.02em}
   .faq summary::-webkit-details-marker{display:none}
-  .faq summary::after{content:'+';font:900 1.4rem Nunito;color:var(--gold);transition:transform .2s}
+  .faq summary::marker{content:''}
+  .faq summary::after{content:'+';font:500 2rem/1 var(--serif);transition:transform .3s var(--ease);flex-shrink:0}
   .faq details[open] summary::after{transform:rotate(45deg)}
-  .faq details p{margin:0 0 18px;color:var(--muted)}
+  .faq summary:hover{color:var(--tomate-txt)}
+  .faq details p{padding:0 3rem 28px 0;color:var(--muted);max-width:40em}
+  @media(max-width:900px){.duv-l,.duv-r{grid-column:1 / -1}.duv-r{margin-top:34px}}
 
-  /* ── rodapé ── */
-  footer{background:#0e2140;color:#c4d1e6;padding:60px 0 26px;margin-top:40px}
-  footer .grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px}
-  footer h4{color:#fff;font-size:1rem}
-  footer a{color:#c4d1e6;text-decoration:none}
-  footer a:hover{color:#fff}
-  footer ul{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:.9rem}
-  footer .base{border-top:1px solid rgba(255,255,255,.1);margin-top:40px;padding-top:20px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.8rem}
-  @media(max-width:860px){footer .grid{grid-template-columns:1fr 1fr}}
+  /* ═══════════ RODAPÉ ═══════════ */
+  footer{background:var(--escuro);color:var(--sobre-escuro);--papel:#101626;--tinta:#F3EEE3;--muted:#B8BDC9;--linha:#F3EEE3;--linha-suave:rgba(243,238,227,.22);--foco:#F0CF6B;overflow:hidden}
+  .rod-top{padding:clamp(56px,8vw,110px) 0 clamp(28px,4vw,56px)}
+  .rod-gigante{word-spacing:.1em;font:800 clamp(3.4rem,13vw,13rem)/.84 var(--serif);font-variation-settings:'opsz' 144;letter-spacing:-.055em;margin-left:-.04em}
+  .rod-gigante em{font-style:italic;font-weight:600;color:var(--tomate)}
+  .rod-cols{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:36px;padding:clamp(32px,4vw,56px) 0;border-top:1px solid var(--linha-suave)}
+  .rod-cols h4{font:500 .72rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--manteiga);margin-bottom:16px}
+  .rod-cols li{padding:5px 0}
+  .rod-cols a{text-decoration:none;background:linear-gradient(currentColor,currentColor) 0 100%/0 1px no-repeat;transition:background-size .3s var(--ease);padding-bottom:2px}
+  .rod-cols a:hover{background-size:100% 1px}
+  .rod-cols p{color:var(--muted-escuro);max-width:24em;font-size:.95rem}
+  .rod-base{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:22px 0 28px;border-top:1px solid var(--linha-suave);color:var(--muted-escuro)}
+  @media(max-width:900px){.rod-cols{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.rod-cols{grid-template-columns:1fr}}
 
-  /* ── saída rápida e voltar ao topo ── */
-  .saida{position:fixed;right:18px;bottom:18px;z-index:60;background:#111;color:#fff;border:0;border-radius:999px;padding:12px 18px;font:700 .85rem Inter,sans-serif;cursor:pointer;box-shadow:0 10px 25px rgba(0,0,0,.3)}
-  .saida:hover{background:#b23a3a}
+  /* saída rápida */
+  .saida{position:fixed;right:16px;bottom:16px;z-index:90;background:var(--escuro);color:var(--sobre-escuro);border:2px solid var(--sobre-escuro);padding:.8em 1.1em;font:500 .75rem var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;box-shadow:4px 4px 0 var(--tomate);transition:transform .18s var(--ease),box-shadow .18s var(--ease),background .15s}
+  .saida:hover{background:var(--tomate);color:var(--on-tomate);transform:translate(2px,2px);box-shadow:2px 2px 0 var(--escuro)}
+  .saida:focus-visible{outline-color:var(--manteiga)}
 
-  /* ── alto contraste ── */
-  body.contraste{--bg:#000;--card:#000;--ink:#fff;--muted:#ffeb3b;--line:#ffeb3b;--sky:#000;--navy:#ffeb3b;--navy-2:#ffeb3b}
-  body.contraste .hero,body.contraste .denuncie,body.contraste footer,body.contraste .res-topo{background:#000!important}
-  body.contraste .alt,body.contraste header.top,body.contraste .finder,body.contraste .res-card,body.contraste .busca input,body.contraste details.ct,body.contraste .feat,body.contraste .proj,body.contraste .ev,body.contraste .eca-painel,body.contraste .faq details,body.contraste .lista-box,body.contraste nav.menu{background:#000!important;color:#fff;border-color:#ffeb3b}
-  body.contraste a{color:#ffeb3b}
+  /* alto contraste */
+  body.contraste{--papel:#000;--papel-2:#000;--tinta:#fff;--muted:#ffe14d;--linha:#ffe14d;--linha-suave:#ffe14d;--tomate:#ffe14d;--tomate-txt:#ffe14d;--on-tomate:#000;--hl:transparent;--manteiga:#ffe14d;--foco:#ffe14d;--escuro:#000;--sobre-escuro:#fff;--muted-escuro:#ffe14d}
+  body.contraste::before{display:none}
+  body.contraste .escuro,body.contraste footer{--papel:#000;--tinta:#fff;--muted:#ffe14d;--linha:#ffe14d;--linha-suave:#ffe14d;--tomate-txt:#ffe14d}
+  body.contraste .ficha{--papel:#000;--tinta:#fff;--muted:#ffe14d;--linha:#ffe14d;--linha-suave:#ffe14d;--tomate-txt:#ffe14d;--foco:#ffe14d;background:#000;color:#fff;border-color:#ffe14d}
+  body.contraste .ficha-topo{border-bottom-color:#ffe14d}
+  body.contraste .tit-hero em,body.contraste .tit em{text-decoration:underline;text-decoration-thickness:4px}
+  body.contraste .sec.denuncie{--tinta:#000;--linha:#000;--linha-suave:#000;--muted:#000}
+  body.contraste .proj:nth-child(3),body.contraste .duas .b{background:#000;color:#fff}
+  body.contraste .proj:nth-child(1){background:#000}
 
-  .revela{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
-  .revela.visivel{opacity:1;transform:none}
-  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}.revela{opacity:1;transform:none}}
+  @media(max-width:900px){.g12>*{grid-column:1 / -1 !important}}
+
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+    .js .rv{opacity:1;transform:none}
+    .js .tit-hero .ln>span{transform:none}
+    .js .atrib .lin::before{transform:none}
+  }
 </style>
 </head>
 <body>
 
-<a class="sr-only" href="#conteudo">Pular para o conteúdo</a>
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
 
-<div class="alerta">
+<div class="emerg">
   <div class="wrap">
-    <div>🚨 Criança ou adolescente em risco? <strong>Disque 100</strong> (24h, gratuito e anônimo) · Emergência: <strong>190</strong></div>
-    <div class="a11y" aria-label="Acessibilidade">
-      <button type="button" onclick="ajustaFonte(-1)" aria-label="Diminuir fonte">A−</button>
-      <button type="button" onclick="ajustaFonte(1)" aria-label="Aumentar fonte">A+</button>
-      <button type="button" onclick="document.body.classList.toggle('contraste')" aria-label="Alto contraste">◐ Contraste</button>
+    <p class="mono">Criança em risco? Ligue <a href="tel:100">Disque 100</a> · 24 h · gratuito · anônimo &nbsp;/&nbsp; Emergência <a href="tel:190">190</a></p>
+    <div class="ctl" role="group" aria-label="Acessibilidade">
+      <button type="button" onclick="ajustaFonte(-1)" aria-label="Diminuir o tamanho da letra">A−</button>
+      <button type="button" onclick="ajustaFonte(1)" aria-label="Aumentar o tamanho da letra">A+</button>
+      <button type="button" id="btn-contraste" onclick="alternaContraste()" aria-pressed="false">Alto contraste</button>
     </div>
   </div>
 </div>
 
-<header class="top">
-  <div class="wrap">
+<header class="cab">
+  <div class="wrap cab-in">
     <a class="marca" href="#inicio">
       <img src="/icons/icon-192.png" alt="Logotipo do Conselho Tutelar de Salvador">
-      <span><b>Conselho Tutelar</b><small>Salvador · Bahia</small></span>
+      <span><b>Conselho Tutelar</b><span class="mono">Salvador · Bahia</span></span>
     </a>
     <nav class="menu" id="menu" aria-label="Navegação principal">
-      <a href="#encontre">Encontre seu CT</a>
-      <a href="#o-que-faz">O que fazemos</a>
-      <a href="#conselhos">Os 24 Conselhos</a>
-      <a href="#projetos">Projetos</a>
-      <a href="#agenda">Agenda</a>
-      <a href="#eca">ECA</a>
-      <a href="#duvidas">Dúvidas</a>
+      <a href="#encontre"><i>01</i>Encontre</a>
+      <a href="#o-que-faz"><i>02</i>Atribuições</a>
+      <a href="#denuncie"><i>03</i>Denuncie</a>
+      <a href="#conselhos"><i>04</i>Conselhos</a>
+      <a href="#projetos"><i>05</i>Projetos</a>
+      <a href="#agenda"><i>06</i>Agenda</a>
+      <a href="#eca"><i>07</i>ECA</a>
+      <a href="#duvidas"><i>08</i>Dúvidas</a>
     </nav>
-    <a class="btn btn-navy btn-sm btn-denuncia" href="#denuncie">Como denunciar</a>
-    <button class="hamb" type="button" aria-label="Abrir menu" aria-controls="menu" onclick="document.getElementById('menu').classList.toggle('aberto')">☰</button>
+    <button class="btn-menu" type="button" id="btn-menu" aria-expanded="false" aria-controls="menu">Menu</button>
   </div>
 </header>
 
@@ -299,190 +439,196 @@
 
 <!-- ═══ HERO ═══ -->
 <section class="hero" id="inicio">
+  <div class="gigante" aria-hidden="true">24</div>
+  <p class="mono rot" aria-hidden="true">Conselhos Tutelares — Salvador / BA</p>
   <div class="wrap">
-    <div>
-      <span class="selo">🛡️ Proteção integral · Lei Federal 8.069/1990</span>
-      <h1>Toda criança tem o direito de crescer <em>protegida</em>.</h1>
-      <p class="lead">Os Conselhos Tutelares de Salvador estão em todos os cantos da cidade para garantir que os direitos de crianças e adolescentes sejam respeitados — na família, na escola, na comunidade e no poder público.</p>
-      <div class="acoes">
-        <a class="btn btn-gold" href="#encontre">📍 Encontre o Conselho do seu bairro</a>
-        <a class="btn btn-ghost" href="#denuncie">Como denunciar</a>
-      </div>
+    <p class="kicker mono"><span>Proteção integral</span><span>Lei Federal 8.069/1990</span></p>
+    <h1 class="tit-hero">
+      <span class="ln"><span>Toda criança</span></span>
+      <span class="ln"><span>tem direito de</span></span>
+      <span class="ln"><span>crescer <em>protegida.</em></span></span>
+    </h1>
+    <p class="lead">O Conselho Tutelar é o órgão da comunidade que age quando um direito de criança ou adolescente é ameaçado ou violado. Salvador tem 24 conselhos, com 120 conselheiros e conselheiras escolhidos pela população.</p>
+    <div class="acoes">
+      <a class="btn btn-primario" href="#encontre">Encontrar meu Conselho <span class="seta" aria-hidden="true">→</span></a>
+      <a class="lnk" href="#denuncie">Ver como denunciar</a>
     </div>
-    <div class="hero-arte" aria-hidden="true">
-      <span class="bolha b1"></span><span class="bolha b2"></span><span class="bolha b3"></span>
-      <div class="disco"><img src="/icons/icon-512.png" alt=""></div>
-    </div>
-  </div>
-  <div class="onda" aria-hidden="true">
-    <svg viewBox="0 0 1440 90" preserveAspectRatio="none" width="100%" height="70"><path d="M0,60 C240,100 480,10 720,40 C960,70 1200,100 1440,40 L1440,90 L0,90 Z" fill="#f7f9fc"/></svg>
   </div>
 </section>
 
-<!-- ═══ NÚMEROS ═══ -->
-<div class="numeros">
-  <div class="wrap grid">
-    <div class="num" style="--c:var(--navy-2)"><b data-conta="24" id="n-ct">0</b><span>Conselhos Tutelares</span></div>
-    <div class="num" style="--c:var(--coral)"><b data-conta="120" id="n-cons">0</b><span>Conselheiros(as) Tutelares</span></div>
-    <div class="num" style="--c:var(--green)"><b data-conta="0" id="n-bairros">0</b><span>Bairros e localidades</span></div>
-    <div class="num" style="--c:var(--gold)"><b data-conta="0" id="n-eca">0</b><span>anos de ECA</span></div>
+<div class="fita" aria-hidden="true">
+  <div class="trilho">
+    <span>Disque 100 — 24 horas, gratuito, anônimo</span><span>※</span><span>Polícia Militar — 190</span><span>※</span><span>Atendimento do Conselho Tutelar — sempre gratuito</span><span>※</span><span>Prevenir é dever de todos — ECA, Art. 70</span><span>※</span>
+    <span>Disque 100 — 24 horas, gratuito, anônimo</span><span>※</span><span>Polícia Militar — 190</span><span>※</span><span>Atendimento do Conselho Tutelar — sempre gratuito</span><span>※</span><span>Prevenir é dever de todos — ECA, Art. 70</span><span>※</span>
   </div>
 </div>
 
-<!-- ═══ ENCONTRE SEU CONSELHO ═══ -->
-<section class="sec" id="encontre">
+<div class="regua">
   <div class="wrap">
-    <div class="sec-head revela">
-      <span class="tag">Serviço</span>
-      <h2>Qual é o Conselho Tutelar do seu bairro?</h2>
-      <p>Cada bairro de Salvador é atendido por um Conselho Tutelar. Digite o nome do seu bairro ou o seu CEP e veja endereço, telefones e como chegar.</p>
+    <div class="it"><b data-conta="24" id="n-ct">0</b><span class="mono">Conselhos Tutelares</span></div>
+    <div class="it"><b data-conta="120" id="n-cons">0</b><span class="mono">Conselheiros(as)</span></div>
+    <div class="it"><b data-conta="0" id="n-bairros">0</b><span class="mono">Bairros e localidades</span></div>
+    <div class="it"><b data-conta="0" id="n-eca">0</b><span class="mono">Anos de ECA</span></div>
+  </div>
+</div>
+
+<!-- ═══ 01 ENCONTRE ═══ -->
+<section class="sec escuro" id="encontre">
+  <div class="wrap">
+    <p class="sec-top mono"><b>01</b><span>Encontre seu conselho</span></p>
+    <div class="g12" style="row-gap:36px">
+      <h2 class="tit rv" style="grid-column:1 / span 8">Qual Conselho atende <em>o seu bairro?</em></h2>
+      <p class="intro rv" style="grid-column:1 / span 6">Cada bairro de Salvador pertence à área de um Conselho Tutelar. Digite o bairro ou o CEP e veja endereço, telefones e como chegar.</p>
     </div>
-    <div class="finder revela">
-      <div>
-        <h3>Busque pelo bairro ou CEP</h3>
-        <p style="color:var(--muted);margin:0">Também funciona com o CEP (8 números) ou o nome do conselho (ex.: “Narandiba”).</p>
-        <div class="busca">
-          <span class="lupa" aria-hidden="true">🔎</span>
-          <label class="sr-only" for="busca-bairro">Nome do bairro ou CEP</label>
-          <input id="busca-bairro" type="search" placeholder="Bairro ou CEP — ex.: Liberdade" autocomplete="off" list="lista-bairros">
-          <datalist id="lista-bairros"></datalist>
-        </div>
-        <div class="sugestoes" id="sugestoes" aria-label="Bairros populares"></div>
+    <div style="margin-top:clamp(32px,4vw,56px)">
+      <label class="campo-rot mono" for="busca-bairro">Bairro ou CEP</label>
+      <input class="campo" id="busca-bairro" type="search" placeholder="Ex.: Liberdade" autocomplete="off" list="lista-bairros" inputmode="search">
+      <datalist id="lista-bairros"></datalist>
+      <div class="sug" id="sugestoes"></div>
+    </div>
+    <div class="resultado" id="resultado" aria-live="polite">
+      <div class="res-vazio"><p class="mono" style="margin-bottom:8px">Resultado</p><p>Comece digitando o bairro ou os 8 números do CEP.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 02 O QUE FAZEMOS ═══ -->
+<section class="sec" id="o-que-faz">
+  <div class="wrap">
+    <p class="sec-top mono"><b>02</b><span>Atribuições · Art. 136 do ECA</span></p>
+    <div class="g12" style="row-gap:28px">
+      <h2 class="tit rv" style="grid-column:1 / span 8">O que o Conselho Tutelar <em>faz</em>, na prática.</h2>
+      <p class="intro rv" style="grid-column:1 / span 6">Órgão permanente e autônomo, escolhido pela comunidade. Age sempre que um direito de criança ou adolescente é ameaçado ou violado.</p>
+    </div>
+    <div class="atrib">
+      <div class="lin"><span class="num">A</span><h3>Atende e acolhe</h3><p>Recebe crianças, adolescentes e famílias em situação de risco e aplica as medidas de proteção previstas em lei.</p></div>
+      <div class="lin"><span class="num">B</span><h3>Orienta as famílias</h3><p>Atende e aconselha pais e responsáveis, encaminhando para programas de apoio e acompanhamento.</p></div>
+      <div class="lin"><span class="num">C</span><h3>Requisita serviços</h3><p>Pode requisitar serviços públicos de saúde, educação, assistência social, previdência, trabalho e segurança.</p></div>
+      <div class="lin"><span class="num">D</span><h3>Aciona a Justiça</h3><p>Encaminha ao Ministério Público e à autoridade judiciária os casos que são de sua competência.</p></div>
+      <div class="lin"><span class="num">E</span><h3>Requisita documentos</h3><p>Solicita certidões de nascimento e de óbito de crianças e adolescentes, quando necessário.</p></div>
+      <div class="lin"><span class="num">F</span><h3>Fiscaliza e propõe</h3><p>Fiscaliza entidades de atendimento e assessora o poder público na elaboração de políticas para a infância.</p></div>
+    </div>
+    <div class="g12 duas">
+      <div class="a rv">
+        <h3>Procure o Conselho quando</h3>
+        <ul>
+          <li>houver suspeita de violência física, psicológica ou sexual;</li>
+          <li>a criança estiver em situação de abandono ou negligência;</li>
+          <li>houver trabalho infantil ou exploração;</li>
+          <li>a criança estiver fora da escola, ou com faltas frequentes sem justificativa;</li>
+          <li>for negado atendimento de saúde, vaga escolar ou outro direito.</li>
+        </ul>
       </div>
-      <div class="resultado" id="resultado" aria-live="polite">
-        <div class="res-vazio"><span>🗺️</span><p>O resultado aparece aqui.<br>Comece digitando o bairro ou o CEP.</p></div>
+      <div class="b rv">
+        <h3>O Conselho Tutelar não</h3>
+        <ul>
+          <li>é polícia nem delegacia: não prende nem investiga crimes;</li>
+          <li>é órgão da Justiça: não julga nem define guarda ou pensão;</li>
+          <li>serve para “dar susto” em criança ou adolescente;</li>
+          <li>substitui a família, a escola ou os serviços públicos;</li>
+          <li>cobra por atendimento: o serviço é sempre gratuito.</li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ O QUE FAZEMOS ═══ -->
-<section class="sec alt" id="o-que-faz">
+<!-- ═══ 03 DENUNCIE ═══ -->
+<section class="sec denuncie" id="denuncie">
   <div class="wrap">
-    <div class="sec-head revela">
-      <span class="tag">Atribuições · Art. 136 do ECA</span>
-      <h2>O que faz o Conselho Tutelar?</h2>
-      <p>É um órgão permanente e autônomo, escolhido pela comunidade, que age sempre que um direito de criança ou adolescente é ameaçado ou violado.</p>
-    </div>
-    <div class="cards-3">
-      <div class="feat revela" style="--c:var(--navy-2)"><div class="ic">🤝</div><h3>Atende e acolhe</h3><p>Recebe crianças, adolescentes e famílias em situação de risco e aplica as medidas de proteção previstas em lei.</p></div>
-      <div class="feat revela" style="--c:var(--coral)"><div class="ic">👨‍👩‍👧</div><h3>Orienta as famílias</h3><p>Atende e aconselha pais e responsáveis, encaminhando para programas de apoio e acompanhamento.</p></div>
-      <div class="feat revela" style="--c:var(--green)"><div class="ic">🏥</div><h3>Requisita serviços</h3><p>Pode requisitar serviços públicos de saúde, educação, assistência social, previdência, trabalho e segurança.</p></div>
-      <div class="feat revela" style="--c:var(--gold)"><div class="ic">⚖️</div><h3>Aciona a Justiça</h3><p>Encaminha ao Ministério Público e à autoridade judiciária os casos que são de sua competência.</p></div>
-      <div class="feat revela" style="--c:var(--lilac)"><div class="ic">📄</div><h3>Requisita documentos</h3><p>Solicita certidões de nascimento e de óbito de crianças e adolescentes, quando necessário.</p></div>
-      <div class="feat revela" style="--c:var(--teal)"><div class="ic">📢</div><h3>Fiscaliza e propõe</h3><p>Fiscaliza entidades de atendimento e assessora o poder público na elaboração de políticas para a infância.</p></div>
-    </div>
-    <div class="duas-col">
-      <div class="lista-box sim revela">
-        <h3>👍 Procure o Conselho quando…</h3>
-        <ul>
-          <li class="sim">houver suspeita de violência física, psicológica ou sexual;</li>
-          <li class="sim">a criança estiver em situação de abandono ou negligência;</li>
-          <li class="sim">houver trabalho infantil ou exploração;</li>
-          <li class="sim">a criança estiver fora da escola ou com faltas frequentes sem justificativa;</li>
-          <li class="sim">for negado atendimento de saúde, vaga escolar ou outro direito.</li>
-        </ul>
-      </div>
-      <div class="lista-box nao revela">
-        <h3>💡 O Conselho Tutelar não…</h3>
-        <ul>
-          <li class="nao">é polícia nem delegacia — não prende nem investiga crimes;</li>
-          <li class="nao">é órgão da Justiça — não julga, não define guarda nem pensão;</li>
-          <li class="nao">serve para “dar susto” em criança ou adolescente;</li>
-          <li class="nao">substitui o papel da família, da escola ou dos serviços públicos;</li>
-          <li class="nao">cobra por nenhum atendimento — o serviço é sempre gratuito.</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ DENUNCIE ═══ -->
-<section class="sec" id="denuncie">
-  <div class="wrap">
-    <div class="denuncie revela">
-      <div>
-        <h2>Viu, suspeitou ou sabe de alguma violação? Denuncie.</h2>
-        <p>Você não precisa ter certeza nem provas. A denúncia pode ser anônima e é o primeiro passo para proteger uma criança. Proteger é dever de todos (Art. 70 do ECA).</p>
-        <div class="passos">
-          <div class="passo"><b>1</b>Anote o que viu: quem, onde, quando.</div>
-          <div class="passo"><b>2</b>Ligue para o Disque 100 ou procure o Conselho do bairro.</div>
-          <div class="passo"><b>3</b>O caso é registrado e encaminhado para proteção.</div>
-        </div>
-      </div>
+    <p class="sec-top mono"><b>03</b><span>Denuncie</span></p>
+    <div class="g12">
+      <h2 class="tit">Viu ou suspeitou de violência contra uma criança? <em>Denuncie.</em></h2>
+      <p class="txt">Você não precisa ter certeza nem provas. A denúncia pode ser anônima e é o primeiro passo para proteger. Prevenir é dever de todos (ECA, Art. 70).</p>
+      <ol class="passos">
+        <li><span>Anote o que viu: quem, onde e quando.</span></li>
+        <li><span>Ligue para o Disque 100 ou procure o Conselho do seu bairro.</span></li>
+        <li><span>O caso é registrado e encaminhado para proteção.</span></li>
+      </ol>
       <div class="canais">
-        <a class="canal" href="tel:100"><b>100</b><span>Disque Direitos Humanos<small>24 horas · gratuito · anônimo</small></span></a>
-        <a class="canal" href="tel:190"><b>190</b><span>Polícia Militar<small>Emergência e flagrante de violência</small></span></a>
-        <a class="canal" href="#encontre"><b>📍</b><span>Conselho Tutelar do seu bairro<small>Atendimento presencial e por telefone</small></span></a>
+        <a class="canal grande" href="tel:100"><span class="n">100</span><span class="s" aria-hidden="true">↗</span><span class="d"><b>Ligar para o Disque 100</b><small>Disque Direitos Humanos · 24 horas · gratuito · anônimo</small></span></a>
+        <a class="canal" href="tel:190"><span class="n">190</span><span class="d"><b>Ligar para a Polícia Militar</b><small>Emergência e flagrante de violência</small></span><span class="s" aria-hidden="true">↗</span></a>
+        <a class="canal" href="#encontre"><span class="n">→</span><span class="d"><b>Achar o Conselho do meu bairro</b><small>Atendimento presencial e por telefone</small></span><span class="s" aria-hidden="true">↓</span></a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ OS 24 CONSELHOS ═══ -->
-<section class="sec alt" id="conselhos">
+<!-- ═══ 04 CONSELHOS ═══ -->
+<section class="sec" id="conselhos">
   <div class="wrap">
-    <div class="sec-head revela">
-      <span class="tag">Rede de proteção</span>
-      <h2>Os 24 Conselhos Tutelares de Salvador</h2>
-      <p>Clique em um conselho para ver endereço, contatos, conselheiros(as) e bairros atendidos.</p>
+    <p class="sec-top mono"><b>04</b><span>Rede de proteção</span></p>
+    <div class="g12 cabec">
+      <h2 class="tit rv">Os 24 Conselhos Tutelares de <em>Salvador.</em></h2>
+      <div class="lado rv">
+        <p class="intro">Toque em um conselho para ver endereço, contatos, equipe e bairros atendidos.</p>
+        <div class="filtro">
+          <label class="campo-rot mono" for="filtro-ct">Filtrar</label>
+          <input class="campo" id="filtro-ct" type="search" placeholder="Conselho, bairro ou nome" autocomplete="off">
+        </div>
+      </div>
     </div>
-    <div class="filtro-ct">
-      <label class="sr-only" for="filtro-ct">Filtrar conselhos</label>
-      <input id="filtro-ct" type="search" placeholder="Filtrar por conselho, bairro ou conselheiro(a)…">
-    </div>
-    <div class="ct-grid" id="ct-grid"></div>
+    <div class="ct-cab mono" aria-hidden="true"><span>N.º</span><span>Conselho</span><span>Região</span><span>Equipe</span><span></span></div>
+    <div id="ct-grid"></div>
     <p class="nada" id="ct-nada">Nenhum conselho encontrado para essa busca.</p>
+    <noscript><p>Para ver a lista dos conselhos, ative o JavaScript do navegador ou ligue para o Disque 100.</p></noscript>
   </div>
 </section>
 
-<!-- ═══ PROJETOS ═══ -->
-<section class="sec" id="projetos">
+<!-- ═══ 05 PROJETOS ═══ -->
+<section class="sec alt" id="projetos">
   <div class="wrap">
-    <div class="sec-head revela">
-      <span class="tag">Em ação</span>
-      <h2>Projetos e frentes de trabalho</h2>
-      <p>Além do atendimento diário, os Conselhos atuam em ações que levam a proteção para onde as crianças estão.</p>
+    <p class="sec-top mono"><b>05</b><span>Frentes de trabalho</span></p>
+    <div class="g12" style="row-gap:24px;margin-bottom:clamp(32px,4vw,56px)">
+      <h2 class="tit rv" style="grid-column:1 / span 8">Além do atendimento, a proteção <em>vai até onde as crianças estão.</em></h2>
     </div>
-    <div class="cards-4" id="projetos-grid"></div>
+    <div class="proj-grid" id="projetos-grid"></div>
   </div>
 </section>
 
-<!-- ═══ AGENDA ═══ -->
-<section class="sec alt" id="agenda">
+<!-- ═══ 06 AGENDA ═══ -->
+<section class="sec" id="agenda">
   <div class="wrap">
-    <div class="sec-head revela">
-      <span class="tag">Agenda</span>
-      <h2>Eventos e datas importantes</h2>
-      <p>Campanhas, operações especiais e datas de mobilização pelos direitos de crianças e adolescentes.</p>
+    <p class="sec-top mono"><b>06</b><span>Agenda</span></p>
+    <div class="g12">
+      <div class="agenda-l">
+        <h2 class="tit rv">Datas que <em>mobilizam.</em></h2>
+        <p class="intro">Campanhas, operações especiais e datas de mobilização pelos direitos de crianças e adolescentes.</p>
+      </div>
+      <div class="agenda-r">
+        <div id="agenda-lista"></div>
+        <p class="nota">Datas de operações especiais podem ser ajustadas conforme o calendário oficial da cidade.</p>
+      </div>
     </div>
-    <div class="agenda" id="agenda-lista"></div>
-    <p class="nota">Datas de operações especiais podem ser ajustadas conforme o calendário oficial da cidade.</p>
   </div>
 </section>
 
-<!-- ═══ ECA ═══ -->
-<section class="sec" id="eca">
+<!-- ═══ 07 ECA ═══ -->
+<section class="sec escuro" id="eca">
   <div class="wrap">
-    <div class="sec-head revela">
-      <span class="tag">Lei 8.069/1990</span>
-      <h2>Estatuto da Criança e do Adolescente</h2>
-      <p>O ECA é a lei que garante a crianças e adolescentes a condição de sujeitos de direitos, com prioridade absoluta. Conheça alguns artigos essenciais.</p>
+    <p class="sec-top mono"><b>07</b><span>Lei 8.069/1990</span></p>
+    <div class="g12">
+      <div class="eca-l">
+        <h2 class="tit rv">Estatuto da Criança e do <em>Adolescente.</em></h2>
+        <p class="intro" style="margin-top:22px">O ECA garante a crianças e adolescentes a condição de sujeitos de direitos, com prioridade absoluta. Escolha um artigo.</p>
+        <div class="eca-abas" id="eca-abas" role="tablist" aria-label="Artigos do ECA"></div>
+      </div>
+      <div class="eca-r">
+        <div class="eca-painel" id="eca-painel" role="tabpanel" aria-live="polite"></div>
+        <div class="acoes"><a class="btn btn-linha" href="https://www.planalto.gov.br/ccivil_03/leis/l8069.htm" target="_blank" rel="noopener">Ler o ECA completo (Planalto) <span class="seta" aria-hidden="true">↗</span></a></div>
+      </div>
     </div>
-    <div class="eca-tabs" id="eca-tabs" role="tablist"></div>
-    <div class="eca-painel revela" id="eca-painel" role="tabpanel" aria-live="polite"></div>
-    <div class="eca-link"><a class="btn btn-navy" href="https://www.planalto.gov.br/ccivil_03/leis/l8069.htm" target="_blank" rel="noopener">📘 Ler o ECA completo (Planalto)</a></div>
   </div>
 </section>
 
-<!-- ═══ FAQ ═══ -->
-<section class="sec alt" id="duvidas">
+<!-- ═══ 08 DÚVIDAS ═══ -->
+<section class="sec alt" id="duvidas" style="border-bottom:0">
   <div class="wrap">
-    <div class="sec-head revela">
-      <span class="tag">Dúvidas frequentes</span>
-      <h2>Perguntas que a gente mais escuta</h2>
+    <p class="sec-top mono"><b>08</b><span>Dúvidas frequentes</span></p>
+    <div class="g12">
+      <div class="duv-l"><h2 class="tit rv">O que mais <em>perguntam.</em></h2></div>
+      <div class="duv-r faq" id="faq"></div>
     </div>
-    <div class="faq" id="faq"></div>
   </div>
 </section>
 
@@ -490,45 +636,49 @@
 
 <footer>
   <div class="wrap">
-    <div class="grid">
+    <div class="rod-top">
+      <p class="rod-gigante" aria-hidden="true">Conselho<br>Tutelar<br><em>de Salvador</em></p>
+    </div>
+    <div class="rod-cols">
       <div>
-        <div class="marca" style="color:#fff;margin-bottom:12px"><img src="/icons/icon-192.png" alt="" style="background:#fff;border-radius:12px;padding:3px"><span><b>Conselho Tutelar</b><small style="color:#9fb0cc">Salvador · Bahia</small></span></div>
-        <p style="font-size:.9rem;margin:0">Órgão permanente e autônomo, não jurisdicional, encarregado pela sociedade de zelar pelo cumprimento dos direitos da criança e do adolescente (Art. 131 do ECA).</p>
+        <h4>Sobre</h4>
+        <p>Órgão permanente e autônomo, não jurisdicional, encarregado pela sociedade de zelar pelo cumprimento dos direitos da criança e do adolescente (Art. 131 do ECA).</p>
       </div>
       <div>
         <h4>Navegue</h4>
         <ul>
-          <li><a href="#encontre">Encontre seu CT</a></li>
+          <li><a href="#encontre">Encontre seu Conselho</a></li>
           <li><a href="#conselhos">Os 24 Conselhos</a></li>
           <li><a href="#projetos">Projetos</a></li>
           <li><a href="#agenda">Agenda</a></li>
+          <li><a href="#eca">ECA</a></li>
         </ul>
       </div>
       <div>
-        <h4>Canais de denúncia</h4>
+        <h4>Denúncia</h4>
         <ul>
-          <li><a href="tel:100">📞 Disque 100 — 24h</a></li>
-          <li><a href="tel:190">🚓 190 — Polícia Militar</a></li>
-          <li><a href="#encontre">📍 Conselho do seu bairro</a></li>
+          <li><a href="tel:100">Disque 100 · 24 h</a></li>
+          <li><a href="tel:190">190 · Polícia Militar</a></li>
+          <li><a href="#encontre">Conselho do seu bairro</a></li>
         </ul>
       </div>
       <div>
-        <h4>Legislação</h4>
+        <h4>Legislação e acesso</h4>
         <ul>
-          <li><a href="https://www.planalto.gov.br/ccivil_03/leis/l8069.htm" target="_blank" rel="noopener">ECA — Lei 8.069/1990</a></li>
+          <li><a href="https://www.planalto.gov.br/ccivil_03/leis/l8069.htm" target="_blank" rel="noopener">ECA, Lei 8.069/1990</a></li>
           <li><a href="#eca">Artigos essenciais</a></li>
-          <li><a href="/" title="Acesso restrito a conselheiros e equipe">🔒 Área restrita (Conecta-CT)</a></li>
+          <li><a href="/" title="Acesso restrito a conselheiros e equipe">Área restrita (Conecta-CT)</a></li>
         </ul>
       </div>
     </div>
-    <div class="base">
+    <div class="rod-base mono">
       <span>© <span id="ano-atual"></span> Conselhos Tutelares de Salvador/BA</span>
-      <span>Atendimento gratuito · Proteção é dever de todos</span>
+      <span>Atendimento gratuito · Proteger é dever de todos</span>
     </div>
   </div>
 </footer>
 
-<button class="saida" type="button" onclick="saidaRapida()" title="Sai imediatamente deste site (atalho: Esc duas vezes)">✕ Saída rápida</button>
+<button class="saida" type="button" onclick="saidaRapida()" title="Sai imediatamente deste site (atalho: Esc duas vezes)">Saída rápida · Esc Esc</button>
 
 <!-- VLibras: tradução para Libras (padrão dos sites públicos do governo) -->
 <div vw class="enabled">
@@ -544,10 +694,10 @@
 // ════════════════════════════════════════════════════════════════
 
 const PROJETOS = [
-  { icone: '🎭', cor: '#e0a91b', titulo: 'Salvador Acolhe', texto: 'No Carnaval e no Réveillon, conselheiros atuam em postos de acolhimento nos circuitos, identificando crianças com pulseirinhas e reunindo famílias.' },
-  { icone: '🕸️', cor: '#1f4a8a', titulo: 'Rede de Proteção', texto: 'Articulação permanente com escolas, unidades de saúde, CRAS, CREAS, Ministério Público e Justiça para que cada caso tenha resposta.' },
-  { icone: '🎤', cor: '#2fae73', titulo: 'ECA nas Comunidades', texto: 'Rodas de conversa e palestras em escolas, associações e igrejas para que famílias e educadores conheçam os direitos e saibam quando acionar o Conselho.' },
-  { icone: '🗳️', cor: '#8b6cf0', titulo: 'Escolha Unificada', texto: 'A cada quatro anos a população escolhe seus conselheiros tutelares. Participar é fortalecer a proteção da infância no seu bairro.' },
+  { tag: 'Operação especial', titulo: 'Salvador Acolhe', texto: 'No Carnaval e no Réveillon, conselheiros atuam em postos de acolhimento nos circuitos, identificando crianças com pulseirinhas e reunindo famílias.' },
+  { tag: 'Articulação', titulo: 'Rede de Proteção', texto: 'Trabalho permanente com escolas, unidades de saúde, CRAS, CREAS, Ministério Público e Justiça para que cada caso tenha resposta.' },
+  { tag: 'Educação em direitos', titulo: 'ECA nas Comunidades', texto: 'Rodas de conversa e palestras em escolas, associações e igrejas para que famílias e educadores conheçam os direitos e saibam quando acionar o Conselho.' },
+  { tag: 'Participação', titulo: 'Escolha Unificada', texto: 'A cada quatro anos a população escolhe seus conselheiros tutelares. Participar é fortalecer a proteção da infância no seu bairro.' },
 ]
 
 // tipo: 'campanha' | 'operacao' | 'eleicao' | 'data'
@@ -566,7 +716,7 @@ const ECA_ARTIGOS = [
   { aba: 'Quem é criança?', art: 'Art. 2º', texto: 'Considera-se criança, para os efeitos desta Lei, a pessoa até doze anos de idade incompletos, e adolescente aquela entre doze e dezoito anos de idade.', nota: 'Em casos expressos em lei, o Estatuto se aplica excepcionalmente a pessoas entre 18 e 21 anos.' },
   { aba: 'Prioridade absoluta', art: 'Art. 4º', texto: 'É dever da família, da comunidade, da sociedade em geral e do poder público assegurar, com absoluta prioridade, a efetivação dos direitos referentes à vida, à saúde, à alimentação, à educação, ao esporte, ao lazer, à profissionalização, à cultura, à dignidade, ao respeito, à liberdade e à convivência familiar e comunitária.', nota: 'Prioridade absoluta significa que crianças e adolescentes vêm primeiro no atendimento e nas políticas públicas.' },
   { aba: 'Nenhuma violência', art: 'Art. 5º', texto: 'Nenhuma criança ou adolescente será objeto de qualquer forma de negligência, discriminação, exploração, violência, crueldade e opressão, punido na forma da lei qualquer atentado, por ação ou omissão, aos seus direitos fundamentais.', nota: 'Omissão também é violação: deixar de agir diante de um risco conhecido é responsabilizável.' },
-  { aba: 'Dignidade', art: 'Art. 18', texto: 'É dever de todos velar pela dignidade da criança e do adolescente, pondo-os a salvo de qualquer tratamento desumano, violento, aterrorizante, vexatório ou constrangedor.', nota: 'A proteção não é tarefa apenas da família ou do Estado — é responsabilidade de todos nós.' },
+  { aba: 'Dignidade', art: 'Art. 18', texto: 'É dever de todos velar pela dignidade da criança e do adolescente, pondo-os a salvo de qualquer tratamento desumano, violento, aterrorizante, vexatório ou constrangedor.', nota: 'A proteção não é tarefa apenas da família ou do Estado: é responsabilidade de todos nós.' },
   { aba: 'Prevenir é dever', art: 'Art. 70', texto: 'É dever de todos prevenir a ocorrência de ameaça ou violação dos direitos da criança e do adolescente.', nota: 'Por isso, ao suspeitar de uma violação, comunique o Conselho Tutelar ou ligue para o Disque 100.' },
   { aba: 'O Conselho Tutelar', art: 'Art. 131', texto: 'O Conselho Tutelar é órgão permanente e autônomo, não jurisdicional, encarregado pela sociedade de zelar pelo cumprimento dos direitos da criança e do adolescente, definidos nesta Lei.', nota: 'Cada Conselho é formado por cinco membros escolhidos pela população local.' },
 ]
@@ -576,7 +726,7 @@ const FAQ = [
   { p: 'O Conselho Tutelar tira a guarda dos pais?', r: 'Não. Decisões sobre guarda, perda do poder familiar e adoção são exclusivas da Justiça. O Conselho aplica medidas de proteção e, quando necessário, comunica o Ministério Público e o Judiciário.' },
   { p: 'Quem pode procurar o Conselho Tutelar?', r: 'Qualquer pessoa: a própria criança ou adolescente, familiares, vizinhos, professores, profissionais de saúde ou qualquer cidadão que saiba de uma ameaça ou violação de direitos.' },
   { p: 'O atendimento é pago?', r: 'Nunca. Todo atendimento do Conselho Tutelar é público e gratuito.' },
-  { p: 'Como sei qual Conselho atende meu bairro?', r: 'Use a ferramenta “Encontre seu CT” no topo desta página: digite o nome do seu bairro ou o CEP e veja o endereço e os telefones do Conselho responsável.' },
+  { p: 'Como sei qual Conselho atende meu bairro?', r: 'Use a busca “Encontre seu Conselho” no começo desta página: digite o nome do seu bairro ou o CEP e veja o endereço e os telefones do Conselho responsável.' },
   { p: 'O Conselho funciona fora do horário comercial?', r: 'Sim. Além do expediente, os Conselhos de Salvador mantêm escala de plantão, inclusive nos fins de semana. Em emergências, ligue também para o 190.' },
   { p: 'Como me torno conselheiro(a) tutelar?', r: 'Pelo processo de escolha unificado, realizado a cada quatro anos. O ECA exige reconhecida idoneidade moral, idade superior a 21 anos e residência no município, além dos requisitos definidos em lei municipal.' },
 ]
@@ -619,22 +769,24 @@ const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 const nomeCurto = c => c.nome.replace(/^CT [IVXLCDM]+ – /, '')
 const telLink = t => 'tel:+5571' + String(t).split('/')[0].replace(/\D/g, '').replace(/^71/, '')
 const mapaLink = c => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(c.endereco + ', Salvador - BA')
+const $ = id => document.getElementById(id)
 
-// ── números do topo ──
+// ── números ──
 const totalBairros = CONSELHOS_BAIRROS.reduce((s, c) => s + (c.bairros || []).length, 0)
 const totalCons = CONSELHOS_BAIRROS.reduce((s, c) => s + (c.conselheiros || []).length, 0)
-document.getElementById('n-ct').dataset.conta = CONSELHOS_BAIRROS.length
-document.getElementById('n-cons').dataset.conta = totalCons
-document.getElementById('n-bairros').dataset.conta = totalBairros
-document.getElementById('n-eca').dataset.conta = new Date().getFullYear() - 1990 - (new Date() < new Date(new Date().getFullYear(), 6, 13) ? 1 : 0)
-document.getElementById('ano-atual').textContent = new Date().getFullYear()
+$('n-ct').dataset.conta = CONSELHOS_BAIRROS.length
+$('n-cons').dataset.conta = totalCons
+$('n-bairros').dataset.conta = totalBairros
+$('n-eca').dataset.conta = new Date().getFullYear() - 1990 - (new Date() < new Date(new Date().getFullYear(), 6, 13) ? 1 : 0)
+$('ano-atual').textContent = new Date().getFullYear()
 
 function animaNumero(el) {
   const alvo = Number(el.dataset.conta) || 0
-  const ini = performance.now(), dur = 1400
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = alvo; return }
+  const ini = performance.now(), dur = 1500
   const passo = t => {
     const p = Math.min(1, (t - ini) / dur)
-    el.textContent = Math.round(alvo * (1 - Math.pow(1 - p, 3)))
+    el.textContent = Math.round(alvo * (1 - Math.pow(1 - p, 4)))
     if (p < 1) requestAnimationFrame(passo)
   }
   requestAnimationFrame(passo)
@@ -644,57 +796,57 @@ function animaNumero(el) {
 const indiceBairros = []
 CONSELHOS_BAIRROS.forEach(c => (c.bairros || []).forEach(b => indiceBairros.push({ bairro: b, ct: c })))
 indiceBairros.sort((a, b) => a.bairro.localeCompare(b.bairro, 'pt-BR'))
-document.getElementById('lista-bairros').innerHTML = indiceBairros.map(i => `<option value="${esc(i.bairro)}">`).join('')
+$('lista-bairros').innerHTML = indiceBairros.map(i => `<option value="${esc(i.bairro)}">`).join('')
 
 const populares = ['Liberdade', 'Pituba', 'Itapuã', 'Periperi', 'Cajazeiras VIII', 'Barra', 'Brotas', 'Sussuarana']
   .map(n => indiceBairros.find(i => norm(i.bairro).startsWith(norm(n)))).filter(Boolean)
-document.getElementById('sugestoes').innerHTML = populares.map(i => `<button type="button" data-bairro="${esc(i.bairro)}">${esc(i.bairro)}</button>`).join('')
-document.getElementById('sugestoes').addEventListener('click', e => {
+$('sugestoes').innerHTML = '<span class="mono">Mais buscados</span>' + populares.map(i => `<button type="button" data-bairro="${esc(i.bairro)}">${esc(i.bairro)}</button>`).join('')
+$('sugestoes').addEventListener('click', e => {
   const b = e.target.closest('button')
   if (!b) return
-  const inp = document.getElementById('busca-bairro')
-  inp.value = b.dataset.bairro
-  buscaBairro(inp.value)
+  $('busca-bairro').value = b.dataset.bairro
+  buscaBairro(b.dataset.bairro)
 })
 
+const VAZIO = '<div class="res-vazio"><p class="mono" style="margin-bottom:8px">Resultado</p><p>Comece digitando o bairro ou os 8 números do CEP.</p></div>'
+const aviso = (titulo, texto) => `<div class="res-vazio"><p class="mono" style="margin-bottom:8px">${titulo}</p><p>${texto}</p></div>`
+
 function cartaoResultado(c, bairro) {
-  return `<div class="res-card">
-    <div class="res-topo"><div class="sigla">${esc(c.num)}</div>
-      <div><small>${bairro ? 'O bairro ' + esc(bairro) + ' é atendido pelo' : 'Conselho Tutelar'}</small><h4>${esc(c.nome)}</h4></div></div>
-    <div class="res-corpo">
-      ${c.endereco ? `<div class="linha">📍 <span>${esc(c.endereco)} – Salvador/BA</span></div>` : ''}
-      <div class="linha">📞 <span>${[c.telefone, c.celular].filter(Boolean).map(esc).join(' · ')}</span></div>
-      ${c.email ? `<div class="linha">✉️ <a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
-      ${c.coordenador ? `<div class="linha">👤 <span>Coordenação: <strong>${esc(c.coordenador)}</strong></span></div>` : ''}
-      <div class="acoes">
-        ${c.telefone ? `<a class="btn btn-navy btn-sm" href="${telLink(c.telefone)}">📞 Ligar</a>` : ''}
-        ${c.endereco ? `<a class="btn btn-gold btn-sm" href="${mapaLink(c)}" target="_blank" rel="noopener">🧭 Como chegar</a>` : ''}
-        <a class="btn btn-sm" style="background:var(--sky);color:var(--navy)" href="#conselhos" onclick="abreCt('${esc(c.num)}')">Ver conselheiros</a>
-      </div>
+  const linhas = [
+    c.endereco ? ['Endereço', `${esc(c.endereco)} – Salvador/BA`] : null,
+    ['Telefone', [c.telefone, c.celular].filter(Boolean).map(esc).join(' · ')],
+    c.email ? ['E-mail', `<a class="lnk" href="mailto:${esc(c.email)}">${esc(c.email)}</a>`] : null,
+    c.coordenador ? ['Coordenação', esc(c.coordenador)] : null,
+    c.regiao ? ['Região', esc(c.regiao)] : null,
+  ].filter(Boolean)
+  return `<article class="ficha">
+    <div class="ficha-topo"><p class="mono">${bairro ? 'O bairro ' + esc(bairro) + ' é atendido pelo' : 'Conselho Tutelar'} · N.º ${esc(c.num)}</p><h3>${esc(c.nome)}</h3></div>
+    <dl>${linhas.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    <div class="acoes">
+      ${c.telefone ? `<a class="btn btn-primario btn-pq" href="${telLink(c.telefone)}">Ligar agora <span class="seta" aria-hidden="true">→</span></a>` : ''}
+      ${c.endereco ? `<a class="btn btn-pq" href="${mapaLink(c)}" target="_blank" rel="noopener">Ver no mapa <span class="seta" aria-hidden="true">↗</span></a>` : ''}
+      <a class="lnk" href="#conselhos" onclick="abreCt('${esc(c.num)}')">Ver a equipe</a>
     </div>
-  </div>`
+  </article>`
 }
 
 // CEP → bairro (ViaCEP) → Conselho. Os nomes de bairro dos Correios nem sempre batem com os
-// da nossa lista, então tentamos igualdade, depois "um contém o outro", e por fim mostramos opções.
+// da nossa lista, então comparamos ignorando pontuação e aceitamos "um contém o outro" (≥ 5 letras).
 async function buscaCep(cep) {
-  const out = document.getElementById('resultado')
-  out.innerHTML = '<div class="res-vazio"><span>⏳</span><p>Consultando o CEP…</p></div>'
+  const out = $('resultado')
+  out.innerHTML = aviso('Consultando', 'Buscando o CEP…')
   let dados
   try {
     const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
     dados = await r.json()
   } catch (e) {
-    out.innerHTML = '<div class="res-vazio"><span>📡</span><p>Não foi possível consultar o CEP agora.<br>Tente digitar o nome do bairro.</p></div>'
+    out.innerHTML = aviso('Sem conexão', 'Não foi possível consultar o CEP agora. Tente digitar o nome do bairro.')
     return
   }
-  if (document.getElementById('busca-bairro').value.replace(/\D/g, '') !== cep) return
-  if (!dados || dados.erro) {
-    out.innerHTML = '<div class="res-vazio"><span>🤔</span><p>CEP não encontrado.<br>Confira os números ou digite o nome do bairro.</p></div>'
-    return
-  }
+  if ($('busca-bairro').value.replace(/\D/g, '') !== cep) return
+  if (!dados || dados.erro) { out.innerHTML = aviso('CEP não encontrado', 'Confira os números ou digite o nome do bairro.'); return }
   if (norm(dados.localidade) !== 'salvador') {
-    out.innerHTML = `<div class="res-vazio"><span>🧭</span><p>Este CEP é de <strong>${esc(dados.localidade)}/${esc(dados.uf)}</strong>.<br>Procure o Conselho Tutelar do seu município ou ligue para o <strong>Disque 100</strong>.</p></div>`
+    out.innerHTML = aviso('Outro município', `Este CEP é de <strong>${esc(dados.localidade)}/${esc(dados.uf)}</strong>. Procure o Conselho Tutelar do seu município ou ligue para o <strong>Disque 100</strong>.`)
     return
   }
   const chave = s => norm(s).replace(/[^a-z0-9]/g, '')
@@ -706,25 +858,21 @@ async function buscaCep(cep) {
     }))
   const rua = [dados.logradouro, dados.bairro].filter(Boolean).join(' · ')
   if (achado) {
-    out.innerHTML = `<p style="margin:0 0 8px;color:var(--muted);font-size:.9rem">📮 CEP ${cep.slice(0, 5)}-${cep.slice(5)}: ${esc(rua)}</p>` + cartaoResultado(achado.ct, achado.bairro)
+    out.innerHTML = `<p class="ficha-msg mono">CEP ${cep.slice(0, 5)}-${cep.slice(5)} · ${esc(rua)}</p>` + cartaoResultado(achado.ct, achado.bairro)
     return
   }
-  out.innerHTML = `<div class="res-vazio"><span>📮</span><p>O CEP fica em <strong>${esc(rua || 'Salvador')}</strong>, mas esse bairro não está na nossa lista com o mesmo nome.<br>Tente digitar um bairro vizinho ou ligue para o <strong>Disque 100</strong>.</p></div>`
+  out.innerHTML = aviso('Bairro fora da lista', `O CEP fica em <strong>${esc(rua || 'Salvador')}</strong>, mas esse bairro não está na nossa lista com o mesmo nome. Tente um bairro vizinho ou ligue para o <strong>Disque 100</strong>.`)
 }
 
 function buscaBairro(texto) {
-  const out = document.getElementById('resultado')
-  const digitos = String(texto).replace(/\D/g, '')
-  if (digitos.length === 8 && /^[\d\s.-]+$/.test(String(texto).trim())) { buscaCep(digitos); return }
-  if (/^[\d\s.-]+$/.test(String(texto).trim()) && digitos.length) {
-    out.innerHTML = '<div class="res-vazio"><span>📮</span><p>Digite os 8 números do CEP.</p></div>'
-    return
-  }
+  const out = $('resultado')
+  const bruto = String(texto).trim()
+  const digitos = bruto.replace(/\D/g, '')
+  const soNumeros = /^[\d\s.-]+$/.test(bruto)
+  if (soNumeros && digitos.length === 8) { buscaCep(digitos); return }
+  if (soNumeros && digitos.length) { out.innerHTML = aviso('CEP incompleto', 'Digite os 8 números do CEP.'); return }
   const q = norm(texto)
-  if (q.length < 2) {
-    out.innerHTML = '<div class="res-vazio"><span>🗺️</span><p>O resultado aparece aqui.<br>Comece digitando o bairro ou o CEP.</p></div>'
-    return
-  }
+  if (q.length < 2) { out.innerHTML = VAZIO; return }
   const exato = indiceBairros.find(i => norm(i.bairro) === q)
   if (exato) { out.innerHTML = cartaoResultado(exato.ct, exato.bairro); return }
   const porBairro = indiceBairros.filter(i => norm(i.bairro).includes(q))
@@ -732,50 +880,62 @@ function buscaBairro(texto) {
   if (porBairro.length === 1 && !porCt.length) { out.innerHTML = cartaoResultado(porBairro[0].ct, porBairro[0].bairro); return }
   if (!porBairro.length && porCt.length === 1) { out.innerHTML = cartaoResultado(porCt[0]); return }
   const opcoes = [
-    ...porCt.map(c => ({ rot: `🏛️ ${c.nome}`, num: c.num, bairro: '' })),
-    ...porBairro.slice(0, 8).map(i => ({ rot: `📍 ${i.bairro} <small style="color:var(--muted)">— ${esc(nomeCurto(i.ct))}</small>`, num: i.ct.num, bairro: i.bairro })),
+    ...porCt.map(c => ({ rot: esc(c.nome), sub: 'Conselho', num: c.num, bairro: '' })),
+    ...porBairro.slice(0, 8).map(i => ({ rot: esc(i.bairro), sub: esc(nomeCurto(i.ct)), num: i.ct.num, bairro: i.bairro })),
   ]
-  if (!opcoes.length) {
-    out.innerHTML = `<div class="res-vazio"><span>🤔</span><p>Não encontramos “${esc(texto)}”.<br>Tente outra grafia ou ligue para o <strong>Disque 100</strong>.</p></div>`
-    return
-  }
-  out.innerHTML = `<div class="multi"><p style="margin:0 0 4px;color:var(--muted)">Encontramos ${opcoes.length} opções. Qual delas?</p>
-    ${opcoes.map(o => `<button type="button" data-num="${esc(o.num)}" data-bairro="${esc(o.bairro)}">${o.rot}</button>`).join('')}</div>`
+  if (!opcoes.length) { out.innerHTML = aviso('Nada encontrado', `Não encontramos “${esc(texto)}”. Tente outra grafia ou ligue para o <strong>Disque 100</strong>.`); return }
+  out.innerHTML = `<div class="opcoes"><p class="mono">${opcoes.length} opções · qual delas?</p>
+    ${opcoes.map(o => `<button type="button" data-num="${esc(o.num)}" data-bairro="${esc(o.bairro)}"><span>${o.rot}</span><small>${o.sub}</small></button>`).join('')}</div>`
 }
-document.getElementById('resultado').addEventListener('click', e => {
-  const b = e.target.closest('.multi button')
+$('resultado').addEventListener('click', e => {
+  const b = e.target.closest('.opcoes button')
   if (!b) return
   const c = CONSELHOS_BAIRROS.find(x => x.num === b.dataset.num)
-  if (c) document.getElementById('resultado').innerHTML = cartaoResultado(c, b.dataset.bairro)
+  if (c) $('resultado').innerHTML = cartaoResultado(c, b.dataset.bairro)
 })
 let _tBusca
-document.getElementById('busca-bairro').addEventListener('input', e => {
+$('busca-bairro').addEventListener('input', e => {
   clearTimeout(_tBusca)
   _tBusca = setTimeout(() => buscaBairro(e.target.value), 180)
 })
 
-// ── grade dos 24 conselhos ──
-document.getElementById('ct-grid').innerHTML = CONSELHOS_BAIRROS.map(c => `
-  <details class="ct" id="ct-${esc(c.num)}" data-busca="${esc(norm([c.nome, c.coordenador, ...(c.bairros || []), ...(c.conselheiros || [])].join(' ')))}">
+// ── lista dos 24 conselhos ──
+$('ct-grid').innerHTML = CONSELHOS_BAIRROS.map(c => {
+  const dados = [
+    c.endereco ? ['Endereço', c.endereco] : null,
+    ['Telefone', [c.telefone, c.celular].filter(Boolean).join(' · ')],
+    c.email ? ['E-mail', `<a class="lnk" href="mailto:${esc(c.email)}">${esc(c.email)}</a>`] : null,
+  ].filter(Boolean)
+  return `<details class="ct" id="ct-${esc(c.num)}" data-busca="${esc(norm([c.nome, c.coordenador, ...(c.bairros || []), ...(c.conselheiros || [])].join(' ')))}">
     <summary>
-      <span class="sig">${esc(c.num)}</span>
-      <span class="nm"><b>${esc(nomeCurto(c))}</b><small>${(c.bairros || []).length} bairros · ${(c.conselheiros || []).length} conselheiros</small></span>
-      <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="n">${esc(c.num)}</span>
+      <span class="nome">${esc(nomeCurto(c))}</span>
+      <span class="reg">${esc(c.regiao || '')}</span>
+      <span class="eq"><span>${(c.conselheiros || []).length} conselheiros</span><span>${(c.bairros || []).length} bairros</span></span>
+      <span class="t" aria-hidden="true">+</span>
     </summary>
     <div class="ct-corpo">
-      ${c.regiao ? `<div class="linha">🗺️ <span>${esc(c.regiao)}</span></div>` : ''}
-      ${c.endereco ? `<div class="linha">📍 <span>${esc(c.endereco)}</span></div>` : ''}
-      <div class="linha">📞 <span>${[c.telefone, c.celular].filter(Boolean).map(esc).join(' · ')}</span></div>
-      ${c.email ? `<div class="linha">✉️ <a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
-      <h5>Conselheiros(as)</h5>
-      <div class="pessoas">${(c.conselheiros || []).map(n => `<span>• ${esc(n)}${n === c.coordenador ? '<span class="coord">Coordenação</span>' : ''}</span>`).join('')}</div>
-      <h5>Bairros atendidos</h5>
-      <div class="chips">${(c.bairros || []).map(b => `<span>${esc(b)}</span>`).join('')}</div>
-      ${c.endereco ? `<a class="btn btn-gold btn-sm" style="justify-self:start;margin-top:6px" href="${mapaLink(c)}" target="_blank" rel="noopener">🧭 Como chegar</a>` : ''}
+      <div>
+        <h4>Contato</h4>
+        <dl>${dados.map(([k, v]) => `<div><dt>${k}</dt><dd>${k === 'E-mail' ? v : esc(v)}</dd></div>`).join('')}</dl>
+        <div class="acoes">
+          ${c.telefone ? `<a class="btn btn-pq btn-primario" href="${telLink(c.telefone)}">Ligar <span class="seta" aria-hidden="true">→</span></a>` : ''}
+          ${c.endereco ? `<a class="btn btn-pq" href="${mapaLink(c)}" target="_blank" rel="noopener">Ver no mapa <span class="seta" aria-hidden="true">↗</span></a>` : ''}
+        </div>
+      </div>
+      <div>
+        <h4>Conselheiros(as)</h4>
+        <ol class="pess">${(c.conselheiros || []).map((n, i) => `<li><i>${String(i + 1).padStart(2, '0')}</i><span>${esc(n)}${n === c.coordenador ? '<span class="coord">Coordenação</span>' : ''}</span></li>`).join('')}</ol>
+      </div>
+      <div>
+        <h4>Bairros atendidos</h4>
+        <div class="tags">${(c.bairros || []).map(b => `<span>${esc(b)}</span>`).join('')}</div>
+      </div>
     </div>
-  </details>`).join('')
+  </details>`
+}).join('')
 
-document.getElementById('filtro-ct').addEventListener('input', e => {
+$('filtro-ct').addEventListener('input', e => {
   const q = norm(e.target.value)
   let vis = 0
   document.querySelectorAll('details.ct').forEach(d => {
@@ -783,69 +943,84 @@ document.getElementById('filtro-ct').addEventListener('input', e => {
     d.style.display = ok ? '' : 'none'
     if (ok) vis++
   })
-  document.getElementById('ct-nada').style.display = vis ? 'none' : 'block'
+  $('ct-nada').style.display = vis ? 'none' : 'block'
 })
 
 function abreCt(num) {
-  const d = document.getElementById('ct-' + num)
+  const d = $('ct-' + num)
   if (!d) return
   d.open = true
-  setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+  setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
 }
 
 // ── projetos ──
-document.getElementById('projetos-grid').innerHTML = PROJETOS.map(p => `
-  <article class="proj revela" style="--c:${p.cor}">
-    <div class="capa" aria-hidden="true">${p.icone}</div>
-    <div class="txt"><h3>${esc(p.titulo)}</h3><p>${esc(p.texto)}</p></div>
+$('projetos-grid').innerHTML = PROJETOS.map((p, i) => `
+  <article class="proj rv">
+    <div class="topo"><span class="mono">${esc(p.tag)}</span><span class="nn" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span></div>
+    <div><h3>${esc(p.titulo)}</h3><p>${esc(p.texto)}</p></div>
   </article>`).join('')
 
 // ── agenda ──
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
-const TIPOS = { campanha: ['Campanha', '#f2665a'], operacao: ['Operação especial', '#e0a91b'], eleicao: ['Escolha unificada', '#8b6cf0'], data: ['Data comemorativa', '#2fae73'] }
+const TIPOS = { campanha: ['Campanha', '●'], operacao: ['Operação especial', '■'], eleicao: ['Escolha unificada', '◐'], data: ['Data comemorativa', '○'] }
 const hoje0 = new Date(); hoje0.setHours(0, 0, 0, 0)
-document.getElementById('agenda-lista').innerHTML = AGENDA
-  .map(e => ({ ...e, d: new Date(e.data + 'T12:00:00') }))
-  .sort((a, b) => a.d - b.d)
-  .map(e => {
-    const [rot, cor] = TIPOS[e.tipo] || TIPOS.data
-    const passado = e.d < hoje0 && !(e.mesInteiro && e.d.getMonth() === hoje0.getMonth() && e.d.getFullYear() === hoje0.getFullYear())
-    return `<div class="ev revela ${passado ? 'passado' : ''}" style="--c:${cor}">
-      <div class="data"><b>${e.mesInteiro ? MESES[e.d.getMonth()] : e.d.getDate()}</b><small>${e.mesInteiro ? e.d.getFullYear() : MESES[e.d.getMonth()] + ' ' + String(e.d.getFullYear()).slice(2)}</small></div>
-      <div><h4>${esc(e.titulo)}</h4><p>${esc(e.texto)}</p></div>
-      <span class="tipo">${rot}</span>
-    </div>`
-  }).join('')
+let _anoAtual = null, _htmlAgenda = ''
+AGENDA.map(e => ({ ...e, d: new Date(e.data + 'T12:00:00') })).sort((a, b) => a.d - b.d).forEach(e => {
+  const ano = e.d.getFullYear()
+  if (ano !== _anoAtual) { _htmlAgenda += `<p class="ag-ano">${ano}</p>`; _anoAtual = ano }
+  const [rot, glifo] = TIPOS[e.tipo] || TIPOS.data
+  const passado = e.d < hoje0 && !(e.mesInteiro && e.d.getMonth() === hoje0.getMonth() && ano === hoje0.getFullYear())
+  _htmlAgenda += `<div class="ev rv ${passado ? 'passado' : ''}">
+    <time datetime="${e.data}"><b>${e.mesInteiro ? MESES[e.d.getMonth()] : String(e.d.getDate()).padStart(2, '0')}</b><span>${e.mesInteiro ? 'o mês todo' : MESES[e.d.getMonth()]}</span></time>
+    <div><h3>${esc(e.titulo)}</h3><p>${esc(e.texto)}</p></div>
+    <span class="tp"><i aria-hidden="true">${glifo}</i>${rot}${passado ? '<span class="sr-only"> (encerrado)</span>' : ''}</span>
+  </div>`
+})
+$('agenda-lista').innerHTML = _htmlAgenda
 
 // ── ECA ──
 function mostraArtigo(i) {
   const a = ECA_ARTIGOS[i]
-  document.querySelectorAll('#eca-tabs button').forEach((b, j) => { b.classList.toggle('ativo', i === j); b.setAttribute('aria-selected', i === j) })
-  document.getElementById('eca-painel').innerHTML = `<div class="art">${esc(a.art)} · ECA</div><blockquote>“${esc(a.texto)}”</blockquote><p>💡 ${esc(a.nota)}</p>`
+  document.querySelectorAll('#eca-abas button').forEach((b, j) => b.setAttribute('aria-selected', i === j ? 'true' : 'false'))
+  $('eca-painel').innerHTML = `<p class="mono art">${esc(a.art)} · ECA</p><blockquote>“${esc(a.texto)}”</blockquote><p class="nota-eca"><b>Em resumo.</b> ${esc(a.nota)}</p>`
 }
-document.getElementById('eca-tabs').innerHTML = ECA_ARTIGOS.map((a, i) => `<button type="button" role="tab" onclick="mostraArtigo(${i})">${esc(a.aba)}</button>`).join('')
+$('eca-abas').innerHTML = ECA_ARTIGOS.map((a, i) => `<button type="button" role="tab" aria-selected="false" onclick="mostraArtigo(${i})"><span class="a">${esc(a.art)}</span><span class="b">${esc(a.aba)}</span></button>`).join('')
 mostraArtigo(1)
 
 // ── FAQ ──
-document.getElementById('faq').innerHTML = FAQ.map(f => `<details class="revela"><summary>${esc(f.p)}</summary><p>${esc(f.r)}</p></details>`).join('')
+$('faq').innerHTML = FAQ.map(f => `<details><summary>${esc(f.p)}</summary><p>${esc(f.r)}</p></details>`).join('')
 
-// ── animações de entrada ──
+// ── entrada ao rolar: títulos e blocos sobem; linhas se desenham; números contam ──
 const obs = new IntersectionObserver(ents => ents.forEach(en => {
   if (!en.isIntersecting) return
-  en.target.classList.add('visivel')
+  en.target.classList.add('in')
   if (en.target.dataset.conta !== undefined) animaNumero(en.target)
   obs.unobserve(en.target)
 }), { threshold: .15 })
-document.querySelectorAll('.revela, [data-conta]').forEach(el => obs.observe(el))
+document.querySelectorAll('.rv, .atrib .lin, [data-conta]').forEach(el => obs.observe(el))
 
-// ── menu mobile fecha ao navegar ──
-document.querySelectorAll('#menu a').forEach(a => a.addEventListener('click', () => document.getElementById('menu').classList.remove('aberto')))
+// ── menu (celular) ──
+const menu = $('menu'), btnMenu = $('btn-menu')
+function fechaMenu() { menu.classList.remove('aberto'); btnMenu.setAttribute('aria-expanded', 'false'); btnMenu.textContent = 'Menu'; document.body.classList.remove('trava') }
+btnMenu.addEventListener('click', () => {
+  const abrir = !menu.classList.contains('aberto')
+  menu.classList.toggle('aberto', abrir)
+  btnMenu.setAttribute('aria-expanded', abrir ? 'true' : 'false')
+  btnMenu.textContent = abrir ? 'Fechar' : 'Menu'
+  document.body.classList.toggle('trava', abrir)
+})
+menu.querySelectorAll('a').forEach(a => a.addEventListener('click', fechaMenu))
+window.addEventListener('resize', () => { if (window.innerWidth > 1180) fechaMenu() })
 
-// ── acessibilidade: tamanho da fonte ──
+// ── acessibilidade ──
 let _fs = 1
 function ajustaFonte(d) {
   _fs = Math.min(1.4, Math.max(.85, _fs + d * .1))
   document.documentElement.style.setProperty('--fs', _fs)
+}
+function alternaContraste() {
+  const on = document.body.classList.toggle('contraste')
+  $('btn-contraste').setAttribute('aria-pressed', on ? 'true' : 'false')
 }
 
 // ── saída rápida (para quem pode estar sendo vigiado por um agressor) ──
