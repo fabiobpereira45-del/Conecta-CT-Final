@@ -17,6 +17,8 @@
     { "source": "/favicon-:size.png",             "destination": "/public/favicon-:size.png" },
     { "source": "/apple-touch-icon.png",          "destination": "/public/apple-touch-icon.png" },
     { "source": "/icons/:file",                   "destination": "/public/icons/:file" },
+    { "source": "/site",                          "destination": "/public/site/index.html" },
+    { "source": "/site/",                         "destination": "/public/site/index.html" },
     { "source": "/((?!api/).*)",                  "destination": "/public/index.html" }
   ],
   "headers": [

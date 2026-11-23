@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conselho Tutelar de Salvador · Proteção integral à criança e ao adolescente</title>
+<meta name="description" content="Portal público dos 24 Conselhos Tutelares de Salvador/BA: encontre o conselho do seu bairro, saiba como denunciar, conheça o ECA, projetos, agenda e a história da proteção à infância.">
+<meta name="theme-color" content="#14305c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Conselho Tutelar de Salvador">
+<meta property="og:description" content="Encontre o Conselho Tutelar do seu bairro, saiba como denunciar e conheça seus direitos.">
+<meta property="og:image" content="/icons/icon-512.png">
+<link rel="icon" href="/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "GovernmentOrganization",
+  "name": "Conselhos Tutelares de Salvador",
+  "areaServed": "Salvador, Bahia, Brasil",
+  "description": "Órgãos permanentes e autônomos, não jurisdicionais, encarregados pela sociedade de zelar pelo cumprimento dos direitos da criança e do adolescente (Art. 131 do ECA)."
+}
+</script>
+<style>
+  :root{
+    --navy:#14305c; --navy-2:#1f4a8a; --sky:#e8f0fb; --gold:#e0a91b; --gold-2:#f6c945;
+    --coral:#f2665a; --green:#2fae73; --lilac:#8b6cf0; --teal:#1aa6a6;
+    --ink:#16233a; --muted:#5d6b82; --line:#e3e8f0; --bg:#f7f9fc; --card:#ffffff;
+    --radius:18px; --shadow:0 10px 30px rgba(20,48,92,.08); --fs:1;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;font-size:calc(16px * var(--fs))}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+  h1,h2,h3,h4{font-family:Nunito,Inter,sans-serif;line-height:1.15;margin:0 0 .5em;letter-spacing:-.01em}
+  a{color:var(--navy-2)}
+  img{max-width:100%}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  :focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:6px}
+
+  /* ── faixa de emergência ── */
+  .alerta{background:var(--navy);color:#fff;font-size:.82rem}
+  .alerta .wrap{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:7px;padding-bottom:7px}
+  .alerta strong{color:var(--gold-2)}
+  .alerta .a11y{display:flex;gap:6px;align-items:center}
+  .alerta button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:2px 9px;font:inherit;cursor:pointer}
+  .alerta button:hover{background:rgba(255,255,255,.22)}
+
+  /* ── cabeçalho ── */
+  header.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  header.top .wrap{display:flex;align-items:center;gap:18px;height:72px}
+  .marca{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);flex-shrink:0}
+  .marca img{width:46px;height:46px;object-fit:contain}
+  .marca b{font-family:Nunito;font-size:1.05rem;display:block;line-height:1.1}
+  .marca small{color:var(--muted);font-size:.75rem}
+  nav.menu{margin-left:auto;display:flex;gap:2px}
+  nav.menu a{text-decoration:none;color:var(--ink);font-weight:600;font-size:.9rem;padding:8px 11px;border-radius:10px}
+  nav.menu a:hover{background:var(--sky);color:var(--navy)}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:12px 22px;font:600 .95rem Inter,sans-serif;cursor:pointer;text-decoration:none;transition:transform .15s,box-shadow .15s}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-gold{background:var(--gold);color:#1b1300;box-shadow:0 8px 20px rgba(224,169,27,.35)}
+  .btn-navy{background:var(--navy);color:#fff}
+  .btn-ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35)}
+  .btn-sm{padding:8px 16px;font-size:.85rem}
+  .hamb{display:none;margin-left:auto;background:none;border:0;font-size:1.6rem;cursor:pointer;color:var(--navy)}
+  @media(max-width:1060px){
+    nav.menu{display:none;position:absolute;top:72px;left:0;right:0;background:#fff;flex-direction:column;padding:10px 22px 18px;border-bottom:1px solid var(--line);box-shadow:var(--shadow)}
+    nav.menu.aberto{display:flex}
+    .hamb{display:block}
+    header.top .btn-denuncia{display:none}
+  }
+
+  /* ── hero ── */
+  .hero{position:relative;overflow:hidden;background:radial-gradient(1200px 500px at 85% -10%,#2f63b3 0%,transparent 60%),linear-gradient(135deg,var(--navy) 0%,#183a6f 55%,#1f4a8a 100%);color:#fff;padding:84px 0 120px}
+  .hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+  .hero h1{font-size:clamp(2.1rem,4.6vw,3.6rem);font-weight:900}
+  .hero h1 em{font-style:normal;color:var(--gold-2)}
+  .hero p.lead{font-size:1.15rem;color:#d7e3f7;max-width:560px}
+  .hero .acoes{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+  .selo{display:inline-flex;gap:8px;align-items:center;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:6px 14px;border-radius:999px;font-size:.8rem;font-weight:600;margin-bottom:18px}
+  .hero-arte{position:relative;display:flex;justify-content:center}
+  .hero-arte .disco{width:min(380px,80vw);aspect-ratio:1;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 80px rgba(0,0,0,.35),0 0 0 14px rgba(255,255,255,.08),0 0 0 30px rgba(255,255,255,.05)}
+  .hero-arte .disco img{width:72%}
+  .bolha{position:absolute;border-radius:50%;opacity:.9;animation:flutua 7s ease-in-out infinite}
+  .b1{width:70px;height:70px;background:var(--coral);top:6%;left:4%}
+  .b2{width:42px;height:42px;background:var(--gold-2);bottom:12%;right:8%;animation-delay:-2s}
+  .b3{width:26px;height:26px;background:var(--green);top:18%;right:2%;animation-delay:-4s}
+  @keyframes flutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  .onda{position:absolute;left:0;right:0;bottom:-1px;line-height:0}
+  @media(max-width:860px){.hero .wrap{grid-template-columns:1fr}.hero-arte{order:-1}.hero{padding:50px 0 100px}}
+
+  /* ── números ── */
+  .numeros{margin-top:-70px;position:relative;z-index:2}
+  .numeros .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .num{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;border-top:5px solid var(--c);text-align:center}
+  .num b{display:block;font-family:Nunito;font-size:2.6rem;font-weight:900;color:var(--c);line-height:1}
+  .num span{color:var(--muted);font-weight:600;font-size:.9rem}
+  @media(max-width:760px){.numeros .grid{grid-template-columns:repeat(2,1fr)}}
+
+  /* ── seções ── */
+  section.sec{padding:90px 0}
+  .sec-head{text-align:center;max-width:720px;margin:0 auto 44px}
+  .sec-head .tag{display:inline-block;font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--navy-2);background:var(--sky);padding:5px 14px;border-radius:999px;margin-bottom:14px}
+  .sec-head h2{font-size:clamp(1.8rem,3.2vw,2.6rem);font-weight:900;color:var(--navy)}
+  .sec-head p{color:var(--muted);font-size:1.05rem}
+  .alt{background:#fff}
+
+  /* ── encontre seu conselho ── */
+  .finder{background:linear-gradient(135deg,#fff 0%,#f2f7ff 100%);border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);padding:34px;display:grid;grid-template-columns:1fr 1.1fr;gap:30px;align-items:start}
+  .finder h3{font-size:1.6rem;color:var(--navy)}
+  .busca{position:relative;margin-top:14px}
+  .busca input{width:100%;font:500 1.05rem Inter,sans-serif;padding:16px 18px 16px 50px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink)}
+  .busca input:focus{border-color:var(--navy-2);outline:none;box-shadow:0 0 0 4px rgba(31,74,138,.12)}
+  .busca .lupa{position:absolute;left:18px;top:50%;transform:translateY(-50%);font-size:1.1rem}
+  .sugestoes{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .sugestoes button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:500 .82rem Inter,sans-serif;cursor:pointer;color:var(--navy-2)}
+  .sugestoes button:hover{background:var(--sky)}
+  .resultado{min-height:220px}
+  .res-vazio{height:100%;min-height:220px;border:2px dashed var(--line);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:20px}
+  .res-vazio span{font-size:2.4rem}
+  .res-card{background:#fff;border-radius:18px;border:1px solid var(--line);overflow:hidden;animation:surge .35s ease}
+  @keyframes surge{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .res-topo{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;padding:18px 20px;display:flex;gap:14px;align-items:center}
+  .res-topo .sigla{width:52px;height:52px;border-radius:50%;background:var(--gold);color:#1b1300;font-weight:900;display:flex;align-items:center;justify-content:center;font-family:Nunito;flex-shrink:0}
+  .res-topo h4{margin:0;font-size:1.2rem}
+  .res-topo small{opacity:.8}
+  .res-corpo{padding:18px 20px;display:grid;gap:10px;font-size:.95rem}
+  .res-corpo .linha{display:flex;gap:10px}
+  .res-corpo .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .multi{display:grid;gap:8px}
+  .multi button{text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;cursor:pointer;font:500 .95rem Inter,sans-serif}
+  .multi button:hover{border-color:var(--navy-2);background:var(--sky)}
+  @media(max-width:860px){.finder{grid-template-columns:1fr;padding:22px}}
+
+  /* ── o que fazemos ── */
+  .cards-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .cards-4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;transition:transform .2s,box-shadow .2s}
+  .feat:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+  .feat .ic{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:color-mix(in srgb,var(--c) 15%,#fff);margin-bottom:14px}
+  .feat h3{font-size:1.15rem;color:var(--navy)}
+  .feat p{color:var(--muted);margin:0;font-size:.95rem}
+  @media(max-width:960px){.cards-3,.cards-4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.cards-3,.cards-4{grid-template-columns:1fr}}
+  .duas-col{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:30px}
+  .lista-box{border-radius:var(--radius);padding:26px;border:1px solid var(--line);background:#fff}
+  .lista-box h3{display:flex;gap:10px;align-items:center}
+  .lista-box ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+  .lista-box li{display:flex;gap:10px;align-items:flex-start}
+  .lista-box li::before{content:var(--ico);flex-shrink:0}
+  .sim{--ico:'✅'} .nao{--ico:'✖️'}
+  .nao{background:#fff8f7;border-color:#fbd5d1}
+  @media(max-width:760px){.duas-col{grid-template-columns:1fr}}
+
+  /* ── denuncie ── */
+  .denuncie{background:linear-gradient(135deg,#7a1f2b 0%,#b23a3a 55%,var(--coral) 120%);color:#fff;border-radius:28px;padding:46px;display:grid;grid-template-columns:1.1fr 1fr;gap:34px;align-items:center;box-shadow:0 30px 60px rgba(178,58,58,.25)}
+  .denuncie h2{font-size:clamp(1.8rem,3vw,2.5rem);font-weight:900}
+  .denuncie p{color:#ffe3e0}
+  .canais{display:grid;gap:12px}
+  .canal{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:16px 18px;display:flex;gap:16px;align-items:center;text-decoration:none;color:#fff;transition:background .15s}
+  .canal:hover{background:rgba(255,255,255,.2)}
+  .canal b{font-family:Nunito;font-size:2rem;font-weight:900;min-width:78px}
+  .canal small{display:block;opacity:.85}
+  .passos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+  .passo{background:rgba(0,0,0,.15);border-radius:14px;padding:14px;font-size:.88rem}
+  .passo b{display:block;font-family:Nunito;font-size:1.4rem;color:var(--gold-2)}
+  @media(max-width:860px){.denuncie{grid-template-columns:1fr;padding:28px}.passos{grid-template-columns:1fr}}
+
+  /* ── conselhos ── */
+  .filtro-ct{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:26px}
+  .filtro-ct input{flex:1;min-width:240px;max-width:520px;font:500 1rem Inter,sans-serif;padding:13px 18px;border:2px solid var(--line);border-radius:999px}
+  .filtro-ct input:focus{border-color:var(--navy-2);outline:none}
+  .ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;align-items:start}
+  details.ct{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:box-shadow .2s}
+  details.ct:hover,details.ct[open]{box-shadow:var(--shadow)}
+  details.ct summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px}
+  details.ct summary::-webkit-details-marker{display:none}
+  details.ct summary::marker{content:''}
+  .ct .sig{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;font:900 .82rem Nunito;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ct .nm{flex:1;min-width:0}
+  .ct .nm b{display:block;font-family:Nunito;font-size:1.05rem;color:var(--navy)}
+  .ct .nm small{color:var(--muted);font-size:.78rem}
+  .ct .chev{transition:transform .2s;color:var(--muted)}
+  details.ct[open] .chev{transform:rotate(180deg)}
+  .ct-corpo{padding:4px 16px 18px;display:grid;gap:9px;font-size:.9rem;border-top:1px solid var(--line);padding-top:14px}
+  .ct-corpo .linha{display:flex;gap:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chips span{font-size:.75rem;background:var(--sky);color:var(--navy);padding:3px 10px;border-radius:999px}
+  .ct-corpo h5{margin:6px 0 2px;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .pessoas{display:grid;gap:3px}
+  .pessoas span{font-size:.88rem}
+  .coord{background:#fff7e0;border-radius:6px;padding:0 6px;font-size:.7rem;font-weight:700;color:#8a6200;margin-left:4px}
+  .nada{text-align:center;color:var(--muted);padding:30px;display:none}
+
+  /* ── projetos ── */
+  .proj{border-radius:var(--radius);overflow:hidden;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column}
+  .proj .capa{height:130px;display:flex;align-items:center;justify-content:center;font-size:3.2rem;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 55%,#fff))}
+  .proj .txt{padding:22px;flex:1}
+  .proj .txt h3{color:var(--navy);font-size:1.15rem}
+  .proj .txt p{color:var(--muted);font-size:.93rem;margin:0}
+
+  /* ── agenda ── */
+  .agenda{display:grid;gap:12px;max-width:880px;margin:0 auto}
+  .ev{display:flex;gap:18px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;transition:transform .15s}
+  .ev:hover{transform:translateX(4px)}
+  .ev .data{min-width:74px;text-align:center;border-radius:12px;background:var(--sky);padding:8px 6px;color:var(--navy)}
+  .ev .data b{display:block;font:900 1.5rem Nunito;line-height:1}
+  .ev .data small{font-weight:700;font-size:.72rem;text-transform:uppercase}
+  .ev h4{margin:0 0 2px;font-size:1.05rem;color:var(--ink)}
+  .ev p{margin:0;color:var(--muted);font-size:.88rem}
+  .ev .tipo{margin-left:auto;font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--c) 15%,#fff);color:var(--c);white-space:nowrap}
+  .ev.passado{opacity:.55}
+  .nota{text-align:center;color:var(--muted);font-size:.82rem;margin-top:16px}
+  @media(max-width:600px){.ev{flex-wrap:wrap}.ev .tipo{margin-left:0}}
+
+  /* ── ECA ── */
+  .eca-tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:22px}
+  .eca-tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 16px;font:600 .9rem Inter,sans-serif;cursor:pointer;color:var(--navy)}
+  .eca-tabs button.ativo{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .eca-painel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:34px;max-width:900px;margin:0 auto;box-shadow:var(--shadow);min-height:220px}
+  .eca-painel .art{font:800 .8rem Inter;letter-spacing:.12em;color:var(--gold);text-transform:uppercase}
+  .eca-painel blockquote{margin:10px 0 16px;font-family:Nunito;font-size:clamp(1.15rem,2vw,1.45rem);font-weight:700;color:var(--navy);line-height:1.45;border-left:5px solid var(--gold);padding-left:18px}
+  .eca-painel p{color:var(--muted);margin:0}
+  .eca-link{text-align:center;margin-top:22px}
+
+  /* ── história ── */
+  .linha-tempo{position:relative;max-width:900px;margin:0 auto;padding-left:34px}
+  .linha-tempo::before{content:'';position:absolute;left:11px;top:6px;bottom:6px;width:3px;background:linear-gradient(var(--gold),var(--navy-2));border-radius:3px}
+  .marco{position:relative;margin-bottom:26px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 22px}
+  .marco::before{content:'';position:absolute;left:-30px;top:22px;width:17px;height:17px;border-radius:50%;background:#fff;border:4px solid var(--gold)}
+  .marco .ano{font:900 1.3rem Nunito;color:var(--gold)}
+  .marco h4{margin:2px 0 4px;color:var(--navy);font-size:1.1rem}
+  .marco p{margin:0;color:var(--muted);font-size:.93rem}
+  .marco.hoje{background:linear-gradient(135deg,var(--navy),var(--navy-2));border:0}
+  .marco.hoje h4,.marco.hoje p{color:#fff}
+  .marco.hoje .ano{color:var(--gold-2)}
+
+  /* ── FAQ ── */
+  .faq{max-width:860px;margin:0 auto;display:grid;gap:10px}
+  .faq details{background:#fff;border:1px solid var(--line);border-radius:14px;padding:0 20px}
+  .faq summary{cursor:pointer;list-style:none;padding:18px 0;font-weight:700;color:var(--navy);display:flex;justify-content:space-between;gap:12px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:'+';font:900 1.4rem Nunito;color:var(--gold);transition:transform .2s}
+  .faq details[open] summary::after{transform:rotate(45deg)}
+  .faq details p{margin:0 0 18px;color:var(--muted)}
+
+  /* ── rodapé ── */
+  footer{background:#0e2140;color:#c4d1e6;padding:60px 0 26px;margin-top:40px}
+  footer .grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px}
+  footer h4{color:#fff;font-size:1rem}
+  footer a{color:#c4d1e6;text-decoration:none}
+  footer a:hover{color:#fff}
+  footer ul{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:.9rem}
+  footer .base{border-top:1px solid rgba(255,255,255,.1);margin-top:40px;padding-top:20px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.8rem}
+  @media(max-width:860px){footer .grid{grid-template-columns:1fr 1fr}}
+
+  /* ── saída rápida e voltar ao topo ── */
+  .saida{position:fixed;right:18px;bottom:18px;z-index:60;background:#111;color:#fff;border:0;border-radius:999px;padding:12px 18px;font:700 .85rem Inter,sans-serif;cursor:pointer;box-shadow:0 10px 25px rgba(0,0,0,.3)}
+  .saida:hover{background:#b23a3a}
+
+  /* ── alto contraste ── */
+  body.contraste{--bg:#000;--card:#000;--ink:#fff;--muted:#ffeb3b;--line:#ffeb3b;--sky:#000;--navy:#ffeb3b;--navy-2:#ffeb3b}
+  body.contraste .hero,body.contraste .denuncie,body.contraste footer,body.contraste .res-topo,body.contraste .marco.hoje{background:#000!important}
+  body.contraste .alt,body.contraste header.top,body.contraste .finder,body.contraste .res-card,body.contraste .busca input,body.contraste details.ct,body.contraste .feat,body.contraste .proj,body.contraste .ev,body.contraste .eca-painel,body.contraste .marco,body.contraste .faq details,body.contraste .lista-box,body.contraste nav.menu{background:#000!important;color:#fff;border-color:#ffeb3b}
+  body.contraste a{color:#ffeb3b}
+
+  .revela{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+  .revela.visivel{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}.revela{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<a class="sr-only" href="#conteudo">Pular para o conteúdo</a>
+
+<div class="alerta">
+  <div class="wrap">
+    <div>🚨 Criança ou adolescente em risco? <strong>Disque 100</strong> (24h, gratuito e anônimo) · Emergência: <strong>190</strong></div>
+    <div class="a11y" aria-label="Acessibilidade">
+      <button type="button" onclick="ajustaFonte(-1)" aria-label="Diminuir fonte">A−</button>
+      <button type="button" onclick="ajustaFonte(1)" aria-label="Aumentar fonte">A+</button>
+      <button type="button" onclick="document.body.classList.toggle('contraste')" aria-label="Alto contraste">◐ Contraste</button>
+    </div>
+  </div>
+</div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="marca" href="#inicio">
+      <img src="/icons/icon-192.png" alt="Logotipo do Conselho Tutelar de Salvador">
+      <span><b>Conselho Tutelar</b><small>Salvador · Bahia</small></span>
+    </a>
+    <nav class="menu" id="menu" aria-label="Navegação principal">
+      <a href="#encontre">Encontre seu CT</a>
+      <a href="#o-que-faz">O que fazemos</a>
+      <a href="#conselhos">Os 24 Conselhos</a>
+      <a href="#projetos">Projetos</a>
+      <a href="#agenda">Agenda</a>
+      <a href="#eca">ECA</a>
+      <a href="#historia">História</a>
+      <a href="#duvidas">Dúvidas</a>
+    </nav>
+    <a class="btn btn-navy btn-sm btn-denuncia" href="#denuncie">Como denunciar</a>
+    <button class="hamb" type="button" aria-label="Abrir menu" aria-controls="menu" onclick="document.getElementById('menu').classList.toggle('aberto')">☰</button>
+  </div>
+</header>
+
+<main id="conteudo">
+
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="inicio">
+  <div class="wrap">
+    <div>
+      <span class="selo">🛡️ Proteção integral · Lei Federal 8.069/1990</span>
+      <h1>Toda criança tem o direito de crescer <em>protegida</em>.</h1>
+      <p class="lead">Os Conselhos Tutelares de Salvador estão em todos os cantos da cidade para garantir que os direitos de crianças e adolescentes sejam respeitados — na família, na escola, na comunidade e no poder público.</p>
+      <div class="acoes">
+        <a class="btn btn-gold" href="#encontre">📍 Encontre o Conselho do seu bairro</a>
+        <a class="btn btn-ghost" href="#denuncie">Como denunciar</a>
+      </div>
+    </div>
+    <div class="hero-arte" aria-hidden="true">
+      <span class="bolha b1"></span><span class="bolha b2"></span><span class="bolha b3"></span>
+      <div class="disco"><img src="/icons/icon-512.png" alt=""></div>
+    </div>
+  </div>
+  <div class="onda" aria-hidden="true">
+    <svg viewBox="0 0 1440 90" preserveAspectRatio="none" width="100%" height="70"><path d="M0,60 C240,100 480,10 720,40 C960,70 1200,100 1440,40 L1440,90 L0,90 Z" fill="#f7f9fc"/></svg>
+  </div>
+</section>
+
+<!-- ═══ NÚMEROS ═══ -->
+<div class="numeros">
+  <div class="wrap grid">
+    <div class="num" style="--c:var(--navy-2)"><b data-conta="24" id="n-ct">0</b><span>Conselhos Tutelares</span></div>
+    <div class="num" style="--c:var(--coral)"><b data-conta="120" id="n-cons">0</b><span>Conselheiros(as) Tutelares</span></div>
+    <div class="num" style="--c:var(--green)"><b data-conta="0" id="n-bairros">0</b><span>Bairros e localidades</span></div>
+    <div class="num" style="--c:var(--gold)"><b data-conta="0" id="n-eca">0</b><span>anos de ECA</span></div>
+  </div>
+</div>
+
+<!-- ═══ ENCONTRE SEU CONSELHO ═══ -->
+<section class="sec" id="encontre">
+  <div class="wrap">
+    <div class="sec-head revela">
+      <span class="tag">Serviço</span>
+      <h2>Qual é o Conselho Tutelar do seu bairro?</h2>
+      <p>Cada bairro de Salvador é atendido por um Conselho Tutelar. Digite o nome do seu bairro e veja endereço, telefones e como chegar.</p>
+    </div>
+    <div class="finder revela">
+      <div>
+        <h3>Busque pelo bairro</h3>
+        <p style="color:var(--muted);margin:0">Também funciona com o nome do conselho (ex.: “Narandiba”).</p>
+        <div class="busca">
+          <span class="lupa" aria-hidden="true">🔎</span>
+          <label class="sr-only" for="busca-bairro">Nome do bairro</label>
+          <input id="busca-bairro" type="search" placeholder="Ex.: Liberdade, Pituba, Cajazeiras…" autocomplete="off" list="lista-bairros">
+          <datalist id="lista-bairros"></datalist>
+        </div>
+        <div class="sugestoes" id="sugestoes" aria-label="Bairros populares"></div>
+      </div>
+      <div class="resultado" id="resultado" aria-live="polite">
+        <div class="res-vazio"><span>🗺️</span><p>O resultado aparece aqui.<br>Comece digitando o nome do seu bairro.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ O QUE FAZEMOS ═══ -->
+<section class="sec alt" id="o-que-faz">
+  <div class="wrap">
+    <div class="sec-head revela">
+      <span class="tag">Atribuições · Art. 136 do ECA</span>
+      <h2>O que faz o Conselho Tutelar?</h2>
+      <p>É um órgão permanente e autônomo, escolhido pela comunidade, que age sempre que um direito de criança ou adolescente é ameaçado ou violado.</p>
+    </div>
+    <div class="cards-3">
+      <div class="feat revela" style="--c:var(--navy-2)"><div class="ic">🤝</div><h3>Atende e acolhe</h3><p>Recebe crianças, adolescentes e famílias em situação de risco e aplica as medidas de proteção previstas em lei.</p></div>
+      <div class="feat revela" style="--c:var(--coral)"><div class="ic">👨‍👩‍👧</div><h3>Orienta as famílias</h3><p>Atende e aconselha pais e responsáveis, encaminhando para programas de apoio e acompanhamento.</p></div>
+      <div class="feat revela" style="--c:var(--green)"><div class="ic">🏥</div><h3>Requisita serviços</h3><p>Pode requisitar serviços públicos de saúde, educação, assistência social, previdência, trabalho e segurança.</p></div>
+      <div class="feat revela" style="--c:var(--gold)"><div class="ic">⚖️</div><h3>Aciona a Justiça</h3><p>Encaminha ao Ministério Público e à autoridade judiciária os casos que são de sua competência.</p></div>
+      <div class="feat revela" style="--c:var(--lilac)"><div class="ic">📄</div><h3>Requisita documentos</h3><p>Solicita certidões de nascimento e de óbito de crianças e adolescentes, quando necessário.</p></div>
+      <div class="feat revela" style="--c:var(--teal)"><div class="ic">📢</div><h3>Fiscaliza e propõe</h3><p>Fiscaliza entidades de atendimento e assessora o poder público na elaboração de políticas para a infância.</p></div>
+    </div>
+    <div class="duas-col">
+      <div class="lista-box sim revela">
+        <h3>👍 Procure o Conselho quando…</h3>
+        <ul>
+          <li class="sim">houver suspeita de violência física, psicológica ou sexual;</li>
+          <li class="sim">a criança estiver em situação de abandono ou negligência;</li>
+          <li class="sim">houver trabalho infantil ou exploração;</li>
+          <li class="sim">a criança estiver fora da escola ou com faltas frequentes sem justificativa;</li>
+          <li class="sim">for negado atendimento de saúde, vaga escolar ou outro direito.</li>
+        </ul>
+      </div>
+      <div class="lista-box nao revela">
+        <h3>💡 O Conselho Tutelar não…</h3>
+        <ul>
+          <li class="nao">é polícia nem delegacia — não prende nem investiga crimes;</li>
+          <li class="nao">é órgão da Justiça — não julga, não define guarda nem pensão;</li>
+          <li class="nao">serve para “dar susto” em criança ou adolescente;</li>
+          <li class="nao">substitui o papel da família, da escola ou dos serviços públicos;</li>
+          <li class="nao">cobra por nenhum atendimento — o serviço é sempre gratuito.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DENUNCIE ═══ -->
+<section class="sec" id="denuncie">
+  <div class="wrap">
+    <div class="denuncie revela">
+      <div>
+        <h2>Viu, suspeitou ou sabe de alguma violação? Denuncie.</h2>
+        <p>Você não precisa ter certeza nem provas. A denúncia pode ser anônima e é o primeiro passo para proteger uma criança. Proteger é dever de todos (Art. 70 do ECA).</p>
+        <div class="passos">
+          <div class="passo"><b>1</b>Anote o que viu: quem, onde, quando.</div>
+          <div class="passo"><b>2</b>Ligue para o Disque 100 ou procure o Conselho do bairro.</div>
+          <div class="passo"><b>3</b>O caso é registrado e encaminhado para proteção.</div>
+        </div>
+      </div>
+      <div class="canais">
+        <a class="canal" href="tel:100"><b>100</b><span>Disque Direitos Humanos<small>24 horas · gratuito · anônimo</small></span></a>
+        <a class="canal" href="tel:190"><b>190</b><span>Polícia Militar<small>Emergência e flagrante de violência</small></span></a>
+        <a class="canal" href="#encontre"><b>📍</b><span>Conselho Tutelar do seu bairro<small>Atendimento presencial e por telefone</small></span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ OS 24 CONSELHOS ═══ -->
+<section class="sec alt" id="conselhos">
+  <div class="wrap">
+    <div class="sec-head revela">
+      <span class="tag">Rede de proteção</span>
+      <h2>Os 24 Conselhos Tutelares de Salvador</h2>
+      <p>Clique em um conselho para ver endereço, contatos, conselheiros(as) e bairros atendidos.</p>
+    </div>
+    <div class="filtro-ct">
+      <label class="sr-only" for="filtro-ct">Filtrar conselhos</label>
+      <input id="filtro-ct" type="search" placeholder="Filtrar por conselho, bairro ou conselheiro(a)…">
+    </div>
+    <div class="ct-grid" id="ct-grid"></div>
+    <p class="nada" id="ct-nada">Nenhum conselho encontrado para essa busca.</p>
+  </div>
+</section>
+
+<!-- ═══ PROJETOS ═══ -->
+<section class="sec" id="projetos">
+  <div class="wrap">
+    <div class="sec-head revela">
+      <span class="tag">Em ação</span>
+      <h2>Projetos e frentes de trabalho</h2>
+      <p>Além do atendimento diário, os Conselhos atuam em ações que levam a proteção para onde as crianças estão.</p>
+    </div>
+    <div class="cards-4" id="projetos-grid"></div>
+  </div>
+</section>
+
+<!-- ═══ AGENDA ═══ -->
+<section class="sec alt" id="agenda">
+  <div class="wrap">
+    <div class="sec-head revela">
+      <span class="tag">Agenda</span>
+      <h2>Eventos e datas importantes</h2>
+      <p>Campanhas, operações especiais e datas de mobilização pelos direitos de crianças e adolescentes.</p>
+    </div>
+    <div class="agenda" id="agenda-lista"></div>
+    <p class="nota">Datas de operações especiais podem ser ajustadas conforme o calendário oficial da cidade.</p>
+  </div>
+</section>
+
+<!-- ═══ ECA ═══ -->
+<section class="sec" id="eca">
+  <div class="wrap">
+    <div class="sec-head revela">
+      <span class="tag">Lei 8.069/1990</span>
+      <h2>Estatuto da Criança e do Adolescente</h2>
+      <p>O ECA é a lei que garante a crianças e adolescentes a condição de sujeitos de direitos, com prioridade absoluta. Conheça alguns artigos essenciais.</p>
+    </div>
+    <div class="eca-tabs" id="eca-tabs" role="tablist"></div>
+    <div class="eca-painel revela" id="eca-painel" role="tabpanel" aria-live="polite"></div>
+    <div class="eca-link"><a class="btn btn-navy" href="https://www.planalto.gov.br/ccivil_03/leis/l8069.htm" target="_blank" rel="noopener">📘 Ler o ECA completo (Planalto)</a></div>
+  </div>
+</section>
+
+<!-- ═══ HISTÓRIA ═══ -->
+<section class="sec alt" id="historia">
+  <div class="wrap">
+    <div class="sec-head revela">
+      <span class="tag">Nossa história</span>
+      <h2>Da “situação irregular” à proteção integral</h2>
+      <p>O Conselho Tutelar nasce de uma mudança profunda: crianças deixam de ser vistas como “menores” e passam a ser reconhecidas como cidadãs, com direitos.</p>
+    </div>
+    <div class="linha-tempo" id="linha-tempo"></div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="sec" id="duvidas">
+  <div class="wrap">
+    <div class="sec-head revela">
+      <span class="tag">Dúvidas frequentes</span>
+      <h2>Perguntas que a gente mais escuta</h2>
+    </div>
+    <div class="faq" id="faq"></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <div class="marca" style="color:#fff;margin-bottom:12px"><img src="/icons/icon-192.png" alt="" style="background:#fff;border-radius:12px;padding:3px"><span><b>Conselho Tutelar</b><small style="color:#9fb0cc">Salvador · Bahia</small></span></div>
+        <p style="font-size:.9rem;margin:0">Órgão permanente e autônomo, não jurisdicional, encarregado pela sociedade de zelar pelo cumprimento dos direitos da criança e do adolescente (Art. 131 do ECA).</p>
+      </div>
+      <div>
+        <h4>Navegue</h4>
+        <ul>
+          <li><a href="#encontre">Encontre seu CT</a></li>
+          <li><a href="#conselhos">Os 24 Conselhos</a></li>
+          <li><a href="#projetos">Projetos</a></li>
+          <li><a href="#agenda">Agenda</a></li>
+          <li><a href="#historia">História</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Canais de denúncia</h4>
+        <ul>
+          <li><a href="tel:100">📞 Disque 100 — 24h</a></li>
+          <li><a href="tel:190">🚓 190 — Polícia Militar</a></li>
+          <li><a href="#encontre">📍 Conselho do seu bairro</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Legislação</h4>
+        <ul>
+          <li><a href="https://www.planalto.gov.br/ccivil_03/leis/l8069.htm" target="_blank" rel="noopener">ECA — Lei 8.069/1990</a></li>
+          <li><a href="#eca">Artigos essenciais</a></li>
+          <li><a href="/" title="Acesso restrito a conselheiros e equipe">🔒 Área restrita (Conecta-CT)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="base">
+      <span>© <span id="ano-atual"></span> Conselhos Tutelares de Salvador/BA</span>
+      <span>Atendimento gratuito · Proteção é dever de todos</span>
+    </div>
+  </div>
+</footer>
+
+<button class="saida" type="button" onclick="saidaRapida()" title="Sai imediatamente deste site (atalho: Esc duas vezes)">✕ Saída rápida</button>
+
+<!-- VLibras: tradução para Libras (padrão dos sites públicos do governo) -->
+<div vw class="enabled">
+  <div vw-access-button class="active"></div>
+  <div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>
+</div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>try { new window.VLibras.Widget('https://vlibras.gov.br/app') } catch (e) {}</script>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  CONTEÚDO EDITÁVEL — atualize aqui projetos, agenda e perguntas.
+// ════════════════════════════════════════════════════════════════
+
+const PROJETOS = [
+  { icone: '🎭', cor: '#e0a91b', titulo: 'Salvador Acolhe', texto: 'No Carnaval e no Réveillon, conselheiros atuam em postos de acolhimento nos circuitos, identificando crianças com pulseirinhas e reunindo famílias.' },
+  { icone: '🕸️', cor: '#1f4a8a', titulo: 'Rede de Proteção', texto: 'Articulação permanente com escolas, unidades de saúde, CRAS, CREAS, Ministério Público e Justiça para que cada caso tenha resposta.' },
+  { icone: '🎤', cor: '#2fae73', titulo: 'ECA nas Comunidades', texto: 'Rodas de conversa e palestras em escolas, associações e igrejas para que famílias e educadores conheçam os direitos e saibam quando acionar o Conselho.' },
+  { icone: '🗳️', cor: '#8b6cf0', titulo: 'Escolha Unificada', texto: 'A cada quatro anos a população escolhe seus conselheiros tutelares. Participar é fortalecer a proteção da infância no seu bairro.' },
+]
+
+// tipo: 'campanha' | 'operacao' | 'eleicao' | 'data'
+const AGENDA = [
+  { data: '2026-12-31', titulo: 'Salvador Acolhe · Réveillon', texto: 'Postos de acolhimento e identificação de crianças nas festas de virada.', tipo: 'operacao' },
+  { data: '2027-02-01', mesInteiro: true, titulo: 'Salvador Acolhe · Carnaval 2027', texto: 'Conselheiros nos circuitos Dodô, Osmar e Batatinha com postos de acolhimento.', tipo: 'operacao' },
+  { data: '2027-05-18', titulo: '18 de Maio', texto: 'Dia Nacional de Combate ao Abuso e à Exploração Sexual de Crianças e Adolescentes.', tipo: 'campanha' },
+  { data: '2027-06-12', titulo: 'Dia Mundial contra o Trabalho Infantil', texto: 'Mobilização pela erradicação do trabalho infantil.', tipo: 'campanha' },
+  { data: '2027-07-13', titulo: 'Aniversário do ECA', texto: 'O Estatuto da Criança e do Adolescente completa 37 anos.', tipo: 'data' },
+  { data: '2027-10-03', titulo: 'Processo de Escolha Unificado', texto: 'Eleição dos conselheiros tutelares em todo o Brasil (primeiro domingo de outubro).', tipo: 'eleicao' },
+  { data: '2027-10-12', titulo: 'Dia das Crianças', texto: 'Ações de convivência e direitos nas comunidades.', tipo: 'data' },
+  { data: '2027-11-20', titulo: 'Dia Universal dos Direitos da Criança', texto: 'Aniversário da Convenção da ONU sobre os Direitos da Criança (1989).', tipo: 'campanha' },
+]
+
+const ECA_ARTIGOS = [
+  { aba: 'Quem é criança?', art: 'Art. 2º', texto: 'Considera-se criança, para os efeitos desta Lei, a pessoa até doze anos de idade incompletos, e adolescente aquela entre doze e dezoito anos de idade.', nota: 'Em casos expressos em lei, o Estatuto se aplica excepcionalmente a pessoas entre 18 e 21 anos.' },
+  { aba: 'Prioridade absoluta', art: 'Art. 4º', texto: 'É dever da família, da comunidade, da sociedade em geral e do poder público assegurar, com absoluta prioridade, a efetivação dos direitos referentes à vida, à saúde, à alimentação, à educação, ao esporte, ao lazer, à profissionalização, à cultura, à dignidade, ao respeito, à liberdade e à convivência familiar e comunitária.', nota: 'Prioridade absoluta significa que crianças e adolescentes vêm primeiro no atendimento e nas políticas públicas.' },
+  { aba: 'Nenhuma violência', art: 'Art. 5º', texto: 'Nenhuma criança ou adolescente será objeto de qualquer forma de negligência, discriminação, exploração, violência, crueldade e opressão, punido na forma da lei qualquer atentado, por ação ou omissão, aos seus direitos fundamentais.', nota: 'Omissão também é violação: deixar de agir diante de um risco conhecido é responsabilizável.' },
+  { aba: 'Dignidade', art: 'Art. 18', texto: 'É dever de todos velar pela dignidade da criança e do adolescente, pondo-os a salvo de qualquer tratamento desumano, violento, aterrorizante, vexatório ou constrangedor.', nota: 'A proteção não é tarefa apenas da família ou do Estado — é responsabilidade de todos nós.' },
+  { aba: 'Prevenir é dever', art: 'Art. 70', texto: 'É dever de todos prevenir a ocorrência de ameaça ou violação dos direitos da criança e do adolescente.', nota: 'Por isso, ao suspeitar de uma violação, comunique o Conselho Tutelar ou ligue para o Disque 100.' },
+  { aba: 'O Conselho Tutelar', art: 'Art. 131', texto: 'O Conselho Tutelar é órgão permanente e autônomo, não jurisdicional, encarregado pela sociedade de zelar pelo cumprimento dos direitos da criança e do adolescente, definidos nesta Lei.', nota: 'Cada Conselho é formado por cinco membros escolhidos pela população local.' },
+]
+
+const HISTORIA = [
+  { ano: '1927', titulo: 'Código de Menores', texto: 'O primeiro código brasileiro voltado à infância trata a criança pobre como “menor” a ser corrigido, com foco na punição e no recolhimento.' },
+  { ano: '1979', titulo: 'Doutrina da situação irregular', texto: 'Um novo Código de Menores mantém a lógica de intervir apenas quando a criança está em “situação irregular”, sem reconhecê-la como sujeito de direitos.' },
+  { ano: '1988', titulo: 'Constituição Federal · Art. 227', texto: 'A Constituição Cidadã estabelece a prioridade absoluta dos direitos de crianças e adolescentes como dever da família, da sociedade e do Estado.' },
+  { ano: '1989', titulo: 'Convenção da ONU', texto: 'A Convenção sobre os Direitos da Criança é adotada pela ONU em 20 de novembro e se torna o tratado de direitos humanos mais ratificado do mundo.' },
+  { ano: '1990', titulo: 'Nasce o ECA e o Conselho Tutelar', texto: 'Em 13 de julho é sancionada a Lei 8.069, o Estatuto da Criança e do Adolescente, que adota a proteção integral e cria os Conselhos Tutelares em todos os municípios.' },
+  { ano: '1991', titulo: 'CONANDA', texto: 'É criado o Conselho Nacional dos Direitos da Criança e do Adolescente, responsável por diretrizes nacionais da política de proteção.' },
+  { ano: '2012', titulo: 'Valorização da função', texto: 'A Lei 12.696 assegura direitos sociais aos conselheiros, amplia o mandato para quatro anos e institui o processo de escolha unificado em todo o país.' },
+  { ano: '2015', titulo: 'Primeira escolha unificada', texto: 'Pela primeira vez, todos os municípios brasileiros escolhem seus conselheiros tutelares no mesmo dia.' },
+  { ano: 'Hoje', titulo: 'Salvador: 24 Conselhos, 120 conselheiros', texto: 'A capital baiana conta com 24 Conselhos Tutelares distribuídos pelas regiões da cidade, garantindo atendimento próximo a cada comunidade.', hoje: true },
+]
+
+const FAQ = [
+  { p: 'Preciso me identificar para fazer uma denúncia?', r: 'Não. A denúncia pode ser anônima, tanto pelo Disque 100 quanto no Conselho Tutelar. O importante é informar o máximo de detalhes possível: endereço, nomes e o que foi observado.' },
+  { p: 'O Conselho Tutelar tira a guarda dos pais?', r: 'Não. Decisões sobre guarda, perda do poder familiar e adoção são exclusivas da Justiça. O Conselho aplica medidas de proteção e, quando necessário, comunica o Ministério Público e o Judiciário.' },
+  { p: 'Quem pode procurar o Conselho Tutelar?', r: 'Qualquer pessoa: a própria criança ou adolescente, familiares, vizinhos, professores, profissionais de saúde ou qualquer cidadão que saiba de uma ameaça ou violação de direitos.' },
+  { p: 'O atendimento é pago?', r: 'Nunca. Todo atendimento do Conselho Tutelar é público e gratuito.' },
+  { p: 'Como sei qual Conselho atende meu bairro?', r: 'Use a ferramenta “Encontre seu CT” no topo desta página: digite o nome do seu bairro e veja o endereço e os telefones do Conselho responsável.' },
+  { p: 'O Conselho funciona fora do horário comercial?', r: 'Sim. Além do expediente, os Conselhos de Salvador mantêm escala de plantão, inclusive nos fins de semana. Em emergências, ligue também para o 190.' },
+  { p: 'Como me torno conselheiro(a) tutelar?', r: 'Pelo processo de escolha unificado, realizado a cada quatro anos. O ECA exige reconhecida idoneidade moral, idade superior a 21 anos e residência no município, além dos requisitos definidos em lei municipal.' },
+]
+
+// ════════════════════════════════════════════════════════════════
+//  DADOS DOS 24 CONSELHOS (copiados da base do sistema Conecta-CT)
+// ════════════════════════════════════════════════════════════════
+const CONSELHOS_BAIRROS = [
+  { num:'I', nome:'CT I – Roma', regiao:'Prefeitura Bairro V – Cidade Baixa', endereco:'Rua Arauá, 0 – Ribeira (Antiga escola Eloyna Barradas)', telefone:'3202-7351', celular:'99634-7946', email:'conselho.roma@salvador.ba.gov.br', coordenador:'Tâmara Pereira dos Santos', conselheiros:['Tâmara Pereira dos Santos','Joselina Reis Oliveira Silva','Maria Aparecida Silva Lima','Ana Suely Soares Santos dos Anjos','Tania Lima Pereira da Silva'], bairros:['Boa Viagem','Bonfim','Calçada','Caminho de Areia','Mangueira','Mares','Massaranduba','Monte Serrat','Ribeira','Roma','Uruguai','Vila Ruy Barbosa/Jardim Cruzeiro'] },
+  { num:'II', nome:'CT II – Barroquinha', regiao:'Prefeitura Bairro I – Centro/Brotas', endereco:'Largo da Barroquinha s/n – Final de linha', telefone:'3202-7352', celular:'71 99678-5730', email:'Conselho.barroquinha@salvador.ba.gov.br', coordenador:'Elisangela Silva Souza Ramos', conselheiros:['Marta Paim Teles','Daniela dos Santos Lirios','Graziela dos Santos Cerqueira','Elisangela Silva Souza Ramos','Samile Santos da Cruz Souza'], bairros:['Barbalho','Barris','Centro','Centro Histórico','Comércio','Dois de Julho','Garcia','Macaúbas','Nazaré','Santo Antônio','Saúde','Tororó'] },
+  { num:'III', nome:'CT III – Vila Laura', regiao:'Prefeitura Bairro I – Centro/Brotas', endereco:'Rua Carlos Chenaud, 18 – Vila Laura Conceição', telefone:'3202-7353', celular:'71 99995-9048', email:'conselho.vilalaura@salvador.ba.gov.br', coordenador:'Wesley Santana de Menezes', conselheiros:['Wesley Santana de Menezes','Rogério Tomás Rodrigues Conceição','Meire Batista de Oliveira','Sandra Santos de Santana','Edneide Maria dos Santos Almeida'], bairros:['Cosme de Farias','Luiz Anselmo','Matatu','Santo Agostinho','Vila Laura'] },
+  { num:'IV', nome:'CT IV – Liberdade', regiao:'Prefeitura Bairro VII – São Caetano/Liberdade', endereco:'Rua do Queimado Nº17 – Liberdade (Anexo à OAF)', telefone:'3202-7354', celular:'99628-7916', email:'conselho.liberdade@salvador.ba.gov.br', coordenador:'Mateus Ferreira de Morais', conselheiros:['Mateus Ferreira de Morais','Luzivane Guimarães da Silva Barbosa Melo','Aline Gomes da Silva','Josenira Meireles dos Santos','Gilcimara Reis da Mota Oliveira'], bairros:['Baixa de Quintas','Caixa D\'Água','Cidade Nova','Curuzu','IAPI','Lapinha','Liberdade','Pau Miúdo','Pero Vaz','Santa Mônica'] },
+  { num:'V', nome:'CT V – Itapuã', regiao:'Prefeitura Bairro IV – Itapuã/Ipitanga', endereco:'Rua da Ilha s/n (ao lado do Centro Esportivo e Cultural de Itapuã)', telefone:'3202-7355', celular:'99629-2877', email:'Conselho.itapua@salvador.ba.gov.br', coordenador:'Noemi Brito da Silva', conselheiros:['Noemi Brito da Silva','Bárbara Gleice da Silva dos Santos','Vatuse Camões Batista Souza','Willian dos Santos Teles','Antonisa Vieira Vale'], bairros:['Bairro da Paz','Itapuã','Alto do Coqueirinho','Piatã','Patamares','Stella Maris'] },
+  { num:'VI', nome:'CT VI – Pernambués', regiao:'Prefeitura Bairro IV – Cabula/Tancredo Neves', endereco:'Rua Thomaz Gonzaga nº 150 (dentro do Centro Social Urbano)', telefone:'3202-7356', celular:'99628-9588', email:'Conselho.pernambues@salvador.ba.gov.br', coordenador:'Georgia Santos da Cruz', conselheiros:['Georgia Santos da Cruz','Ana Lazara Ferreira Santiago','Luciene Pereira dos Santos','Edmaria Santana Nunes','Kelly Daiane Santiago de Santana Reis'], bairros:['Arraial do Retiro','Alto do Cruzeiro','Pernambués','Resgate','São Gonçalo','Saramandaia'] },
+  { num:'VII', nome:'CT VII – Castelo Branco', regiao:'Prefeitura Bairro III – Cajazeiras', endereco:'Rua A s/n – 3ª Etapa (Centro Social Urbano)', telefone:'3202-7357', celular:'99636-4471', email:'Conselho.castelo@salvador.ba.gov.br', coordenador:'Raquel Rodrigues dos Santos', conselheiros:['Raquel Rodrigues dos Santos','Renan Oliveira dos Santos','Joselina Soares Ribeiro de Oliveira','Roseane de Araujo de Jesus','Celeste Caldas de Jesus Macena'], bairros:['Canabrava','Castelo Branco','São Rafael','Dom Avelar','Nova Brasília','Pau da Lima','São Marcos','Sete de Abril','Vila Canária','Trobogy','Vale dos Lagos','Jardim Cajazeiras'] },
+  { num:'VIII', nome:'CT VIII – Cajazeiras', regiao:'Prefeitura Bairro III – Cajazeiras', endereco:'Estrada do Coqueiro nº1902 – Fazenda Grande II', telefone:'3202-7358', celular:'71 99991-0373', email:'Conselho.cajazeiras@salvador.ba.gov.br', coordenador:'Laura Souza da Silva Santana', conselheiros:['Laura Souza da Silva Santana','Analice de Souza Santos','Sônia Maria Soares Ribeiro Jesus','Flávia Regina Santos da Silva','Jacilda Brito de Araujo Cerqueira'], bairros:['Cajazeiras VIII','Cajazeiras X','Cajazeiras XI','Fazenda Grande I','Fazenda Grande II','Fazenda Grande III','Fazenda Grande IV','Boca da Mata','Jaguaripe I','Novo Marotinho'] },
+  { num:'IX', nome:'CT IX – Periperi', regiao:'Prefeitura Bairro II – Subúrbio/Ilhas', endereco:'Rua Almáquio Vasconcelos, 13 – Periperi', telefone:'3202-7359 / 3308-0173', celular:'71 99656-0716', email:'Conselho.periperi@salvador.ba.gov.br', coordenador:'Márcia dos Santos Silva', conselheiros:['Márcia dos Santos Silva','Belvan Passos da Paixão Conceição','Marcos Vinicios Garrido da Silva','Sandra Passos Calhau Pires','Aracele Araujo Silva Barbosa'], bairros:['Alto da Terezinha','Coutos','Fazenda Coutos','Itacaranha','Nova Constituinte','Periperi','Praia Grande','Colinas de Periperi','Mirantes de Periperi','Vista Alegre'] },
+  { num:'X', nome:'CT X – Federação', regiao:'Prefeitura Bairro VI – Barra/Pituba', endereco:'2ª Travessa Pedro Gama, s/n – Federação (CSU)', telefone:'3202-7360', celular:'99623-2412', email:'Conselho.federacao@salvador.ba.gov.br', coordenador:'Francirley dos Reis Amorim', conselheiros:['Francirley dos Reis Amorim','Eranilde de Jesus Lopes','Estela Oliveira Santos','Zilda Nunes Leal dos Santos','Rosana Jesus da Silva Ribeiro'], bairros:['Alto das Pombas','Eng. Velho da Federação','Rio Vermelho','Federação','Amaralina'] },
+  { num:'XI', nome:'CT XI – Boca do Rio', regiao:'Prefeitura Bairro IV – Itapuã/Ipitanga', endereco:'Rua Clemente Mariani, 45 – Boca do Rio', telefone:'3202-7361', celular:'71 98800-6246', email:'Conselho.bocadorio@salvador.ba.gov.br', coordenador:'Bianca de Azevedo Silveira', conselheiros:['Bianca de Azevedo Silveira','Robson Pinto dos Santos','Sileda Muniz Silva Regis','Andrea Helma Santos Borges','Edineuza da Anunciação Santos Ramos'], bairros:['Boca do Rio','Imbuí','Pituaçu','Costa Azul','Jardim Armação','Stiep'] },
+  { num:'XII', nome:'CT XII – São Caetano', regiao:'Prefeitura Bairro VII – São Caetano/Liberdade', endereco:'Ladeira da Alegria, S/N – São Caetano (Anexo à escola Helena Magalhães)', telefone:'3202-7362', celular:'71 98549-6007', email:'Conselho.saocaetano@salvador.ba.gov.br', coordenador:'Sidney Silva Santos', conselheiros:['Sidney Silva Santos','Cristiane Passos dos Santos','Lucicleide Oliveira de Santana Castro','Cidinalva da Silva Santos','Carmem Lucia dos Passos Suzart Souza'], bairros:['Boa Vista de São Caetano','Bom Juá','Campinas de Pirajá','Capelinha','Fazenda Grande do Retiro','Marechal Rondon','Retiro','São Caetano'] },
+  { num:'XIII', nome:'CT XIII – Narandiba', regiao:'Prefeitura Bairro VIII – Cabula/Tancredo Neves', endereco:'Avenida Edgard Santos nº511 E (dentro do Centro Social Urbano)', telefone:'3202-7363', celular:'71 99982-9428', email:'Conselho.narandiba@salvador.ba.gov.br', coordenador:'Alex Fabio Teles Brito', conselheiros:['Alex Fabio Teles Brito','Jailton Santana de Jesus','Regiane Santos de Jesus Lima','Fábio Barreto Pereira','Joilson Souza de Almeida'], bairros:['Arenoso','Beiru/Tancredo Neves','Cabula VI','Narandiba','Nova Sussuarana','Novo Horizonte','Saboeiro','Sussuarana','CAB','Doron'] },
+  { num:'XIV', nome:'CT XIV – Ilhas', regiao:'Prefeitura Bairro II – Subúrbio/Ilhas', endereco:'Rua Benjamin de Souza, nº 101 – São Tomé de Paripe', telefone:'3202-7364', celular:'71 99623-3595', email:'Conselho.ilhas@salvador.ba.gov.br', coordenador:'Viviane Silva Peixoto', conselheiros:['Viviane Silva Peixoto','Ester Torres Oliveira','Janice Ferreira Sales','Hildomar Soares de Oliveira','Magali de Souza Santos'], bairros:['Ilha Bom Jesus dos Passos','Ilha de Maré','Ilha dos Frades','Paripe','São Tomé'] },
+  { num:'XV', nome:'CT XV – Barra', regiao:'Prefeitura Bairro VI – Barra/Pituba', endereco:'Rua Manoel Barreto, 415 – Graça', telefone:'3202-7365', celular:'99950-9879', email:'Conselho.barra@salvador.ba.gov.br', coordenador:'Mianga Madillê da Silva Gavião', conselheiros:['Mianga Madillê da Silva Gavião','Gersina da Silva Praxedes','Robert Souza dos Santos','Rafaela de Castro Correia','Vania dos Santos Soares'], bairros:['Barra','Calabar','Chame-chame','Graça','Ondina','Vitória','Canela'] },
+  { num:'XVI', nome:'CT XVI – Ipitanga', regiao:'Prefeitura Bairro IV – Itapuã/Ipitanga', endereco:'Rua I, Setor E, s/n (dentro do Centro Social Urbano – Mussurunga)', telefone:'(71) 3202-7366', celular:'71 99950-8293', email:'Conselho.mussurunga@salvador.ba.gov.br', coordenador:'Iuine Taiane Costa Badaró', conselheiros:['Iuine Taiane Costa Badaró','Cíntia Mara Conceição de Jesus','Ana Caroline dos Reis Barbosa','Rosenilda Santana dos Reis Santos','Ana Paula dos Santos'], bairros:['Mussurunga','São Cristóvão','Nova Esperança','Jardim Nova Esperança'] },
+  { num:'XVII', nome:'CT XVII – Pituba', regiao:'Prefeitura Bairro VI – Barra/Pituba', endereco:'Alameda das Espatódeas, S/N – Pça do Caminho das Árvores (Antiga Central de Regulação)', telefone:'3202-7367', celular:'71 98796-0897', email:'Conselho.pituba@salvador.ba.gov.br', coordenador:'Maria Antônia Bento Carvalho', conselheiros:['Maria Antônia Bento Carvalho','Gicelia Freitas dos Santos','Valmir Ferreira da Silva','Ilma Santos Conceição','Keli Cristiane Viana Hirsch'], bairros:['Caminho das Árvores','Itaigara','Pituba'] },
+  { num:'XVIII', nome:'CT XVIII – Valéria', regiao:'Prefeitura Bairro X – Valéria', endereco:'Valéria – endereço a confirmar', telefone:'3202-7368', celular:'71 99608-6286', email:'Conselho.valeria@salvador.ba.gov.br', coordenador:'Elionai Lima dos Santos', conselheiros:['Elionai Lima dos Santos','Rosemeire Duarte Santos','Ana Paula Viana de Souza','Matheus Borges de Souza','Josiane dos Santos Pereira Braitt de Souza'], bairros:['Moradas da Lagoa','Palestina','Pirajá','Valéria'] },
+  { num:'XIX', nome:'CT XIX – Nordeste de Amaralina', regiao:'Prefeitura Bairro VI – Barra/Pituba', endereco:'2ª Travessa Pedro Gama s/n (CSU/Vasco da Gama) – SEDE PROVISÓRIA', telefone:'3202-7360', celular:'71 99929-0258', email:'conselho.nordeste@salvador.ba.gov.br', coordenador:'Aloisia Reis dos Santos', conselheiros:['Aloisia Reis dos Santos','Marcos Silva de Oliveira','Jociene da Paz Lessa Ferreira','Andressa Costa dos Santos','Jailson Pacheco dos Santos'], bairros:['Nordeste de Amaralina','Santa Cruz','Vale das Pedrinhas','Chapada do Rio Vermelho'] },
+  { num:'XX', nome:'CT XX – Subúrbio', regiao:'Prefeitura Bairro II – Subúrbio/Ilhas', endereco:'Rua Arauá, 0 – Ribeira (próximo ao Cemei Eloyna Barradas) – SEDE PROVISÓRIA', telefone:'3202-7351', celular:'71 99904-9553', email:'Conselho.suburbio@salvador.ba.gov.br', coordenador:'Jeane Silva dos Santos Almeida', conselheiros:['Jeane Silva dos Santos Almeida','Mateus Sousa do Nascimento','Flávia Rocha Alencar Pereira','Joanderson Bispo dos Santos','André Santos Santana'], bairros:['Lobato','Santa Luzia','Alto do Cabrito','São João do Cabrito','Plataforma','Rio Sena','Ilha Amarela'] },
+  { num:'XXI', nome:'CT XXI – Águas Claras', regiao:'Prefeitura Bairro III – Cajazeiras', endereco:'Rua A, s/n – 3ª Etapa – Castelo Branco (CSU) – SEDE PROVISÓRIA', telefone:'3202-7357', celular:'71 99988-8475', email:'conselho.aguasclaras@salvador.ba.gov.br', coordenador:'Mario Costa Gonçalves Filho', conselheiros:['Mario Costa Gonçalves Filho','Edson Barcelos dos Santos','Ednalda Nunes Araújo Souza','Araci da Silva Souza','Ana Glaucia Anjos Andrade dos Santos'], bairros:['Águas Claras','Cajazeiras II','Cajazeiras IV','Cajazeiras V','Cajazeiras VI','Cajazeiras VII','Porto Seco Pirajá'] },
+  { num:'XXII', nome:'CT XXII – Cabula', regiao:'Prefeitura Bairro IV – Cabula/Tancredo Neves', endereco:'Avenida Edgard Santos nº511 E (CSU) – SEDE PROVISÓRIA', telefone:'3202-7363', celular:'71 99742-5958', email:'Conselho.cabula@salvador.ba.gov.br', coordenador:'Jandiara Felix Dorea', conselheiros:['Jandiara Felix Dorea','Noemi Tavares Xavier dos Santos','Rosana Meireles Barbosa','Djanira da Costa Pereira','Ana Cristina Almeida dos Santos'], bairros:['Barreiras','Cabula','Calabetão','Engomadeira','Jardim Santo Inácio','Mata Escura','Granjas Rurais'] },
+  { num:'XXIII', nome:'CT XXIII – Jardim das Margaridas', regiao:'Prefeitura Bairro IV – Itapuã/Ipitanga', endereco:'Rua I, Setor E, s/n – CSU Mussurunga 1 – SEDE PROVISÓRIA', telefone:'3202-7366', celular:'71 99697-4276', email:'Conselho.jardim@salvador.ba.gov.br', coordenador:'Lindinalva Silva Santos', conselheiros:['Lindinalva Silva Santos','Priscila de Almeida Rocha','Michele Santos da Silva','Silvia da Paz Jesus','Vilma Clei Santos'], bairros:['Aeroporto','Areia Branca','Cassange','Itinga','Jardim das Margaridas'] },
+  { num:'XXIV', nome:'CT XXIV – Brotas', regiao:'Prefeitura Bairro I – Centro/Brotas', endereco:'Rua Carlos Chenaud nº18 – Vila Laura/Matatu Brotas – SEDE PROVISÓRIA', telefone:'3202-7353', celular:'71 99923-3463', email:'conselho.brotas@salvador.ba.gov.br', coordenador:'Esthela Monica Gomes da Costa', conselheiros:['Esthela Monica Gomes da Costa','Carine Souza Santos','Soraia do Nascimento Veiga','Jhon Victor Oliveira dos Santos','Adriana Marinho Santos'], bairros:['Acupe Brotas','Boa Vista de Brotas','Candeal','Engenho Velho de Brotas','Horto Florestal'] },
+]
+
+// ════════════════════════════════════════════════════════════════
+//  COMPORTAMENTO
+// ════════════════════════════════════════════════════════════════
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+const nomeCurto = c => c.nome.replace(/^CT [IVXLCDM]+ – /, '')
+const telLink = t => 'tel:+5571' + String(t).split('/')[0].replace(/\D/g, '').replace(/^71/, '')
+const mapaLink = c => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(c.endereco + ', Salvador - BA')
+
+// ── números do topo ──
+const totalBairros = CONSELHOS_BAIRROS.reduce((s, c) => s + (c.bairros || []).length, 0)
+const totalCons = CONSELHOS_BAIRROS.reduce((s, c) => s + (c.conselheiros || []).length, 0)
+document.getElementById('n-ct').dataset.conta = CONSELHOS_BAIRROS.length
+document.getElementById('n-cons').dataset.conta = totalCons
+document.getElementById('n-bairros').dataset.conta = totalBairros
+document.getElementById('n-eca').dataset.conta = new Date().getFullYear() - 1990 - (new Date() < new Date(new Date().getFullYear(), 6, 13) ? 1 : 0)
+document.getElementById('ano-atual').textContent = new Date().getFullYear()
+
+function animaNumero(el) {
+  const alvo = Number(el.dataset.conta) || 0
+  const ini = performance.now(), dur = 1400
+  const passo = t => {
+    const p = Math.min(1, (t - ini) / dur)
+    el.textContent = Math.round(alvo * (1 - Math.pow(1 - p, 3)))
+    if (p < 1) requestAnimationFrame(passo)
+  }
+  requestAnimationFrame(passo)
+}
+
+// ── encontre seu conselho ──
+const indiceBairros = []
+CONSELHOS_BAIRROS.forEach(c => (c.bairros || []).forEach(b => indiceBairros.push({ bairro: b, ct: c })))
+indiceBairros.sort((a, b) => a.bairro.localeCompare(b.bairro, 'pt-BR'))
+document.getElementById('lista-bairros').innerHTML = indiceBairros.map(i => `<option value="${esc(i.bairro)}">`).join('')
+
+const populares = ['Liberdade', 'Pituba', 'Itapuã', 'Periperi', 'Cajazeiras VIII', 'Barra', 'Brotas', 'Sussuarana']
+  .map(n => indiceBairros.find(i => norm(i.bairro).startsWith(norm(n)))).filter(Boolean)
+document.getElementById('sugestoes').innerHTML = populares.map(i => `<button type="button" data-bairro="${esc(i.bairro)}">${esc(i.bairro)}</button>`).join('')
+document.getElementById('sugestoes').addEventListener('click', e => {
+  const b = e.target.closest('button')
+  if (!b) return
+  const inp = document.getElementById('busca-bairro')
+  inp.value = b.dataset.bairro
+  buscaBairro(inp.value)
+})
+
+function cartaoResultado(c, bairro) {
+  return `<div class="res-card">
+    <div class="res-topo"><div class="sigla">${esc(c.num)}</div>
+      <div><small>${bairro ? 'O bairro ' + esc(bairro) + ' é atendido pelo' : 'Conselho Tutelar'}</small><h4>${esc(c.nome)}</h4></div></div>
+    <div class="res-corpo">
+      ${c.endereco ? `<div class="linha">📍 <span>${esc(c.endereco)} – Salvador/BA</span></div>` : ''}
+      <div class="linha">📞 <span>${[c.telefone, c.celular].filter(Boolean).map(esc).join(' · ')}</span></div>
+      ${c.email ? `<div class="linha">✉️ <a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
+      ${c.coordenador ? `<div class="linha">👤 <span>Coordenação: <strong>${esc(c.coordenador)}</strong></span></div>` : ''}
+      <div class="acoes">
+        ${c.telefone ? `<a class="btn btn-navy btn-sm" href="${telLink(c.telefone)}">📞 Ligar</a>` : ''}
+        ${c.endereco ? `<a class="btn btn-gold btn-sm" href="${mapaLink(c)}" target="_blank" rel="noopener">🧭 Como chegar</a>` : ''}
+        <a class="btn btn-sm" style="background:var(--sky);color:var(--navy)" href="#conselhos" onclick="abreCt('${esc(c.num)}')">Ver conselheiros</a>
+      </div>
+    </div>
+  </div>`
+}
+
+function buscaBairro(texto) {
+  const out = document.getElementById('resultado')
+  const q = norm(texto)
+  if (q.length < 2) {
+    out.innerHTML = '<div class="res-vazio"><span>🗺️</span><p>O resultado aparece aqui.<br>Comece digitando o nome do seu bairro.</p></div>'
+    return
+  }
+  const exato = indiceBairros.find(i => norm(i.bairro) === q)
+  if (exato) { out.innerHTML = cartaoResultado(exato.ct, exato.bairro); return }
+  const porBairro = indiceBairros.filter(i => norm(i.bairro).includes(q))
+  const porCt = CONSELHOS_BAIRROS.filter(c => norm(c.nome).includes(q))
+  if (porBairro.length === 1 && !porCt.length) { out.innerHTML = cartaoResultado(porBairro[0].ct, porBairro[0].bairro); return }
+  if (!porBairro.length && porCt.length === 1) { out.innerHTML = cartaoResultado(porCt[0]); return }
+  const opcoes = [
+    ...porCt.map(c => ({ rot: `🏛️ ${c.nome}`, num: c.num, bairro: '' })),
+    ...porBairro.slice(0, 8).map(i => ({ rot: `📍 ${i.bairro} <small style="color:var(--muted)">— ${esc(nomeCurto(i.ct))}</small>`, num: i.ct.num, bairro: i.bairro })),
+  ]
+  if (!opcoes.length) {
+    out.innerHTML = `<div class="res-vazio"><span>🤔</span><p>Não encontramos “${esc(texto)}”.<br>Tente outra grafia ou ligue para o <strong>Disque 100</strong>.</p></div>`
+    return
+  }
+  out.innerHTML = `<div class="multi"><p style="margin:0 0 4px;color:var(--muted)">Encontramos ${opcoes.length} opções. Qual delas?</p>
+    ${opcoes.map(o => `<button type="button" data-num="${esc(o.num)}" data-bairro="${esc(o.bairro)}">${o.rot}</button>`).join('')}</div>`
+}
+document.getElementById('resultado').addEventListener('click', e => {
+  const b = e.target.closest('.multi button')
+  if (!b) return
+  const c = CONSELHOS_BAIRROS.find(x => x.num === b.dataset.num)
+  if (c) document.getElementById('resultado').innerHTML = cartaoResultado(c, b.dataset.bairro)
+})
+let _tBusca
+document.getElementById('busca-bairro').addEventListener('input', e => {
+  clearTimeout(_tBusca)
+  _tBusca = setTimeout(() => buscaBairro(e.target.value), 180)
+})
+
+// ── grade dos 24 conselhos ──
+document.getElementById('ct-grid').innerHTML = CONSELHOS_BAIRROS.map(c => `
+  <details class="ct" id="ct-${esc(c.num)}" data-busca="${esc(norm([c.nome, c.coordenador, ...(c.bairros || []), ...(c.conselheiros || [])].join(' ')))}">
+    <summary>
+      <span class="sig">${esc(c.num)}</span>
+      <span class="nm"><b>${esc(nomeCurto(c))}</b><small>${(c.bairros || []).length} bairros · ${(c.conselheiros || []).length} conselheiros</small></span>
+      <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="ct-corpo">
+      ${c.regiao ? `<div class="linha">🗺️ <span>${esc(c.regiao)}</span></div>` : ''}
+      ${c.endereco ? `<div class="linha">📍 <span>${esc(c.endereco)}</span></div>` : ''}
+      <div class="linha">📞 <span>${[c.telefone, c.celular].filter(Boolean).map(esc).join(' · ')}</span></div>
+      ${c.email ? `<div class="linha">✉️ <a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
+      <h5>Conselheiros(as)</h5>
+      <div class="pessoas">${(c.conselheiros || []).map(n => `<span>• ${esc(n)}${n === c.coordenador ? '<span class="coord">Coordenação</span>' : ''}</span>`).join('')}</div>
+      <h5>Bairros atendidos</h5>
+      <div class="chips">${(c.bairros || []).map(b => `<span>${esc(b)}</span>`).join('')}</div>
+      ${c.endereco ? `<a class="btn btn-gold btn-sm" style="justify-self:start;margin-top:6px" href="${mapaLink(c)}" target="_blank" rel="noopener">🧭 Como chegar</a>` : ''}
+    </div>
+  </details>`).join('')
+
+document.getElementById('filtro-ct').addEventListener('input', e => {
+  const q = norm(e.target.value)
+  let vis = 0
+  document.querySelectorAll('details.ct').forEach(d => {
+    const ok = !q || d.dataset.busca.includes(q)
+    d.style.display = ok ? '' : 'none'
+    if (ok) vis++
+  })
+  document.getElementById('ct-nada').style.display = vis ? 'none' : 'block'
+})
+
+function abreCt(num) {
+  const d = document.getElementById('ct-' + num)
+  if (!d) return
+  d.open = true
+  setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+}
+
+// ── projetos ──
+document.getElementById('projetos-grid').innerHTML = PROJETOS.map(p => `
+  <article class="proj revela" style="--c:${p.cor}">
+    <div class="capa" aria-hidden="true">${p.icone}</div>
+    <div class="txt"><h3>${esc(p.titulo)}</h3><p>${esc(p.texto)}</p></div>
+  </article>`).join('')
+
+// ── agenda ──
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const TIPOS = { campanha: ['Campanha', '#f2665a'], operacao: ['Operação especial', '#e0a91b'], eleicao: ['Escolha unificada', '#8b6cf0'], data: ['Data comemorativa', '#2fae73'] }
+const hoje0 = new Date(); hoje0.setHours(0, 0, 0, 0)
+document.getElementById('agenda-lista').innerHTML = AGENDA
+  .map(e => ({ ...e, d: new Date(e.data + 'T12:00:00') }))
+  .sort((a, b) => a.d - b.d)
+  .map(e => {
+    const [rot, cor] = TIPOS[e.tipo] || TIPOS.data
+    const passado = e.d < hoje0 && !(e.mesInteiro && e.d.getMonth() === hoje0.getMonth() && e.d.getFullYear() === hoje0.getFullYear())
+    return `<div class="ev revela ${passado ? 'passado' : ''}" style="--c:${cor}">
+      <div class="data"><b>${e.mesInteiro ? MESES[e.d.getMonth()] : e.d.getDate()}</b><small>${e.mesInteiro ? e.d.getFullYear() : MESES[e.d.getMonth()] + ' ' + String(e.d.getFullYear()).slice(2)}</small></div>
+      <div><h4>${esc(e.titulo)}</h4><p>${esc(e.texto)}</p></div>
+      <span class="tipo">${rot}</span>
+    </div>`
+  }).join('')
+
+// ── ECA ──
+function mostraArtigo(i) {
+  const a = ECA_ARTIGOS[i]
+  document.querySelectorAll('#eca-tabs button').forEach((b, j) => { b.classList.toggle('ativo', i === j); b.setAttribute('aria-selected', i === j) })
+  document.getElementById('eca-painel').innerHTML = `<div class="art">${esc(a.art)} · ECA</div><blockquote>“${esc(a.texto)}”</blockquote><p>💡 ${esc(a.nota)}</p>`
+}
+document.getElementById('eca-tabs').innerHTML = ECA_ARTIGOS.map((a, i) => `<button type="button" role="tab" onclick="mostraArtigo(${i})">${esc(a.aba)}</button>`).join('')
+mostraArtigo(1)
+
+// ── história ──
+document.getElementById('linha-tempo').innerHTML = HISTORIA.map(h => `
+  <div class="marco revela ${h.hoje ? 'hoje' : ''}"><div class="ano">${esc(h.ano)}</div><h4>${esc(h.titulo)}</h4><p>${esc(h.texto)}</p></div>`).join('')
+
+// ── FAQ ──
+document.getElementById('faq').innerHTML = FAQ.map(f => `<details class="revela"><summary>${esc(f.p)}</summary><p>${esc(f.r)}</p></details>`).join('')
+
+// ── animações de entrada ──
+const obs = new IntersectionObserver(ents => ents.forEach(en => {
+  if (!en.isIntersecting) return
+  en.target.classList.add('visivel')
+  if (en.target.dataset.conta !== undefined) animaNumero(en.target)
+  obs.unobserve(en.target)
+}), { threshold: .15 })
+document.querySelectorAll('.revela, [data-conta]').forEach(el => obs.observe(el))
+
+// ── menu mobile fecha ao navegar ──
+document.querySelectorAll('#menu a').forEach(a => a.addEventListener('click', () => document.getElementById('menu').classList.remove('aberto')))
+
+// ── acessibilidade: tamanho da fonte ──
+let _fs = 1
+function ajustaFonte(d) {
+  _fs = Math.min(1.4, Math.max(.85, _fs + d * .1))
+  document.documentElement.style.setProperty('--fs', _fs)
+}
+
+// ── saída rápida (para quem pode estar sendo vigiado por um agressor) ──
+function saidaRapida() {
+  document.body.innerHTML = ''
+  window.location.replace('https://www.google.com.br')
+}
+let _ultimoEsc = 0
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return
+  const agora = Date.now()
+  if (agora - _ultimoEsc < 800) saidaRapida()
+  _ultimoEsc = agora
+})
+</script>
+</body>
+</html>
