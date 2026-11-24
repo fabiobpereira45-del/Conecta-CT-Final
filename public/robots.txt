@@ -1,0 +1,7 @@
+# Portal público: /site. O sistema interno (Conecta-CT) fica na raiz e não é indexado (meta noindex).
+User-agent: *
+Allow: /site
+Allow: /icons/
+Disallow: /api/
+
+Sitemap: https://conecta-ct-final.vercel.app/sitemap.xml
