@@ -1,6 +1,6 @@
 /**
  * GET /api/noticias?limit=12
- * Público: devolve só as notícias com status 'publicada' (últimos 30 dias), para o carrossel do portal.
+ * Público: devolve só as notícias com status 'publicada' (últimos 14 dias), para o carrossel do portal.
  * Nunca expõe notícias pendentes ou rejeitadas.
  */
 const supabase = require('../../lib/supabase')
@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Método não permitido.' })
 
   const limite = Math.min(30, Math.max(1, parseInt(req.query.limit, 10) || 12))
-  const desde = new Date(Date.now() - 30 * 86400000).toISOString()
+  const desde = new Date(Date.now() - 14 * 86400000).toISOString()
 
   const { data, error } = await supabase
     .from('noticias')
