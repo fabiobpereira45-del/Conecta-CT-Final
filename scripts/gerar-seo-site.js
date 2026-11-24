@@ -90,7 +90,7 @@ const grafo = [
     return o
   }),
 ]
-const jsonld = `<script type="application/ld+json">\n${JSON.stringify({ '@context': 'https://schema.org', '@graph': grafo }, null, 1).replace(/</g, '\\u003c')}\n</script>`
+const jsonld = `<script type="application/ld+json">\n${JSON.stringify({ '@context': 'https://schema.org', '@graph': grafo }).replace(/</g, '\\u003c')}\n</script>`
 
 // ── conteúdo estático para quem não executa JavaScript ──
 const noscript = `<noscript>

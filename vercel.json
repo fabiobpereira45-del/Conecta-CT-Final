@@ -4,6 +4,10 @@
     {
       "path": "/api/requisicoes/poll",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/noticias/coletar",
+      "schedule": "0 10 * * *"
     }
   ],
   "rewrites": [
@@ -11,6 +15,7 @@
     { "source": "/api/requisicoes/:id/mensagens", "destination": "/api/requisicoes/[id]" },
     { "source": "/api/requisicoes/:id",           "destination": "/api/requisicoes/[id]" },
     { "source": "/api/requisicoes",               "destination": "/api/requisicoes/index" },
+    { "source": "/api/noticias",                  "destination": "/api/noticias/index" },
     { "source": "/api/atendimentos",              "destination": "/api/atendimentos/index" },
     { "source": "/manifest.json",                 "destination": "/public/manifest.json" },
     { "source": "/favicon.ico",                   "destination": "/public/favicon.ico" },
@@ -25,7 +30,7 @@
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/((?!noticias$).*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]

@@ -1479,6 +1479,7 @@ const NAV_ALL = [
   { id:'ficha-atendimento', label:'Ficha de Atendimento', icon:'fileplus', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'profile', label:'Meu Perfil', icon:'user', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'notices', label:'Convocatórias e Avisos', icon:'megaphone', roles:['master','coordenador','conselheiro','atendente'] },
+  { id:'noticias', label:'Notícias do Portal', icon:'filetext', roles:['master','coordenador','conselheiro'] },
   { id:'councils', label:'Conselhos e Bairros', icon:'building', roles:['master','coordenador','conselheiro','atendente'] },
   { id:'statistics', label:'Minhas Estatísticas', icon:'chart', roles:['master','coordenador','conselheiro'] },
   { id:'dashboard', label:'Painel de Gráficos', icon:'pie', roles:['master','coordenador','conselheiro'] },
@@ -2068,6 +2069,7 @@ function renderContent() {
     case 'duty-roster': el.innerHTML = renderDutyRoster(); attachDutyRosterEvents(); break
     case 'requisicoes': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando requisições…</div>'; carregarRequisicoes().then(() => { if (typeof sincronizarRespostasCartorios === 'function') sincronizarRespostasCartorios(true) }); break
     case 'councils': el.innerHTML = renderCouncils(); break
+    case 'noticias': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando…</div>'; renderNoticias(); break
     case 'general-stats': el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando estatísticas…</div>'; renderGeneralStats().then(html => { if (document.getElementById('content')) el.innerHTML = html }); break
     case 'photos': el.innerHTML = renderPhotos(); attachPhotosEvents(); break
     case 'eca': el.innerHTML = renderEca(); attachEcaEvents(); break
@@ -4370,6 +4372,104 @@ function _geExportarCsv() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   showToast('Planilha exportada com sucesso!');
+}
+
+// ── NOTÍCIAS DO PORTAL (moderação) ──
+// O portal público mostra notícias sobre infância e adolescência coletadas automaticamente.
+// Fontes oficiais, leis e campanhas entram sozinhas; violência, redes sociais e prefeituras de outras
+// cidades ficam aqui para um conselheiro aprovar antes de aparecerem no site.
+let _nm = { status: 'pendente', itens: [], contagem: { pendente: 0, publicada: 0, rejeitada: 0 }, carregando: false, erro: '' }
+
+function _nmHeaders() {
+  return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (_sbSession?.access_token || '') }
+}
+
+const _NM_MOTIVOS = {
+  'violacao': 'Trata de violência ou violação de direitos: confira antes de publicar',
+  'rede-social': 'Veio de rede social',
+  'municipal': 'Prefeitura de outra cidade',
+  'auto-oficial': 'Publicada automaticamente (fonte oficial)',
+  'auto-legislacao': 'Publicada automaticamente (lei ou norma)',
+  'auto-campanha': 'Publicada automaticamente (campanha)',
+  'manual': 'Decisão de um conselheiro',
+}
+const _NM_CAT = { legislacao: 'Leis e normas', campanha: 'Campanhas', politica: 'Políticas públicas', violacao: 'Violação de direitos', geral: 'Geral' }
+
+async function _nmCarregar(status) {
+  if (status) _nm.status = status
+  _nm.carregando = true; _nm.erro = ''
+  _nmDesenhar()
+  try {
+    const r = await apiFetch('/api/noticias/moderacao?status=' + _nm.status, { headers: _nmHeaders() })
+    _nm.itens = r.itens || []
+    _nm.contagem = r.contagem || _nm.contagem
+  } catch (e) {
+    _nm.itens = []
+    _nm.erro = /não autorizado|401/i.test(e.message) ? 'Sua sessão expirou. Saia e entre no sistema novamente.' : 'Não foi possível carregar as notícias: ' + e.message
+  }
+  _nm.carregando = false
+  if (activeModule === 'noticias') _nmDesenhar()
+}
+
+async function _nmDecidir(id, acao) {
+  try {
+    await apiFetch('/api/noticias/moderacao', { method: 'POST', headers: _nmHeaders(), body: JSON.stringify({ id, acao }) })
+    showToast(acao === 'publicar' ? 'Notícia publicada no portal.' : acao === 'rejeitar' ? 'Notícia retirada.' : 'Notícia devolvida para a fila.')
+    _nmCarregar()
+  } catch (e) { showToast('Erro: ' + e.message) }
+}
+
+async function _nmColetarAgora(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Coletando…' }
+  try {
+    const r = await apiFetch('/api/noticias/coletar', { method: 'POST', headers: _nmHeaders() })
+    showToast('Coleta concluída: ' + (r.novas || 0) + ' novas (' + (r.publicadas || 0) + ' publicadas, ' + (r.pendentes || 0) + ' para revisar).')
+  } catch (e) { showToast('Erro na coleta: ' + e.message) }
+  _nmCarregar()
+}
+
+function _nmDesenhar() {
+  const el = document.getElementById('content')
+  if (!el || activeModule !== 'noticias') return
+  const aba = (id, rotulo) => '<button class="btn ' + (_nm.status === id ? 'btn-primary' : 'btn-outline') + '" onclick="_nmCarregar(\'' + id + '\')">' +
+    rotulo + ' <span style="opacity:.8">(' + (_nm.contagem[id] || 0) + ')</span></button>'
+  const quando = iso => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const botoes = n => n.status === 'pendente'
+    ? '<button class="btn btn-primary btn-sm" onclick="_nmDecidir(\'' + n.id + '\',\'publicar\')">Publicar no portal</button><button class="btn btn-outline btn-sm" onclick="_nmDecidir(\'' + n.id + '\',\'rejeitar\')">Rejeitar</button>'
+    : n.status === 'publicada'
+      ? '<button class="btn btn-outline btn-sm" onclick="_nmDecidir(\'' + n.id + '\',\'rejeitar\')">Retirar do portal</button>'
+      : '<button class="btn btn-primary btn-sm" onclick="_nmDecidir(\'' + n.id + '\',\'publicar\')">Publicar no portal</button><button class="btn btn-outline btn-sm" onclick="_nmDecidir(\'' + n.id + '\',\'pendente\')">Voltar para a fila</button>'
+
+  const cartoes = _nm.itens.map(n => {
+    const motivo = n.motivo === 'manual' && n.moderada_por ? 'Decisão de ' + n.moderada_por : (_NM_MOTIVOS[n.motivo] || n.motivo || '')
+    const alerta = n.motivo === 'violacao' && n.status === 'pendente'
+    return '<div class="card card-pad" style="margin-bottom:12px;' + (alerta ? 'border-left:4px solid #dc2626' : '') + '">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:11px">' +
+        '<span style="background:var(--primary-subtle);color:var(--primary);padding:2px 10px;border-radius:999px;font-weight:700">' + esc(_NM_CAT[n.categoria] || n.categoria) + '</span>' +
+        (n.fonte_tipo === 'oficial' ? '<span style="background:#dcfce7;color:#166534;padding:2px 10px;border-radius:999px;font-weight:700">Fonte oficial</span>' : '') +
+        '<span style="color:var(--text-muted)">' + esc(n.fonte) + ' · ' + esc(quando(n.publicada_em)) + '</span></div>' +
+      '<a href="' + esc(n.url) + '" target="_blank" rel="noopener noreferrer" style="font-size:15px;font-weight:700;color:var(--text);text-decoration:none">' + esc(n.titulo) + ' ↗</a>' +
+      (n.resumo ? '<p style="font-size:13px;color:var(--text-muted);margin:6px 0 0">' + esc(n.resumo) + '</p>' : '') +
+      (motivo ? '<p style="font-size:12px;margin:8px 0 0;' + (alerta ? 'color:#b91c1c;font-weight:600' : 'color:var(--text-muted)') + '">' + esc(motivo) + '</p>' : '') +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">' + botoes(n) + '</div></div>'
+  }).join('')
+
+  const vazio = { pendente: 'Nenhuma notícia aguardando revisão.', publicada: 'Nenhuma notícia publicada ainda.', rejeitada: 'Nenhuma notícia rejeitada.' }[_nm.status]
+  el.innerHTML =
+    '<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">' +
+      '<div><h2>Notícias do Portal</h2><p>Notícias sobre infância e adolescência coletadas todo dia. Você decide o que vai para o site.</p></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-outline" href="/site#noticias" target="_blank" rel="noopener">Ver no portal ↗</a>' +
+      '<button class="btn btn-primary" onclick="_nmColetarAgora(this)">Coletar agora</button></div></div>' +
+    '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:12px;color:#9a3412;margin-bottom:16px">' +
+      '<strong>Antes de publicar notícias de violência:</strong> confira se a matéria não identifica criança ou adolescente (nome, foto, escola, endereço). O ECA (Art. 143) proíbe essa divulgação.</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">' + aba('pendente', 'Para revisar') + aba('publicada', 'Publicadas') + aba('rejeitada', 'Rejeitadas') + '</div>' +
+    (_nm.carregando ? '<div style="padding:40px;text-align:center;color:var(--text-muted)">Carregando…</div>'
+      : _nm.erro ? '<div class="card card-pad" style="color:#b91c1c">' + esc(_nm.erro) + '</div>'
+      : cartoes || '<div class="card card-pad empty"><p style="font-weight:600">' + vazio + '</p></div>')
+}
+
+function renderNoticias() {
+  _nmCarregar('pendente')
 }
 
 // ── ESTATÍSTICAS DE GRANDES EVENTOS ──
