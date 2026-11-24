@@ -9,7 +9,7 @@
  */
 const supabase = require('../../lib/supabase')
 const cors = require('../../lib/cors')
-const { usuarioLogado } = require('../../lib/auth')
+const { usuarioLogado, negarAcesso } = require('../../lib/auth')
 const { coletar } = require('../../lib/noticias')
 
 const ROLES = ['master', 'coordenador', 'conselheiro']
@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
   const usuario = viaCron || viaCronSemSegredo ? null : await usuarioLogado(req, ROLES)
 
   if (!viaCron && !viaCronSemSegredo && !usuario) {
-    return res.status(401).json({ error: 'Não autorizado.' })
+    return negarAcesso(req, res)
   }
 
   try {

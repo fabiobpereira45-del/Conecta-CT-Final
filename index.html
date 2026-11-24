@@ -4384,6 +4384,20 @@ function _nmHeaders() {
   return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (_sbSession?.access_token || '') }
 }
 
+// Chama a API de notícias com o login em dia: renova o token se está perto de vencer
+// e, se a API responder "sessão expirada", renova uma vez e tenta de novo.
+async function _nmApi(path, opts = {}) {
+  if (_sbSession && Date.now() > _sbSession.expires_at - 60000) await _authRefresh()
+  try {
+    return await apiFetch(path, { ...opts, headers: _nmHeaders() })
+  } catch (e) {
+    if (/sess[aã]o|n[aã]o autorizado/i.test(e.message) && await _authRefresh()) {
+      return apiFetch(path, { ...opts, headers: _nmHeaders() })
+    }
+    throw e
+  }
+}
+
 const _NM_MOTIVOS = {
   'violacao': 'Trata de violência ou violação de direitos: confira antes de publicar',
   'rede-social': 'Veio de rede social',
@@ -4400,12 +4414,12 @@ async function _nmCarregar(status) {
   _nm.carregando = true; _nm.erro = ''
   _nmDesenhar()
   try {
-    const r = await apiFetch('/api/noticias/moderacao?status=' + _nm.status, { headers: _nmHeaders() })
+    const r = await _nmApi('/api/noticias/moderacao?status=' + _nm.status)
     _nm.itens = r.itens || []
     _nm.contagem = r.contagem || _nm.contagem
   } catch (e) {
     _nm.itens = []
-    _nm.erro = /não autorizado|401/i.test(e.message) ? 'Sua sessão expirou. Saia e entre no sistema novamente.' : 'Não foi possível carregar as notícias: ' + e.message
+    _nm.erro = e.message
   }
   _nm.carregando = false
   if (activeModule === 'noticias') _nmDesenhar()
@@ -4413,7 +4427,7 @@ async function _nmCarregar(status) {
 
 async function _nmDecidir(id, acao) {
   try {
-    await apiFetch('/api/noticias/moderacao', { method: 'POST', headers: _nmHeaders(), body: JSON.stringify({ id, acao }) })
+    await _nmApi('/api/noticias/moderacao', { method: 'POST', body: JSON.stringify({ id, acao }) })
     showToast(acao === 'publicar' ? 'Notícia publicada no portal.' : acao === 'rejeitar' ? 'Notícia retirada.' : 'Notícia devolvida para a fila.')
     _nmCarregar()
   } catch (e) { showToast('Erro: ' + e.message) }
@@ -4422,7 +4436,7 @@ async function _nmDecidir(id, acao) {
 async function _nmColetarAgora(btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'Coletando…' }
   try {
-    const r = await apiFetch('/api/noticias/coletar', { method: 'POST', headers: _nmHeaders() })
+    const r = await _nmApi('/api/noticias/coletar', { method: 'POST' })
     showToast('Coleta concluída: ' + (r.novas || 0) + ' novas (' + (r.publicadas || 0) + ' publicadas, ' + (r.pendentes || 0) + ' para revisar).')
   } catch (e) { showToast('Erro na coleta: ' + e.message) }
   _nmCarregar()

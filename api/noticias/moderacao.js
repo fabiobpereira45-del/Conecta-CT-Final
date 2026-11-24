@@ -6,7 +6,7 @@
  */
 const supabase = require('../../lib/supabase')
 const cors = require('../../lib/cors')
-const { usuarioLogado } = require('../../lib/auth')
+const { usuarioLogado, negarAcesso } = require('../../lib/auth')
 
 const ROLES = ['master', 'coordenador', 'conselheiro']
 const STATUS = ['pendente', 'publicada', 'rejeitada']
@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
   if (cors(req, res)) return
 
   const usuario = await usuarioLogado(req, ROLES)
-  if (!usuario) return res.status(401).json({ error: 'Não autorizado. Entre no sistema novamente.' })
+  if (!usuario) return negarAcesso(req, res)
 
   if (req.method === 'GET') {
     const status = STATUS.includes(req.query.status) ? req.query.status : 'pendente'

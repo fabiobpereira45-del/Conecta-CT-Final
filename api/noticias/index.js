@@ -23,7 +23,10 @@ module.exports = async function handler(req, res) {
     .order('publicada_em', { ascending: false })
     .limit(120)
 
-  if (error) return res.status(500).json({ error: 'Não foi possível carregar as notícias.' })
+  if (error) {
+    console.error('noticias: falha ao consultar', error.code, error.message)
+    return res.status(500).json({ error: 'Não foi possível carregar as notícias.', codigo: error.code || null })
+  }
 
   const porFonte = {}
   const noticias = []
