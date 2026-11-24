@@ -403,8 +403,8 @@
     <div class="news-head">
       <div>
         <span class="tag">Notícias do dia</span>
-        <h2 id="noticias-titulo">Infância e adolescência no Brasil</h2>
-        <p>Leis, resoluções, campanhas e notícias de fontes oficiais e da imprensa, reunidas automaticamente e revisadas pelo Conselho.</p>
+        <h2 id="noticias-titulo">Infância e adolescência na Bahia</h2>
+        <p>Notícias da Bahia e, no Brasil, o que muda no ECA, no Conanda e nas leis. Reunidas automaticamente e revisadas pelo Conselho.</p>
       </div>
       <div class="news-ctl" id="news-ctl" hidden>
         <button type="button" id="news-prev" aria-label="Notícia anterior">←</button>
@@ -930,7 +930,7 @@ function quandoNoticia(iso) {
   trilho.innerHTML = lista.map((n, i) => {
     const [rotulo, cor] = NOTICIA_CAT[n.categoria] || NOTICIA_CAT.geral
     return '<article class="news-card" style="--c:' + cor + '" role="group" aria-roledescription="slide" aria-label="' + (i + 1) + ' de ' + lista.length + '">' +
-      '<span class="news-cat">' + esc(rotulo) + '</span>' +
+      '<span class="news-cat">' + (n.escopo === 'brasil' ? 'Brasil' : 'Bahia') + ' · ' + esc(rotulo) + '</span>' +
       '<h3><a href="' + esc(n.url) + '" target="_blank" rel="noopener noreferrer">' + esc(n.titulo) + '</a></h3>' +
       (n.resumo ? '<p class="resumo">' + esc(n.resumo) + '</p>' : '') +
       '<div class="news-meta"><span><b>' + esc(n.fonte) + '</b> · ' + esc(quandoNoticia(n.publicada_em)) + '</span>' +

@@ -4401,7 +4401,8 @@ async function _nmApi(path, opts = {}) {
 const _NM_MOTIVOS = {
   'violacao': 'Trata de violência ou violação de direitos: confira antes de publicar',
   'rede-social': 'Veio de rede social',
-  'municipal': 'Prefeitura de outra cidade',
+  'municipal': 'Prefeitura de município baiano (fora de Salvador)',
+  'imprensa-geral': 'Imprensa da Bahia, assunto geral: decida se vale publicar',
   'auto-oficial': 'Publicada automaticamente (fonte oficial)',
   'auto-legislacao': 'Publicada automaticamente (lei ou norma)',
   'auto-campanha': 'Publicada automaticamente (campanha)',
@@ -4459,7 +4460,7 @@ function _nmDesenhar() {
     const alerta = n.motivo === 'violacao' && n.status === 'pendente'
     return '<div class="card card-pad" style="margin-bottom:12px;' + (alerta ? 'border-left:4px solid #dc2626' : '') + '">' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:11px">' +
-        '<span style="background:var(--primary-subtle);color:var(--primary);padding:2px 10px;border-radius:999px;font-weight:700">' + esc(_NM_CAT[n.categoria] || n.categoria) + '</span>' +
+        '<span style="background:var(--primary-subtle);color:var(--primary);padding:2px 10px;border-radius:999px;font-weight:700">' + esc((n.escopo === 'brasil' ? 'Brasil' : 'Bahia') + ' · ' + (_NM_CAT[n.categoria] || n.categoria)) + '</span>' +
         (n.fonte_tipo === 'oficial' ? '<span style="background:#dcfce7;color:#166534;padding:2px 10px;border-radius:999px;font-weight:700">Fonte oficial</span>' : '') +
         '<span style="color:var(--text-muted)">' + esc(n.fonte) + ' · ' + esc(quando(n.publicada_em)) + '</span></div>' +
       '<a href="' + esc(n.url) + '" target="_blank" rel="noopener noreferrer" style="font-size:15px;font-weight:700;color:var(--text);text-decoration:none">' + esc(n.titulo) + ' ↗</a>' +
@@ -4471,7 +4472,7 @@ function _nmDesenhar() {
   const vazio = { pendente: 'Nenhuma notícia aguardando revisão.', publicada: 'Nenhuma notícia publicada ainda.', rejeitada: 'Nenhuma notícia rejeitada.' }[_nm.status]
   el.innerHTML =
     '<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">' +
-      '<div><h2>Notícias do Portal</h2><p>Notícias sobre infância e adolescência coletadas todo dia. Você decide o que vai para o site.</p></div>' +
+      '<div><h2>Notícias do Portal</h2><p>Coletamos todo dia o que sai sobre infância e adolescência na Bahia e, no Brasil, só ECA, Conanda e novas leis. Você decide o que vai para o site.</p></div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-outline" href="/site#noticias" target="_blank" rel="noopener">Ver no portal ↗</a>' +
       '<button class="btn btn-primary" onclick="_nmColetarAgora(this)">Coletar agora</button></div></div>' +
     '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:12px;color:#9a3412;margin-bottom:16px">' +

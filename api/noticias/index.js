@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
 
   const { data, error } = await supabase
     .from('noticias')
-    .select('id, titulo, resumo, fonte, fonte_tipo, categoria, publicada_em, url')
+    .select('id, titulo, resumo, fonte, fonte_tipo, categoria, escopo, publicada_em, url')
     .eq('status', 'publicada')
     .gte('publicada_em', desde)
     .order('publicada_em', { ascending: false })

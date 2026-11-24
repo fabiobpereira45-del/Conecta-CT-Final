@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     const status = STATUS.includes(req.query.status) ? req.query.status : 'pendente'
     const { data, error } = await supabase
       .from('noticias')
-      .select('id, titulo, resumo, fonte, fonte_tipo, categoria, status, motivo, publicada_em, url, moderada_por, moderada_em')
+      .select('id, titulo, resumo, fonte, fonte_tipo, categoria, escopo, status, motivo, publicada_em, url, moderada_por, moderada_em')
       .eq('status', status)
       .order('publicada_em', { ascending: false })
       .limit(80)
