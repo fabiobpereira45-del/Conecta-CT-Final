@@ -5312,23 +5312,8 @@ function openEmailModal(tipoCertidao) {
       </div>
       ` : ''}
 
-      <!-- Tipo de Destinatário / Modalidade de Envio -->
-      <div style="margin-bottom:14px;background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)">
-        <label class="field-label" style="margin-bottom:6px">Modalidade do Cartório Destinatário</label>
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer">
-            <input type="radio" name="email-modo-destino" value="salvador" ${!_isModalidadeMaterializacaoAtiva() ? 'checked' : ''} onchange="_toggleEmailModoDestino(this.value)" />
-            Cartórios de Salvador
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;color:var(--primary);font-weight:700">
-            <input type="radio" name="email-modo-destino" value="materializacao" ${_isModalidadeMaterializacaoAtiva() ? 'checked' : ''} onchange="_toggleEmailModoDestino(this.value)" />
-            Materialização (Outros Municípios da Bahia – FECOM)
-          </label>
-        </div>
-      </div>
-
-      <!-- Subdistrito / Cartório destino (SALVADOR) -->
-      <div id="email-bloco-salvador" style="${!_isModalidadeMaterializacaoAtiva() ? '' : 'display:none;'}margin-bottom:14px">
+      <!-- Cartório que receberá o pedido -->
+      <div style="margin-bottom:14px">
         <label class="field-label">Comarca / Subdistrito do cartório destinatário</label>
         <select id="email-cartorio" onchange="updateCartorioEmail()" style="margin-top:4px">
           <option value="">— Selecione o subdistrito —</option>
@@ -5338,30 +5323,6 @@ function openEmailModal(tipoCertidao) {
             ).join('')
           ).join('')}
         </select>
-      </div>
-
-      <!-- Município / Cartório destino (MATERIALIZAÇÃO BAHIA) -->
-      <div id="email-bloco-materializacao" style="${_isModalidadeMaterializacaoAtiva() ? '' : 'display:none;'}margin-bottom:14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          <span style="font-size:12px">🏛️</span>
-          <strong style="font-size:12px;color:#1e40af">Requisição de Materialização de Cartório Diverso (FECOM nº 002/2020)</strong>
-        </div>
-        <div class="field-row cols-2" style="margin-bottom:8px">
-          <div>
-            <label class="field-label" style="font-size:11px">Município da Bahia (Comarca de Origem)</label>
-            <input list="email-lista-cidades-ba" id="email-mat-cidade" placeholder="Buscar cidade da Bahia…" style="width:100%;font-size:12px" oninput="_onEmailMatCidadeInput(this.value)" onchange="_onEmailMatCidadeSelect(this.value)" value="${esc(document.getElementById('rc-mat-cidade')?.value || '')}" />
-            <datalist id="email-lista-cidades-ba"></datalist>
-          </div>
-          <div>
-            <label class="field-label" style="font-size:11px">Cartório de Registro Civil</label>
-            <select id="email-mat-cartorio" style="width:100%;font-size:12px" onchange="_onEmailMatCartorioSelect()">
-              <option value="">— Selecione a serventia —</option>
-            </select>
-          </div>
-        </div>
-        <div style="font-size:11px;color:#0369a1;line-height:1.4">
-          Conforme Ato Normativo FECOM nº 002/2020 (Art. 5º, XIII/XIV e Anexo II, Item XXVIII), a materialização por requisição do Conselho Tutelar é gratuita ao solicitante e ressarcida pelo FECOM.
-        </div>
       </div>
 
       <div id="cartorio-info" style="display:none;background:var(--bg);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.8">
@@ -5383,7 +5344,6 @@ function openEmailModal(tipoCertidao) {
         </div>
         <div id="email-to-label" style="display:none;font-size:12px;color:var(--primary);font-weight:600;background:var(--primary-subtle);padding:6px 10px;border-radius:6px;margin-bottom:6px"></div>
         <input id="email-to" placeholder="ou digite o e-mail manualmente" />
-        <div id="email-to-aviso" style="display:none;font-size:11.5px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;margin-top:6px"></div>
       </div>
 
       <!-- CC opcional -->
@@ -5455,7 +5415,7 @@ function openEmailModal(tipoCertidao) {
       </div>
     </div>
   `)
-  if (_isModalidadeMaterializacaoAtiva()) _toggleEmailModoDestino('materializacao')
+  if (_isModalidadeMaterializacaoAtiva()) _aplicarEmailMaterializacao(tipoCertidao)
 }
 
 function _isModalidadeMaterializacaoAtiva() {
@@ -5463,118 +5423,20 @@ function _isModalidadeMaterializacaoAtiva() {
   return r && r.value === 'Materialização';
 }
 
-// Troca o destinatário sem herdar o e-mail do cartório escolhido antes.
-function _definirDestinatario(email, aviso) {
-  const to = document.getElementById('email-to');
-  if (to) to.value = email || '';
-  const rotulo = document.getElementById('email-to-label');
-  if (rotulo) rotulo.style.display = 'none';
-  const av = document.getElementById('email-to-aviso');
-  if (av) { av.textContent = aviso || ''; av.style.display = aviso ? 'block' : 'none'; }
-}
-
-function _toggleEmailModoDestino(modo) {
-  const blocoSsa = document.getElementById('email-bloco-salvador');
-  const blocoMat = document.getElementById('email-bloco-materializacao');
-  const info = document.getElementById('cartorio-info');
-  if (info) info.style.display = 'none';
-
-  if (modo === 'materializacao') {
-    if (blocoSsa) blocoSsa.style.display = 'none';
-    if (blocoMat) blocoMat.style.display = 'block';
-    _definirDestinatario('');
-    _popularDatalistCidadesBa();
-    const cidInput = document.getElementById('email-mat-cidade');
-    const cidForm = document.getElementById('rc-mat-cidade')?.value.trim();
-    if (cidForm && (!cidInput.value || cidInput.value !== cidForm)) {
-      cidInput.value = cidForm;
-    }
-    if (cidInput && cidInput.value) {
-      _onEmailMatCidadeSelect(cidInput.value);
-    }
-  } else {
-    if (blocoSsa) blocoSsa.style.display = 'block';
-    if (blocoMat) blocoMat.style.display = 'none';
-    _definirDestinatario('');
-    for (const id of ['email-subject', 'email-body']) {
-      const el = document.getElementById(id);
-      if (el) el.value = el.defaultValue;
-    }
-    updateCartorioEmail();
-  }
-}
-
-function _onEmailMatCidadeInput(val) {
-  if (!val) return;
-  const match = (CARTORIOS_BAHIA.cidades || []).find(c => c.toLowerCase() === val.trim().toLowerCase());
-  if (match) { _onEmailMatCidadeSelect(match); return; }
-  // cidade incompleta ou trocada: descarta o cartório e o e-mail anteriores
-  const select = document.getElementById('email-mat-cartorio');
-  if (select) select.innerHTML = '<option value="">— Selecione a serventia —</option>';
-  document.getElementById('cartorio-info').style.display = 'none';
-  _definirDestinatario('');
-}
-
-function _onEmailMatCidadeSelect(cidadeNome) {
-  if (!cidadeNome) return;
-  const cidades = CARTORIOS_BAHIA.cidades || [];
-  const cidExata = cidades.find(c => c.toLowerCase() === cidadeNome.trim().toLowerCase()) || cidadeNome.trim();
-  const cartorios = (CARTORIOS_BAHIA.cartorios && CARTORIOS_BAHIA.cartorios[cidExata]) || [];
-
-  const select = document.getElementById('email-mat-cartorio');
-  if (!select) return;
-
-  if (cartorios.length === 0) {
-    select.innerHTML = '<option value="">— Nenhum cartório específico listado nesta cidade —</option>';
-    document.getElementById('cartorio-info').style.display = 'none';
-    _definirDestinatario('');
-    return;
-  }
-
-  select.innerHTML = cartorios.map((c, idx) => `
-    <option value="${idx}">${esc(c.oficio || c.nome)} ${c.titular ? '· Titular: ' + esc(c.titular) : ''}</option>
-  `).join('');
-
-  _onEmailMatCartorioSelect(cidExata);
-}
-
-function _onEmailMatCartorioSelect(cidadeForcada) {
-  const cidInput = document.getElementById('email-mat-cidade');
-  const cidade = cidadeForcada || cidInput?.value.trim() || '';
-  const select = document.getElementById('email-mat-cartorio');
-  if (!select || select.selectedIndex < 0) return;
-
-  const idx = parseInt(select.value, 10);
-  const cartorios = (CARTORIOS_BAHIA.cartorios && CARTORIOS_BAHIA.cartorios[cidade]) || [];
-  const c = cartorios[idx] || cartorios[0];
-  if (!c) return;
-
-  const info = document.getElementById('cartorio-info');
-  if (info) {
-    document.getElementById('ci-oficio').textContent = `${c.nome} ${c.oficio && c.oficio !== c.nome ? '— ' + c.oficio : ''} (${cidade}/BA)`;
-    document.getElementById('ci-end').textContent = c.endereco || 'Endereço da comarca';
-    document.getElementById('ci-tel').textContent = c.telefone || 'Não informado';
-    document.getElementById('ci-email').textContent = c.email || 'Não informado / verificar na serventia';
-    info.style.display = 'block';
-  }
-
-  _definirDestinatario(c.email, c.email
-    ? 'Contato obtido de diretório não oficial. Confirme o e-mail com o cartório antes de enviar.'
-    : 'Este cartório não tem e-mail cadastrado. Ligue para confirmar e digite o e-mail no campo acima.');
-
-  const tipoCertidao = document.querySelector('[name=tipo-certidao]:checked')?.value || 'Nascimento';
+// Materialização: assunto e mensagem citam o cartório de ORIGEM escolhido no formulário.
+// O destinatário continua sendo o cartório que receberá o pedido.
+function _aplicarEmailMaterializacao(tipoCertidao) {
+  const cidade = document.getElementById('rc-mat-cidade')?.value.trim() || '';
+  const lista = (CARTORIOS_BAHIA.cartorios && CARTORIOS_BAHIA.cartorios[cidade]) || [];
+  const cartorio = lista[parseInt(document.getElementById('rc-mat-cartorio')?.value, 10)];
+  const tipo = tipoCertidao || 'Nascimento';
   const ctInfo = _getActiveCtInfo();
   const ctNome = ctInfo?.nome || currentUser.ctFull || currentUser.ct || 'Conselho Tutelar';
-  
-  const subjInput = document.getElementById('email-subject');
-  if (subjInput) {
-    subjInput.value = `Requisição de Materialização de Certidão de ${tipoCertidao} – ${cidade}/BA – ${ctNome}`;
-  }
 
-  const bodyInput = document.getElementById('email-body');
-  if (bodyInput) {
-    bodyInput.value = gerarCorpoEmail(tipoCertidao, { isMaterializacao: true, cidade, cartorio: c });
-  }
+  const assunto = document.getElementById('email-subject');
+  if (assunto) assunto.value = `Requisição de Materialização de Certidão de ${tipo} – origem ${cidade || '______'}/BA – ${ctNome}`;
+  const corpo = document.getElementById('email-body');
+  if (corpo) corpo.value = gerarCorpoEmail(tipo, { isMaterializacao: true, cidade, cartorio });
 }
 
 function updateCartorioEmail() {
@@ -5667,23 +5529,16 @@ async function enviarEmail() {
 
   // Registrar a requisição primeiro, para ter o protocolo (entra no assunto: o polling do
   // Gmail usa esse protocolo para casar a resposta do cartório com esta requisição).
-  const modoDestino = document.querySelector('[name=email-modo-destino]:checked')?.value || (_isModalidadeMaterializacaoAtiva() ? 'materializacao' : 'salvador')
   const cartorioSel = document.getElementById('email-cartorio')?.value || ''
   let cartorioNome = to
   let subdistrito = ''
 
-  if (modoDestino === 'materializacao') {
-    const matCid = (document.getElementById('email-mat-cidade')?.value || document.getElementById('rc-mat-cidade')?.value || '').trim()
-    const matCartSel = document.getElementById('email-mat-cartorio')
-    const matCartNome = matCartSel?.options[matCartSel.selectedIndex]?.text || document.getElementById('rc-mat-cartorio')?.options[document.getElementById('rc-mat-cartorio')?.selectedIndex]?.text || ''
-    cartorioNome = matCartNome ? `${matCartNome} — ${matCid}/BA` : (matCid ? `Cartório de ${matCid}/BA` : to)
-    subdistrito = matCid ? `${matCid} (Materialização FECOM)` : 'Materialização'
-  } else if (cartorioSel) {
+  if (cartorioSel) {
     const [idx, sub] = cartorioSel.split('|')
     cartorioNome = CARTORIOS_SALVADOR[parseInt(idx)]?.oficio || to
     subdistrito = sub || ''
   }
-  const tipoMatch = subject.match(/Certidão de (\w+)/i)
+  const tipoMatch = subject.match(/Certidão de (Nascimento|Casamento|Óbito)/i)
   const tipoCertidao = tipoMatch ? tipoMatch[1] : 'Nascimento'
 
   let nova
@@ -8885,7 +8740,7 @@ function renderFormRequisicaoCertidao(form) {
             <datalist id="rc-lista-cidades-ba"></datalist>
           </div>
           <div>
-            <label class="field-label" style="font-weight:700;color:#0369a1">Cartório de Registro Civil das Pessoas Naturais *</label>
+            <label class="field-label" style="font-weight:700;color:#0369a1">Cartório de Origem do Registro *</label>
             <select id="rc-mat-cartorio" style="width:100%;border-color:#7dd3fc;background:#fff" onchange="_onMaterializacaoCartorioSelect()">
               <option value="">— Selecione primeiro o município —</option>
             </select>
@@ -9007,10 +8862,6 @@ function _popularDatalistCidadesBa() {
   if (dl && cidades.length) {
     dl.innerHTML = cidades.map(c => `<option value="${esc(c)}"></option>`).join('');
   }
-  const dlEmail = document.getElementById('email-lista-cidades-ba');
-  if (dlEmail && cidades.length) {
-    dlEmail.innerHTML = cidades.map(c => `<option value="${esc(c)}"></option>`).join('');
-  }
 }
 
 function _onModalidadeChange(val) {
@@ -9081,12 +8932,6 @@ function _onMaterializacaoCartorioSelect(cidadeForcada) {
     document.getElementById('rc-mat-info-horario').textContent = c.horario || 'Segunda a sexta, das 8h às 14h';
   }
 
-  // Preenche automaticamente o destinatário oficial no cabeçalho da requisição
-  const comarcaInput = document.getElementById('rc-comarca');
-  const subdistritoInput = document.getElementById('rc-subdistrito');
-  if (comarcaInput) comarcaInput.value = cidade;
-  if (subdistritoInput) subdistritoInput.value = c.oficio || c.nome || 'Sede';
-
   // Atualiza observações com texto oficial do FECOM
   _aplicarTextoFecomObservacoes(false);
 }
@@ -9106,7 +8951,7 @@ function _aplicarTextoFecomObservacoes(forcar = false) {
   const textoFecom = [
     `Materialização de 2ª via de Certidão de ${tipoCert}.`,
     `Ato Normativo do Fundo Especial de Compensação (FECOM) nº 002/2020 (atualizado em 10/02/2026), em consonância com o Art. 5º, XIII/XIV e Anexo II, Item XXVIII (requisição gratuita do Conselho Tutelar c/c Art. 136, VIII da Lei nº 8.069/1990 - ECA).`,
-    `Comarca de ${cidade || '______'}-BA`,
+    `Cartório de origem do registro — Comarca de ${cidade || '______'}-BA`,
     `${c.nome || c.oficio || 'Cartório de Registro Civil das Pessoas Naturais'}`,
     c.endereco ? `Endereço: ${c.endereco}` : '',
     c.horario ? `Horário de Atendimento: ${c.horario}` : '',
