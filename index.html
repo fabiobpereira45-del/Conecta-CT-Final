@@ -9125,7 +9125,7 @@ function _carregarGeradorPdf() {
 // Reduz uma imagem (logo, assinatura) a um JPEG pequeno antes de embutir no PDF do anexo —
 // sem isso, uma imagem grande (ex.: assinatura enviada em alta resolução) deixa o PDF pesado
 // e o servidor recusa o e-mail (HTTP 413, anexo grande demais).
-function _comprimirParaAnexo(dataUrl, larguraMax) {
+function _comprimirParaAnexo(dataUrl, larguraMax, qualidade = 0.75) {
   return new Promise(resolve => {
     if (!dataUrl) return resolve(null)
     const img = new Image()
@@ -9138,7 +9138,7 @@ function _comprimirParaAnexo(dataUrl, larguraMax) {
       const g = c.getContext('2d')
       g.fillStyle = '#fff'; g.fillRect(0, 0, w, h)   // JPEG não tem transparência
       g.drawImage(img, 0, 0, w, h)
-      resolve({ dataUrl: c.toDataURL('image/jpeg', 0.75), w, h })
+      resolve({ dataUrl: c.toDataURL('image/jpeg', qualidade), w, h })
     }
     img.src = dataUrl
   })
@@ -9161,7 +9161,7 @@ async function _gerarAnexoRequisicaoPDF() {
   }
 
   const logo = await _comprimirParaAnexo(_CT_LOGO_SRC, 160)
-  const assinaturaImg = await _comprimirParaAnexo(currentUser?.assinatura, 400)
+  const assinaturaImg = await _comprimirParaAnexo(currentUser?.assinatura, 600, 0.9)
   const v = id => (document.getElementById(id)?.value || '').trim()
   const sel = name => document.querySelector('[name="' + name + '"]:checked')?.value || ''
   const dataBr = iso => (iso ? iso.split('-').reverse().join('/') : '')
@@ -9315,8 +9315,8 @@ async function _gerarAnexoRequisicaoPDF() {
     y += alturaCaixa + 10
   }
 
-  // Se não couber o bloco final (data + assinaturas + nota legal = ~90pt), passa para a próxima página
-  if (y + 90 > pageH - margem) {
+  // Se não couber o bloco final (data + assinaturas + nota legal = ~125pt), passa para a próxima página
+  if (y + 125 > pageH - margem) {
     pdf.addPage()
     y = margem
   }
@@ -9324,7 +9324,7 @@ async function _gerarAnexoRequisicaoPDF() {
   // Local e data
   pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9.5); pdf.setTextColor(26, 35, 50)
   pdf.text(`${v('rc-local') || 'Salvador'}, ${dataBr(v('rc-data')) || '____/____/______'}.`, margem + larguraUtil, y, { align: 'right' })
-  y += 36
+  y += 70
 
   // Assinaturas
   const conselheiroLinhaX1 = margem + 20
@@ -9337,8 +9337,10 @@ async function _gerarAnexoRequisicaoPDF() {
 
   if (assinaturaImg) {
     try {
-      const assW = 100
-      const assH = Math.min(36, 100 * assinaturaImg.h / assinaturaImg.w)
+      // cabe na caixa de 190×60 pt sem distorcer: mesma escala para largura e altura
+      const escala = Math.min(190 / assinaturaImg.w, 60 / assinaturaImg.h)
+      const assW = assinaturaImg.w * escala
+      const assH = assinaturaImg.h * escala
       pdf.addImage(assinaturaImg.dataUrl, 'JPEG', conselheiroCentroX - assW / 2, y - assH - 3, assW, assH)
     } catch (e) {}
   }
