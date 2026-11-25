@@ -8613,7 +8613,7 @@ function renderFormRequisicaoCertidao(form) {
         <div><label class="field-label">Filiação – Genitora (Mãe)</label><input id="rc-mae" placeholder="Nome da mãe / genitora" /></div>
       </div>
       <div class="field-row cols-2">
-        <div><label class="field-label">Nome do(a) Responsável</label><input id="rc-responsavel" placeholder="Nome do(a) responsável" /></div>
+        <div><label class="field-label">Contato para o Cartório se comunicar</label><input id="rc-responsavel" placeholder="Nome, e-mail ou telefone para o cartório responder" /></div>
         <div><label class="field-label">Número de Contato / Telefone</label><input id="rc-contato" placeholder="(71) 99999-9999" /></div>
       </div>
 
@@ -8737,8 +8737,8 @@ function _requisicaoCorpoHtml() {
   const banner = _bannerParaWord(document.getElementById('council-banner'), ct)
   const ctFormatado = _formatarNomeCt(ct)
   const obsTexto = v('rc-obs')
-  const respNome = v('rc-responsavel')
-  const respAssinTexto = respNome ? 'Assinatura do(a) Responsável (' + esc(respNome) + ')' : 'Assinatura do Responsável / Representante'
+
+  const respAssinTexto = 'Assinatura do Responsável / Representante'
 
   const corpo = `
   <div class="banner">${banner}</div>
@@ -8755,7 +8755,7 @@ function _requisicaoCorpoHtml() {
     ${linha('CPF', v('rc-cpf'))}
     ${linha('Filiação – Genitor (Pai)', v('rc-pai'))}
     ${linha('Filiação – Genitora (Mãe)', v('rc-mae'))}
-    ${linha('Nome do(a) Responsável', v('rc-responsavel'))}
+    ${linha('Contato para o Cartório se comunicar', v('rc-responsavel'))}
     ${linha('Número de Contato / Telefone', v('rc-contato'))}
   </table>
   <h2>2. Certidão requerida</h2>
@@ -9026,7 +9026,7 @@ async function _gerarAnexoRequisicaoPDF() {
     ['CPF', v('rc-cpf')],
     ['Filiação – Genitor (Pai)', v('rc-pai')],
     ['Filiação – Genitora (Mãe)', v('rc-mae')],
-    ['Nome do(a) Responsável', v('rc-responsavel')],
+    ['Contato para o Cartório', v('rc-responsavel')],
     ['Número de Contato / Tel.', v('rc-contato')],
   ])
   secao('2. Certidão requerida', [
@@ -9107,7 +9107,7 @@ async function _gerarAnexoRequisicaoPDF() {
   pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5); pdf.setTextColor(40, 40, 40)
   pdf.text('Conselheiro(a) Tutelar Requisitante', conselheiroCentroX, y + 11, { align: 'center' })
 
-  const respRotulo = v('rc-responsavel') ? `Assinatura do(a) Responsável (${v('rc-responsavel')})` : 'Assinatura do Responsável / Representante'
+  const respRotulo = 'Assinatura do Responsável / Representante'
   pdf.text(respRotulo, respLinhaCentroX, y + 11, { align: 'center' })
   y += 24
 
